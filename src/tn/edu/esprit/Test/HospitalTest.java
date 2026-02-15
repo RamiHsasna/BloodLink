@@ -1,14 +1,15 @@
 package tn.edu.esprit.Test;
 
-import tn.edu.esprit.Entities.Hospital;
-import tn.edu.esprit.Services.HospitalServiceImpl;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
+import tn.edu.esprit.Entities.Hospital;
+import tn.edu.esprit.Services.HospitalServiceImpl;
 
 public class HospitalTest {
+
     private static HospitalServiceImpl hospitalService;
+
     public static void main(String[] args) {
         hospitalService = new HospitalServiceImpl();
 
@@ -18,7 +19,6 @@ public class HospitalTest {
     }
 
     private static void testCreateHospital() {
-        Hospital hospital = new Hospital();
         try {
             Hospital newHospital = new Hospital();
             newHospital.setName("Hôpital Test Centre");
@@ -30,21 +30,28 @@ public class HospitalTest {
             newHospital.setEmail("test@hospital.tn");
             newHospital.setActive(true);
 
-            System.out.println("Creating hospital without ID (will be auto-generated):");
-            System.out.println("Before insert - ID: " + newHospital.getHospitalId());
+            System.out.println(
+                "Creating hospital without ID (will be auto-generated):"
+            );
+            System.out.println(
+                "Before insert - ID: " + newHospital.getHospitalId()
+            );
 
             hospitalService.ajouter(newHospital);
 
-            System.out.println("After insert - Auto-generated ID: " + newHospital.getHospitalId());
-            System.out.println("✓ Hospital created successfully with auto-generated UUID!\n");
-
+            System.out.println(
+                "After insert - Auto-generated ID: " +
+                    newHospital.getHospitalId()
+            );
+            System.out.println(
+                "✓ Hospital created successfully with auto-generated UUID!\n"
+            );
         } catch (Exception e) {
             System.err.println("✗ Error creating hospital: " + e.getMessage());
         }
     }
 
     private static void testUpdateHospital() {
-
         try {
             // Get a hospital to update
             List<Hospital> hospitals = hospitalService.getAllHospitals();
@@ -52,8 +59,12 @@ public class HospitalTest {
                 Hospital hospitalToUpdate = hospitals.getFirst();
                 UUID hospitalId = hospitalToUpdate.getHospitalId();
 
-                System.out.println("Updating hospital: " + hospitalToUpdate.getName());
-                System.out.println("Original phone: " + hospitalToUpdate.getPhone());
+                System.out.println(
+                    "Updating hospital: " + hospitalToUpdate.getName()
+                );
+                System.out.println(
+                    "Original phone: " + hospitalToUpdate.getPhone()
+                );
 
                 // Update the hospital
                 hospitalToUpdate.setPhone("+216 71 999 888");
@@ -61,33 +72,41 @@ public class HospitalTest {
                 hospitalService.modifier(hospitalToUpdate);
 
                 // Retrieve the updated hospital
-                Hospital updatedHospital = hospitalService.getHospitalById(hospitalId);
-                System.out.println("Updated phone: " + updatedHospital.getPhone());
+                Hospital updatedHospital = hospitalService.getHospitalById(
+                    hospitalId
+                );
+                System.out.println(
+                    "Updated phone: " + updatedHospital.getPhone()
+                );
                 System.out.println("Hospital updated successfully!");
             }
-
         } catch (Exception e) {
             System.err.println("Error in update operations: " + e.getMessage());
         }
     }
-    private static void testDeleteHospital(){
+
+    private static void testDeleteHospital() {
         List<Hospital> hospitals = hospitalService.getAllHospitals();
 
-        try{
+        try {
             Hospital hospitalToDelete = hospitals.getLast(); // Get last one
             UUID idToDelete = hospitalToDelete.getHospitalId();
 
-            System.out.println("Deleting hospital: " + hospitalToDelete.getName());
+            System.out.println(
+                "Deleting hospital: " + hospitalToDelete.getName()
+            );
             hospitalService.supprimer(idToDelete);
 
             // Verify deletion
-            Hospital deletedHospital = hospitalService.getHospitalById(idToDelete);
+            Hospital deletedHospital = hospitalService.getHospitalById(
+                idToDelete
+            );
             if (deletedHospital == null) {
                 System.out.println("Hospital deleted successfully!");
             } else {
                 System.out.println("Hospital deletion failed!");
             }
-        }catch(Exception e){
+        } catch (Exception e) {
             System.err.println("Error deleting hospital: " + e.getMessage());
         }
     }
