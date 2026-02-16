@@ -3,7 +3,7 @@ package tn.edu.esprit.Services;
 import java.util.List;
 import java.util.UUID;
 
-public interface ServiceHospital<T> {
+public interface HospitalService<T> {
     public void ajouter(T t);
     public void modifier(T t);
     public void supprimer(UUID id);
