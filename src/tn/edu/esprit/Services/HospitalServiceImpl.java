@@ -3,7 +3,6 @@ package tn.edu.esprit.Services;
 import tn.edu.esprit.Entities.Hospital;
 import tn.edu.esprit.Tools.DataSource;
 
-import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,7 +10,7 @@ import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class HospitalServiceImpl implements ServiceHospital{
+public class HospitalServiceImpl implements HospitalService {
     private static final Logger LOGGER = Logger.getLogger(
         HospitalServiceImpl.class.getName()
     );
