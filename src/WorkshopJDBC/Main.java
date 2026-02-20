@@ -1,15 +1,21 @@
 package WorkshopJDBC;
 
-import tn.edu.esprit.Tools.DataSource;
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.control.Label;
+import javafx.stage.Stage;
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
-public class Main {
+public class Main extends Application {
+    @Override
+    public void start(Stage stage) {
+        Label label = new Label("JavaFX is working!");
+        Scene scene = new Scene(label, 300, 200);
+        stage.setScene(scene);
+        stage.setTitle("JavaFX Test");
+        stage.show();
+    }
+
     public static void main(String[] args) {
-        DataSource.getInstance();
-        DataSource.getInstance();
-        DataSource.getInstance();
-        DataSource.getInstance();
-        DataSource.getInstance();
+        launch(); // starts the JavaFX application
     }
 }
