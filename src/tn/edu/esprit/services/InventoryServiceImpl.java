@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import tn.edu.esprit.Tools.DataSource;
 import tn.edu.esprit.entities.BloodInventory;
 import tn.edu.esprit.entities.InventoryStatus;
-import tn.edu.esprit.Tools.DataSource;
 
 public class InventoryServiceImpl implements InventoryService {
 
@@ -53,7 +53,7 @@ public class InventoryServiceImpl implements InventoryService {
                 Statement.RETURN_GENERATED_KEYS
             )
         ) {
-            ps.setObject(1,inventory.getHospitalId());
+            ps.setObject(1, inventory.getHospitalId());
             ps.setString(2, inventory.getBloodTypeId());
             ps.setString(3, inventory.getDonorId());
             ps.setInt(4, inventory.getQuantityUnitsInt());
@@ -93,7 +93,7 @@ public class InventoryServiceImpl implements InventoryService {
         try (
             PreparedStatement ps = connection.prepareStatement(UPDATE_INVENTORY)
         ) {
-            ps.setObject(1,inventory.getHospitalId());
+            ps.setObject(1, inventory.getHospitalId());
             ps.setString(2, inventory.getBloodTypeId());
             ps.setString(3, inventory.getDonorId());
             ps.setInt(4, inventory.getQuantityUnitsInt());

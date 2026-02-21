@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.shape.Circle?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="tn.edu.esprit.controllers.MainDashboardController"
+            prefWidth="1200" prefHeight="750"
+            styleClass="root-pane"
+            stylesheets="@../styles/dashboard.css">
+
+    <!-- LEFT: Dark Sidebar -->
+    <left>
+        <VBox fx:id="sidebar" styleClass="sidebar" prefWidth="260" spacing="0">
+            <padding>
+                <Insets top="0" right="0" bottom="0" left="0"/>
+            </padding>
+
+            <!-- Logo / Brand -->
+            <HBox styleClass="sidebar-brand" alignment="CENTER_LEFT" spacing="12">
+                <padding>
+                    <Insets top="24" right="24" bottom="24" left="24"/>
+                </padding>
+                <StackPane prefWidth="36" prefHeight="36">
+                    <Circle radius="18" styleClass="brand-circle"/>
+                    <Label text="B" styleClass="brand-letter"/>
+                </StackPane>
+                <VBox spacing="0">
+                    <Label text="BloodLink" styleClass="brand-title"/>
+                    <Label text="Admin Dashboard" styleClass="brand-subtitle"/>
+                </VBox>
+            </HBox>
+
+            <!-- Divider -->
+            <Separator styleClass="sidebar-divider"/>
+
+            <!-- Navigation Section Label -->
+            <Label text="MANAGEMENT" styleClass="sidebar-section-label">
+                <padding>
+                    <Insets top="20" right="24" bottom="8" left="24"/>
+                </padding>
+            </Label>
+
+            <!-- Nav Items -->
+            <VBox styleClass="nav-items" spacing="4">
+                <padding>
+                    <Insets top="0" right="12" bottom="0" left="12"/>
+                </padding>
+
+                <HBox fx:id="navHospitals" styleClass="nav-item, nav-item-active" alignment="CENTER_LEFT"
+                      spacing="12" onMouseClicked="#onNavHospitals">
+                    <padding>
+                        <Insets top="10" right="16" bottom="10" left="16"/>
+                    </padding>
+                    <Label text="🏥" styleClass="nav-icon"/>
+                    <Label text="Hospitals" styleClass="nav-label"/>
+                </HBox>
+
+                <HBox fx:id="navInventory" styleClass="nav-item" alignment="CENTER_LEFT"
+                      spacing="12" onMouseClicked="#onNavInventory">
+                    <padding>
+                        <Insets top="10" right="16" bottom="10" left="16"/>
+                    </padding>
+                    <Label text="🩸" styleClass="nav-icon"/>
+                    <Label text="Blood Inventory" styleClass="nav-label"/>
+                </HBox>
+
+                <HBox fx:id="navTransfers" styleClass="nav-item" alignment="CENTER_LEFT"
+                      spacing="12" onMouseClicked="#onNavTransfers">
+                    <padding>
+                        <Insets top="10" right="16" bottom="10" left="16"/>
+                    </padding>
+                    <Label text="🔄" styleClass="nav-icon"/>
+                    <Label text="Transfers" styleClass="nav-label"/>
+                </HBox>
+
+                <HBox fx:id="navBloodTypes" styleClass="nav-item" alignment="CENTER_LEFT"
+                      spacing="12" onMouseClicked="#onNavBloodTypes">
+                    <padding>
+                        <Insets top="10" right="16" bottom="10" left="16"/>
+                    </padding>
+                    <Label text="🧬" styleClass="nav-icon"/>
+                    <Label text="Blood Types" styleClass="nav-label"/>
+                </HBox>
+            </VBox>
+
+            <!-- Spacer to push bottom content down -->
+            <Region VBox.vgrow="ALWAYS"/>
+
+            <!-- Bottom: Settings / Profile area -->
+            <Separator styleClass="sidebar-divider"/>
+            <HBox styleClass="nav-item" alignment="CENTER_LEFT" spacing="12">
+                <padding>
+                    <Insets top="16" right="28" bottom="20" left="28"/>
+                </padding>
+                <StackPane prefWidth="32" prefHeight="32">
+                    <Circle radius="16" styleClass="avatar-circle"/>
+                    <Label text="A" styleClass="avatar-letter"/>
+                </StackPane>
+                <VBox spacing="0">
+                    <Label text="Admin User" styleClass="nav-label"/>
+                    <Label text="Hospital Staff" styleClass="sidebar-subtitle-text"/>
+                </VBox>
+            </HBox>
+        </VBox>
+    </left>
+
+    <!-- CENTER: Main Content Area -->
+    <center>
+        <StackPane fx:id="contentArea" styleClass="content-area">
+            <!-- Content will be loaded here dynamically -->
+        </StackPane>
+    </center>
+
+</BorderPane>

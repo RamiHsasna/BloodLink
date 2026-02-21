@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="tn.edu.esprit.controllers.HospitalFormController"
+      styleClass="modal-overlay"
+      alignment="CENTER"
+      stylesheets="@../styles/dashboard.css">
+
+    <!-- Modal Card -->
+    <VBox fx:id="modalCard" styleClass="modal-card" spacing="0" maxWidth="560" maxHeight="680"
+          alignment="TOP_CENTER">
+
+        <!-- Modal Header -->
+        <HBox styleClass="modal-header" alignment="CENTER_LEFT" spacing="12">
+            <padding>
+                <Insets top="20" right="24" bottom="16" left="24"/>
+            </padding>
+
+            <VBox spacing="4" HBox.hgrow="ALWAYS">
+                <Label fx:id="lblFormTitle" text="Add Hospital" styleClass="modal-title"/>
+                <Label fx:id="lblFormSubtitle" text="Register a new hospital in the BloodLink network."
+                       styleClass="modal-subtitle"/>
+            </VBox>
+
+            <Button fx:id="btnClose" text="✕" styleClass="btn-close-modal"
+                    onAction="#onCancel"/>
+        </HBox>
+
+        <Separator styleClass="modal-divider"/>
+
+        <!-- Modal Body - Scrollable Form -->
+        <ScrollPane styleClass="modal-body-scroll" fitToWidth="true" hbarPolicy="NEVER"
+                    vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS">
+
+            <VBox styleClass="modal-body" spacing="20">
+                <padding>
+                    <Insets top="20" right="24" bottom="8" left="24"/>
+                </padding>
+
+                <!-- Hospital Name -->
+                <VBox spacing="6">
+                    <Label text="Hospital Name" styleClass="form-label"/>
+                    <TextField fx:id="tfName" promptText="e.g. Charles Nicolle Hospital"
+                               styleClass="form-input"/>
+                    <Label fx:id="lblNameError" text="" styleClass="form-error" visible="false" managed="false"/>
+                </VBox>
+
+                <!-- Address -->
+                <VBox spacing="6">
+                    <Label text="Address" styleClass="form-label"/>
+                    <TextField fx:id="tfAddress" promptText="e.g. Blvd 9 Avril, Tunis"
+                               styleClass="form-input"/>
+                    <Label fx:id="lblAddressError" text="" styleClass="form-error" visible="false" managed="false"/>
+                </VBox>
+
+                <!-- City & Phone - Side by Side -->
+                <HBox spacing="16">
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="City" styleClass="form-label"/>
+                        <TextField fx:id="tfCity" promptText="e.g. Tunis"
+                                   styleClass="form-input"/>
+                        <Label fx:id="lblCityError" text="" styleClass="form-error" visible="false" managed="false"/>
+                    </VBox>
+
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="Phone" styleClass="form-label"/>
+                        <TextField fx:id="tfPhone" promptText="e.g. +216 71 123 456"
+                                   styleClass="form-input"/>
+                        <Label fx:id="lblPhoneError" text="" styleClass="form-error" visible="false" managed="false"/>
+                    </VBox>
+                </HBox>
+
+                <!-- Email -->
+                <VBox spacing="6">
+                    <Label text="Email" styleClass="form-label"/>
+                    <TextField fx:id="tfEmail" promptText="e.g. contact@hospital.tn"
+                               styleClass="form-input"/>
+                    <Label fx:id="lblEmailError" text="" styleClass="form-error" visible="false" managed="false"/>
+                </VBox>
+
+                <!-- Latitude & Longitude - Side by Side -->
+                <HBox spacing="16">
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="Latitude" styleClass="form-label"/>
+                        <TextField fx:id="tfLatitude" promptText="e.g. 36.8065"
+                                   styleClass="form-input"/>
+                        <Label fx:id="lblLatitudeError" text="" styleClass="form-error" visible="false" managed="false"/>
+                    </VBox>
+
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="Longitude" styleClass="form-label"/>
+                        <TextField fx:id="tfLongitude" promptText="e.g. 10.1815"
+                                   styleClass="form-input"/>
+                        <Label fx:id="lblLongitudeError" text="" styleClass="form-error" visible="false" managed="false"/>
+                    </VBox>
+                </HBox>
+
+                <!-- Active Status Toggle -->
+                <HBox alignment="CENTER_LEFT" spacing="12" styleClass="form-toggle-row">
+                    <padding>
+                        <Insets top="4" right="0" bottom="4" left="0"/>
+                    </padding>
+                    <CheckBox fx:id="cbActive" styleClass="form-checkbox" selected="true"/>
+                    <VBox spacing="2">
+                        <Label text="Active Status" styleClass="form-label"/>
+                        <Label text="Hospital is currently operational and accepting transfers."
+                               styleClass="form-hint"/>
+                    </VBox>
+                </HBox>
+
+                <!-- Status Message -->
+                <Label fx:id="lblStatusMessage" text="" styleClass="form-status-message"
+                       visible="false" managed="false" wrapText="true"/>
+
+            </VBox>
+        </ScrollPane>
+
+        <Separator styleClass="modal-divider"/>
+
+        <!-- Modal Footer -->
+        <HBox styleClass="modal-footer" alignment="CENTER_RIGHT" spacing="12">
+            <padding>
+                <Insets top="16" right="24" bottom="20" left="24"/>
+            </padding>
+
+            <Button fx:id="btnCancel" text="Cancel" styleClass="btn-secondary"
+                    onAction="#onCancel"/>
+            <Button fx:id="btnSubmit" text="Create Hospital" styleClass="btn-primary"
+                    onAction="#onSubmit"/>
+        </HBox>
+    </VBox>
+</VBox>
