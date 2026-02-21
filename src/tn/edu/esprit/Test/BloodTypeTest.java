@@ -1,8 +1,8 @@
 package tn.edu.esprit.Test;
 
 import java.util.List;
-import tn.edu.esprit.Entities.BloodType;
-import tn.edu.esprit.Services.BloodTypeServiceImpl;
+import tn.edu.esprit.entities.BloodType;
+import tn.edu.esprit.services.BloodTypeServiceImpl;
 
 public class BloodTypeTest {
 

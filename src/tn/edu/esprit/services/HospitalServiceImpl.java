@@ -1,6 +1,6 @@
-package tn.edu.esprit.Services;
+package tn.edu.esprit.services;
 
-import tn.edu.esprit.Entities.Hospital;
+import tn.edu.esprit.entities.Hospital;
 import tn.edu.esprit.Tools.DataSource;
 
 import java.sql.*;

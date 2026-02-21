@@ -5,12 +5,11 @@ import java.sql.Date;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
-import tn.edu.esprit.Entities.BloodInventory;
-import tn.edu.esprit.Entities.Hospital;
-import tn.edu.esprit.Entities.InventoryStatus;
-import tn.edu.esprit.Services.HospitalServiceImpl;
-import tn.edu.esprit.Services.InventoryService;
-import tn.edu.esprit.Services.InventoryServiceImpl;
+import tn.edu.esprit.entities.BloodInventory;
+import tn.edu.esprit.entities.Hospital;
+import tn.edu.esprit.entities.InventoryStatus;
+import tn.edu.esprit.services.HospitalServiceImpl;
+import tn.edu.esprit.services.InventoryServiceImpl;
 
 public class InventoryTest {
 

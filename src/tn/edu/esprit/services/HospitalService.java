@@ -1,4 +1,4 @@
-package tn.edu.esprit.Services;
+package tn.edu.esprit.services;
 
 import java.util.List;
 import java.util.UUID;

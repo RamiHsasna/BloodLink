@@ -1,4 +1,4 @@
-package tn.edu.esprit.Entities;
+package tn.edu.esprit.entities;
 
 import java.math.BigDecimal;
 import java.sql.Date;
