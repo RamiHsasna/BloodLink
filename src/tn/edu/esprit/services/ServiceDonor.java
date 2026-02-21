@@ -23,11 +23,17 @@ public class ServiceDonor implements IService<Donor> {
     public void ajouter(Donor d) {
         try {
 
-            String req = "INSERT INTO donors "
-                    + "(user_id, blood_type_id, last_donation_date, "
+                String req = "INSERT INTO donors "
+                    + "(user_id, first_name, last_name, blood_type_id, last_donation_date, "
                     + "is_currently_eligible, latitude, longitude, total_donations, created_at) "
                     + "VALUES ("
                     + "'" + d.getUserId() + "', "
+                    + (d.getFirstName() != null
+                    ? "'" + d.getFirstName() + "'"
+                    : "NULL") + ", "
+                    + (d.getLastName() != null
+                    ? "'" + d.getLastName() + "'"
+                    : "NULL") + ", "
                     + "'" + d.getBloodTypeId() + "', "
                     + (d.getLastDonationDate() != null
                     ? "'" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(d.getLastDonationDate()) + "'"
@@ -61,7 +67,15 @@ public class ServiceDonor implements IService<Donor> {
 
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 
-            String bloodTypeId = d.getBloodTypeId() != null
+                String firstName = d.getFirstName() != null
+                    ? d.getFirstName()
+                    : existing.getFirstName();
+
+                String lastName = d.getLastName() != null
+                    ? d.getLastName()
+                    : existing.getLastName();
+
+                String bloodTypeId = d.getBloodTypeId() != null
                     ? d.getBloodTypeId()
                     : existing.getBloodTypeId();
 
@@ -88,7 +102,9 @@ public class ServiceDonor implements IService<Donor> {
                     ? d.getLongitude()
                     : existing.getLongitude();
 
-            String req = "UPDATE donors SET "
+                String req = "UPDATE donors SET "
+                    + "first_name = " + (firstName != null ? "'" + firstName + "'" : "NULL") + ", "
+                    + "last_name = " + (lastName != null ? "'" + lastName + "'" : "NULL") + ", "
                     + "blood_type_id = '" + bloodTypeId + "', "
 
                     + "last_donation_date = " + lastDonationDate + ", "
@@ -147,6 +163,8 @@ public class ServiceDonor implements IService<Donor> {
                 donor = new Donor();
 
                 donor.setUserId(rs.getString("user_id"));
+                donor.setFirstName(rs.getString("first_name"));
+                donor.setLastName(rs.getString("last_name"));
                 donor.setBloodTypeId(rs.getString("blood_type_id"));
 
                 Date sqlDate = rs.getDate("last_donation_date");
@@ -182,6 +200,8 @@ public class ServiceDonor implements IService<Donor> {
                 Donor donor = new Donor();
 
                 donor.setUserId(rs.getString("user_id"));
+                donor.setFirstName(rs.getString("first_name"));
+                donor.setLastName(rs.getString("last_name"));
                 donor.setBloodTypeId(rs.getString("blood_type_id"));
 
                 Date sqlDate = rs.getDate("last_donation_date");
