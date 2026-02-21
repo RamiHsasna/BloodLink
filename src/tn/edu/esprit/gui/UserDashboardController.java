@@ -15,6 +15,7 @@ import tn.edu.esprit.entities.UserType;
 import tn.edu.esprit.entities.Users;
 import tn.edu.esprit.services.ServiceUser;
 
+import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
@@ -29,10 +30,15 @@ public class UserDashboardController {
     @FXML private Text donorsCountLabel;
     @FXML private Text staffCountLabel;
     @FXML private Button addUserBtn;
+    @FXML private StackPane contentArea;
+    @FXML private VBox userManagementContent;
+    @FXML private Button usersNavBtn;
+    @FXML private Button eligibilityNavBtn;
 
     private ServiceUser serviceUser;
     private List<Users> allUsers;
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private Parent eligibilityContent;
 
     @FXML
     public void initialize() {
@@ -43,6 +49,60 @@ public class UserDashboardController {
         userTypeFilter.setValue("All User Types");
         
         loadUsers();
+        
+        // Show user management by default
+        showUserManagement();
+    }
+
+    @FXML
+    private void handleUsersNav() {
+        showUserManagement();
+    }
+
+    @FXML
+    private void handleEligibilityNav() {
+        showEligibilityManagement();
+    }
+
+    private void showUserManagement() {
+        // Update navigation buttons
+        usersNavBtn.getStyleClass().add("nav-button-active");
+        eligibilityNavBtn.getStyleClass().remove("nav-button-active");
+        
+        // Show user management content
+        userManagementContent.setVisible(true);
+        userManagementContent.setManaged(true);
+        
+        if (eligibilityContent != null) {
+            eligibilityContent.setVisible(false);
+            eligibilityContent.setManaged(false);
+        }
+    }
+
+    private void showEligibilityManagement() {
+        // Update navigation buttons
+        usersNavBtn.getStyleClass().remove("nav-button-active");
+        eligibilityNavBtn.getStyleClass().add("nav-button-active");
+        
+        // Hide user management content
+        userManagementContent.setVisible(false);
+        userManagementContent.setManaged(false);
+        
+        // Load eligibility content if not already loaded
+        if (eligibilityContent == null) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("DonorEligibilityDashboard.fxml"));
+                eligibilityContent = loader.load();
+                contentArea.getChildren().add(eligibilityContent);
+            } catch (IOException e) {
+                e.printStackTrace();
+                showAlert("Error", "Could not load donor eligibility interface: " + e.getMessage());
+                return;
+            }
+        }
+        
+        eligibilityContent.setVisible(true);
+        eligibilityContent.setManaged(true);
     }
 
     private void loadUsers() {

@@ -38,7 +38,7 @@
                     </padding>
                 </Label>
 
-                <Button text="Users" styleClass="nav-button, nav-button-active" maxWidth="Infinity">
+                <Button fx:id="usersNavBtn" text="Users" styleClass="nav-button, nav-button-active" maxWidth="Infinity" onAction="#handleUsersNav">
                     <padding>
                         <Insets top="15" right="20" bottom="15" left="35"/>
                     </padding>
@@ -67,6 +67,12 @@
                         <Insets top="15" right="20" bottom="15" left="35"/>
                     </padding>
                 </Button>
+
+                <Button fx:id="eligibilityNavBtn" text="Donor Eligibility" styleClass="nav-button" maxWidth="Infinity" onAction="#handleEligibilityNav">
+                    <padding>
+                        <Insets top="15" right="20" bottom="15" left="35"/>
+                    </padding>
+                </Button>
             </VBox>
 
             <!-- User Profile Section -->
@@ -88,68 +94,70 @@
 
     <!-- Main Content -->
     <center>
-        <VBox styleClass="main-content" spacing="20">
-            <padding>
-                <Insets top="30" right="40" bottom="30" left="40"/>
-            </padding>
+        <StackPane fx:id="contentArea">
+            <VBox styleClass="main-content" spacing="20" fx:id="userManagementContent">
+                <padding>
+                    <Insets top="30" right="40" bottom="30" left="40"/>
+                </padding>
 
-            <!-- Header Section -->
-            <HBox alignment="CENTER_LEFT" spacing="20">
-                <VBox HBox.hgrow="ALWAYS">
-                    <Text text="Users" styleClass="page-title"/>
-                    <Text text="Manage and monitor all registered users in the network." styleClass="page-subtitle"/>
-                </VBox>
-                <Button text="+ Add User" styleClass="btn-primary" fx:id="addUserBtn" onAction="#handleAddUser">
-                    <padding>
-                        <Insets top="12" right="24" bottom="12" left="24"/>
-                    </padding>
-                </Button>
-            </HBox>
-
-            <!-- Search and Filter Bar -->
-            <HBox spacing="15" alignment="CENTER_LEFT">
-                <TextField fx:id="searchField" promptText="Search users by name, email, or phone..." 
-                          styleClass="search-field" HBox.hgrow="ALWAYS" onKeyReleased="#handleSearch">
-                    <padding>
-                        <Insets top="10" right="15" bottom="10" left="15"/>
-                    </padding>
-                </TextField>
-                
-                <ComboBox fx:id="userTypeFilter" promptText="All User Types" styleClass="filter-combo" prefWidth="180"
-                         onAction="#handleFilter">
-                    <padding>
-                        <Insets top="10" right="15" bottom="10" left="15"/>
-                    </padding>
-                </ComboBox>
-            </HBox>
-
-            <!-- Stats Section -->
-            <HBox spacing="20">
-                <HBox spacing="10" alignment="CENTER_LEFT">
-                    <Text text="Total:" styleClass="stat-label"/>
-                    <Text fx:id="totalUsersLabel" text="0" styleClass="stat-value"/>
+                <!-- Header Section -->
+                <HBox alignment="CENTER_LEFT" spacing="20">
+                    <VBox HBox.hgrow="ALWAYS">
+                        <Text text="Users" styleClass="page-title"/>
+                        <Text text="Manage and monitor all registered users in the network." styleClass="page-subtitle"/>
+                    </VBox>
+                    <Button text="+ Add User" styleClass="btn-primary" fx:id="addUserBtn" onAction="#handleAddUser">
+                        <padding>
+                            <Insets top="12" right="24" bottom="12" left="24"/>
+                        </padding>
+                    </Button>
                 </HBox>
-                <HBox spacing="10" alignment="CENTER_LEFT">
-                    <Text text="•" styleClass="stat-dot-donor"/>
-                    <Text text="Donors:" styleClass="stat-label"/>
-                    <Text fx:id="donorsCountLabel" text="0" styleClass="stat-value-donor"/>
-                </HBox>
-                <HBox spacing="10" alignment="CENTER_LEFT">
-                    <Text text="•" styleClass="stat-dot-staff"/>
-                    <Text text="Hospital Staff:" styleClass="stat-label"/>
-                    <Text fx:id="staffCountLabel" text="0" styleClass="stat-value-staff"/>
-                </HBox>
-            </HBox>
 
-            <!-- Users List -->
-            <ScrollPane fitToWidth="true" styleClass="content-scroll" VBox.vgrow="ALWAYS">
-                <VBox fx:id="usersContainer" spacing="15" styleClass="users-container">
-                    <padding>
-                        <Insets top="5" right="5" bottom="5" left="5"/>
-                    </padding>
-                </VBox>
-            </ScrollPane>
-        </VBox>
+                <!-- Search and Filter Bar -->
+                <HBox spacing="15" alignment="CENTER_LEFT">
+                    <TextField fx:id="searchField" promptText="Search users by name, email, or phone..." 
+                              styleClass="search-field" HBox.hgrow="ALWAYS" onKeyReleased="#handleSearch">
+                        <padding>
+                            <Insets top="10" right="15" bottom="10" left="15"/>
+                        </padding>
+                    </TextField>
+                    
+                    <ComboBox fx:id="userTypeFilter" promptText="All User Types" styleClass="filter-combo" prefWidth="180"
+                             onAction="#handleFilter">
+                        <padding>
+                            <Insets top="10" right="15" bottom="10" left="15"/>
+                        </padding>
+                    </ComboBox>
+                </HBox>
+
+                <!-- Stats Section -->
+                <HBox spacing="20">
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Text text="Total:" styleClass="stat-label"/>
+                        <Text fx:id="totalUsersLabel" text="0" styleClass="stat-value"/>
+                    </HBox>
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Text text="•" styleClass="stat-dot-donor"/>
+                        <Text text="Donors:" styleClass="stat-label"/>
+                        <Text fx:id="donorsCountLabel" text="0" styleClass="stat-value-donor"/>
+                    </HBox>
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Text text="•" styleClass="stat-dot-staff"/>
+                        <Text text="Hospital Staff:" styleClass="stat-label"/>
+                        <Text fx:id="staffCountLabel" text="0" styleClass="stat-value-staff"/>
+                    </HBox>
+                </HBox>
+
+                <!-- Users List -->
+                <ScrollPane fitToWidth="true" styleClass="content-scroll" VBox.vgrow="ALWAYS">
+                    <VBox fx:id="usersContainer" spacing="15" styleClass="users-container">
+                        <padding>
+                            <Insets top="5" right="5" bottom="5" left="5"/>
+                        </padding>
+                    </VBox>
+                </ScrollPane>
+            </VBox>
+        </StackPane>
     </center>
 
 </BorderPane>
