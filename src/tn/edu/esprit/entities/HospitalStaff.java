@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 
 public class HospitalStaff {
 
-    private String staffId;     // corresponds to staff_id
     private String id;          // corresponds to user_id
     private String hospitalId;  // corresponds to hospital_id
     private String role;
@@ -14,8 +13,7 @@ public class HospitalStaff {
     public HospitalStaff() {
     }
 
-    public HospitalStaff(String staffId, String id, String hospitalId, String role, String department, LocalDateTime createdAt) {
-        this.staffId = staffId;
+    public HospitalStaff(String id, String hospitalId, String role, String department, LocalDateTime createdAt) {
         this.id = id;
         this.hospitalId = hospitalId;
         this.role = role;
@@ -24,14 +22,6 @@ public class HospitalStaff {
     }
 
     // Getters & Setters
-    public String getStaffId() {
-        return staffId;
-    }
-
-    public void setStaffId(String staffId) {
-        this.staffId = staffId;
-    }
-
     public String getId() {
         return id;
     }

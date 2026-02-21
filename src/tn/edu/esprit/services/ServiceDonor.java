@@ -24,20 +24,21 @@ public class ServiceDonor implements IService<Donor> {
         try {
 
             String req = "INSERT INTO donors "
-                    + "(donor_id, user_id, blood_type_id, last_donation_date, "
+                    + "(user_id, blood_type_id, last_donation_date, "
                     + "is_currently_eligible, latitude, longitude, total_donations, created_at) "
-                    + "VALUES ('"
-                    + d.getDonorId() + "', '"
-                    + d.getUserId() + "', '"
-                    + d.getBloodTypeId() + "', "
+                    + "VALUES ("
+                    + "'" + d.getUserId() + "', "
+                    + "'" + d.getBloodTypeId() + "', "
                     + (d.getLastDonationDate() != null
-                    ? "'" + d.getLastDonationDate().toString() + "'"
+                    ? "'" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(d.getLastDonationDate()) + "'"
                     : "NULL") + ", "
                     + (d.isCurrentlyEligible() ? "true" : "false") + ", "
                     + (d.getLatitude() != null ? d.getLatitude() : "NULL") + ", "
                     + (d.getLongitude() != null ? d.getLongitude() : "NULL") + ", "
                     + d.getTotalDonations() + ", "
                     + "NOW())";
+
+
 
             Statement stm = cnx.createStatement();
             stm.executeUpdate(req);
@@ -51,7 +52,8 @@ public class ServiceDonor implements IService<Donor> {
     @Override
     public void modifier(Donor d) {
         try {
-            Donor existing = getOne(d);
+            Donor existing;
+            existing = getOne(d);
             if (existing == null) {
                 System.out.println(" Aucun Donor trouvé avec cet ID !");
                 return;
@@ -62,6 +64,7 @@ public class ServiceDonor implements IService<Donor> {
             String bloodTypeId = d.getBloodTypeId() != null
                     ? d.getBloodTypeId()
                     : existing.getBloodTypeId();
+
 
             String lastDonationDate = d.getLastDonationDate() != null
                     ? "'" + sdf.format(d.getLastDonationDate()) + "'"
@@ -87,6 +90,7 @@ public class ServiceDonor implements IService<Donor> {
 
             String req = "UPDATE donors SET "
                     + "blood_type_id = '" + bloodTypeId + "', "
+
                     + "last_donation_date = " + lastDonationDate + ", "
                     + "is_currently_eligible = " + isCurrentlyEligible + ", "
                     + "latitude = " + (latitude != null ? latitude : "NULL") + ", "
@@ -110,17 +114,17 @@ public class ServiceDonor implements IService<Donor> {
 
 
     @Override
-    public void supprimer(String donorId) {
+    public void supprimer(String userId) {
         try {
 
             Statement stm = cnx.createStatement();
 
             // Supprimer Donor
-            String reqDonor = "DELETE FROM donors WHERE donor_id = '" + donorId + "'";
+            String reqDonor = "DELETE FROM donors WHERE user_id = '" + userId + "'";
             stm.executeUpdate(reqDonor);
 
             // Supprimer User parent (si donorId == userId dans ta logique)
-            String reqUser = "DELETE FROM users WHERE user_id = '" + donorId + "'";
+            String reqUser = "DELETE FROM users WHERE user_id = '" + userId + "'";
             stm.executeUpdate(reqUser);
 
             System.out.println("Donor supprimé !");
@@ -142,14 +146,13 @@ public class ServiceDonor implements IService<Donor> {
             if (rs.next()) {
                 donor = new Donor();
 
-                donor.setDonorId(rs.getString("donor_id"));
                 donor.setUserId(rs.getString("user_id"));
                 donor.setBloodTypeId(rs.getString("blood_type_id"));
 
-                donor.setLastDonationDate(rs.getDate("last_donation_date").toLocalDate());
+                Date sqlDate = rs.getDate("last_donation_date");
+                donor.setLastDonationDate(sqlDate != null ? sqlDate.toLocalDate() : null);
 
                 donor.setCurrentlyEligible(rs.getBoolean("is_currently_eligible"));
-
                 donor.setTotalDonations(rs.getInt("total_donations"));
 
                 double lat = rs.getDouble("latitude");
@@ -166,25 +169,25 @@ public class ServiceDonor implements IService<Donor> {
         return donor;
     }
 
+
     @Override
     public List<Donor> getAll(Donor d) {
         List<Donor> donors = new ArrayList<>();
         try {
-            String req = "SELECT * FROM donors ";
+            String req = "SELECT * FROM donors";
             Statement stm = cnx.createStatement();
             ResultSet rs = stm.executeQuery(req);
 
             while (rs.next()) {
                 Donor donor = new Donor();
 
-                donor.setDonorId(rs.getString("donor_id"));
                 donor.setUserId(rs.getString("user_id"));
                 donor.setBloodTypeId(rs.getString("blood_type_id"));
 
-                donor.setLastDonationDate(rs.getDate("last_donation_date").toLocalDate());
+                Date sqlDate = rs.getDate("last_donation_date");
+                donor.setLastDonationDate(sqlDate != null ? sqlDate.toLocalDate() : null);
 
                 donor.setCurrentlyEligible(rs.getBoolean("is_currently_eligible"));
-
                 donor.setTotalDonations(rs.getInt("total_donations"));
 
                 double lat = rs.getDouble("latitude");
@@ -193,14 +196,16 @@ public class ServiceDonor implements IService<Donor> {
                 double lon = rs.getDouble("longitude");
                 donor.setLongitude(!rs.wasNull() ? lon : null);
 
-                donor.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+                Timestamp ts = rs.getTimestamp("created_at");
+                donor.setCreatedAt(ts != null ? ts.toLocalDateTime() : null);
 
                 donors.add(donor);
             }
         } catch (SQLException ex) {
-            System.out.println(ex.getMessage());
+            System.out.println("Erreur getAll Donors : " + ex.getMessage());
         }
         return donors;
     }
 
-    }
+}
+

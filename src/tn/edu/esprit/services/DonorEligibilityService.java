@@ -24,9 +24,9 @@ public class DonorEligibilityService implements IService<DonorEligibility> {
     public void ajouter(DonorEligibility de) {
         try {
             String req = "INSERT INTO donor_eligibility "
-                    + "(donor_id, is_currently_eligible, days_until_eligible, last_calculated_at, "
+                    + "(user_id, is_currently_eligible, days_until_eligible, last_calculated_at, "
                     + "latitude_cache, longitude_cache, blood_type_cache) VALUES ('"
-                    + de.getDonorId() + "', "
+                    + de.getId() + "', "
                     + (de.getIsCurrentlyEligible() != null ? de.getIsCurrentlyEligible() : true) + ", "
                     + (de.getDaysUntilEligible() != null ? de.getDaysUntilEligible() : 0) + ", "
                     + "NOW(), "
@@ -45,7 +45,7 @@ public class DonorEligibilityService implements IService<DonorEligibility> {
     @Override
     public void modifier(DonorEligibility de) {
         try {
-            DonorEligibility existing = getOne(de.getDonorId());
+            DonorEligibility existing = getOne(de.getId());
             if (existing == null) {
                 System.out.println("Aucun DonorEligibility trouvé pour ce donor_id !");
                 return;
@@ -82,7 +82,7 @@ public class DonorEligibilityService implements IService<DonorEligibility> {
             if (!first) req.append(", ");
             req.append("last_calculated_at = NOW() ");
 
-            req.append("WHERE donor_id = '").append(de.getDonorId()).append("'");
+            req.append("WHERE donor_id = '").append(de.getId()).append("'");
 
             Statement stm = cnx.createStatement();
             int rows = stm.executeUpdate(req.toString());
@@ -92,9 +92,9 @@ public class DonorEligibilityService implements IService<DonorEligibility> {
         }
     }
 
-    public void supprimer(String donorId) {
+    public void supprimer(String id) {
         try {
-            String req = "DELETE FROM donor_eligibility WHERE donor_id = '" + donorId + "'";
+            String req = "DELETE FROM donor_eligibility WHERE user_id = '" + id + "'";
             Statement stm = cnx.createStatement();
             int rows = stm.executeUpdate(req);
             System.out.println(rows > 0 ? "DonorEligibility supprimé !" : "Aucun record trouvé !");
@@ -105,19 +105,19 @@ public class DonorEligibilityService implements IService<DonorEligibility> {
 
     @Override
     public DonorEligibility getOne(DonorEligibility de) {
-        return getOne(de.getDonorId());
+        return getOne(de.getId());
     }
 
-    public DonorEligibility getOne(String donorId) {
+    public DonorEligibility getOne(String id) {
         DonorEligibility de = null;
         try {
-            String req = "SELECT * FROM donor_eligibility WHERE donor_id = '" + donorId + "'";
+            String req = "SELECT * FROM donor_eligibility WHERE user_id = '" + id + "'";
             Statement stm = cnx.createStatement();
             ResultSet rs = stm.executeQuery(req);
             if (rs.next()) {
                 de = new DonorEligibility();
                 de.setDonorEligibilityId(rs.getObject("donor_eligibility_id", UUID.class));
-                de.setDonorId(rs.getString("donor_id"));
+                de.setId(rs.getString("user_id"));
                 de.setIsCurrentlyEligible(rs.getBoolean("is_currently_eligible"));
                 de.setDaysUntilEligible(rs.getObject("days_until_eligible", Integer.class));
                 if (rs.getDate("last_calculated_at") != null) {
@@ -143,7 +143,7 @@ public class DonorEligibilityService implements IService<DonorEligibility> {
             while (rs.next()) {
                 DonorEligibility de = new DonorEligibility();
                 de.setDonorEligibilityId(rs.getObject("donor_eligibility_id", UUID.class));
-                de.setDonorId(rs.getString("donor_id"));
+                de.setId(rs.getString("donor_id"));
                 de.setIsCurrentlyEligible(rs.getBoolean("is_currently_eligible"));
                 de.setDaysUntilEligible(rs.getObject("days_until_eligible", Integer.class));
                 if (rs.getDate("last_calculated_at") != null) {

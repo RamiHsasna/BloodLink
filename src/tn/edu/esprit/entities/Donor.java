@@ -5,9 +5,9 @@ import java.time.LocalDateTime;
 
 public class Donor {
 
-    private String donorId;
     private String userId;
     private String bloodTypeId;
+
     private LocalDate lastDonationDate;
     private boolean isCurrentlyEligible;
     private Double latitude;
@@ -17,11 +17,10 @@ public class Donor {
 
     public Donor() {}
 
-    public Donor(String donorId, String userId, String bloodTypeId,
+    public Donor( String userId, String bloodTypeId,
                  LocalDate lastDonationDate, boolean isCurrentlyEligible,
                  Double latitude, Double longitude, int totalDonations,
                  LocalDateTime createdAt) {
-        this.donorId = donorId;
         this.userId = userId;
         this.bloodTypeId = bloodTypeId;
         this.lastDonationDate = lastDonationDate;
@@ -33,14 +32,14 @@ public class Donor {
     }
 
     // Getters & Setters
-    public String getDonorId() { return donorId; }
-    public void setDonorId(String donorId) { this.donorId = donorId; }
 
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
 
     public String getBloodTypeId() { return bloodTypeId; }
     public void setBloodTypeId(String bloodTypeId) { this.bloodTypeId = bloodTypeId; }
+
+
 
     public LocalDate getLastDonationDate() { return lastDonationDate; }
     public void setLastDonationDate(LocalDate lastDonationDate) { this.lastDonationDate = lastDonationDate; }
