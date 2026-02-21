@@ -82,7 +82,7 @@ public class DonorEligibilityService implements IService<DonorEligibility> {
             if (!first) req.append(", ");
             req.append("last_calculated_at = NOW() ");
 
-            req.append("WHERE donor_id = '").append(de.getId()).append("'");
+            req.append("WHERE user_id = '").append(de.getId()).append("'");
 
             Statement stm = cnx.createStatement();
             int rows = stm.executeUpdate(req.toString());
@@ -143,7 +143,7 @@ public class DonorEligibilityService implements IService<DonorEligibility> {
             while (rs.next()) {
                 DonorEligibility de = new DonorEligibility();
                 de.setDonorEligibilityId(rs.getObject("donor_eligibility_id", UUID.class));
-                de.setId(rs.getString("donor_id"));
+                de.setId(rs.getString("user_id"));
                 de.setIsCurrentlyEligible(rs.getBoolean("is_currently_eligible"));
                 de.setDaysUntilEligible(rs.getObject("days_until_eligible", Integer.class));
                 if (rs.getDate("last_calculated_at") != null) {
