@@ -20,12 +20,11 @@ public class ServiceHospitalStaff implements IService<HospitalStaff> {
     @Override
     public void ajouter(HospitalStaff hs) {
         try {
-            String req = "INSERT INTO hospital_staff "
-                    + "(user_id, role, hospital_id, created_at) VALUES ('"
-                    + hs.getId() + "', '"
-                    + hs.getRole() + "', '"
-                    + hs.getHospitalId() + "', NOW())";
-
+            String req = "INSERT INTO hospital_staff (user_id, role, hospital_id, created_at) VALUES ("
+                    + "'" + hs.getId() + "', "
+                    + "'" + hs.getRole() + "', "
+                    + "'" + hs.getHospitalId() + "', "
+                    + "NOW())";
             Statement stm = cnx.createStatement();
             stm.executeUpdate(req);
 
@@ -34,6 +33,7 @@ public class ServiceHospitalStaff implements IService<HospitalStaff> {
             System.out.println("Erreur ajout HospitalStaff : " + ex.getMessage());
         }
     }
+
 
     @Override
     public void modifier(HospitalStaff hs) {
