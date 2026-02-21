@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 public class Donor {
 
     private String userId;
+    private String firstName;
+    private String lastName;
     private String bloodTypeId;
 
     private LocalDate lastDonationDate;
@@ -17,7 +19,7 @@ public class Donor {
 
     public Donor() {}
 
-    public Donor( String userId, String bloodTypeId,
+    public Donor(String userId, String bloodTypeId,
                  LocalDate lastDonationDate, boolean isCurrentlyEligible,
                  Double latitude, Double longitude, int totalDonations,
                  LocalDateTime createdAt) {
@@ -31,10 +33,32 @@ public class Donor {
         this.createdAt = createdAt;
     }
 
+    public Donor(String userId, String firstName, String lastName, String bloodTypeId,
+                 LocalDate lastDonationDate, boolean isCurrentlyEligible,
+                 Double latitude, Double longitude, int totalDonations,
+                 LocalDateTime createdAt) {
+        this.userId = userId;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.bloodTypeId = bloodTypeId;
+        this.lastDonationDate = lastDonationDate;
+        this.isCurrentlyEligible = isCurrentlyEligible;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.totalDonations = totalDonations;
+        this.createdAt = createdAt;
+    }
+
     // Getters & Setters
 
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
+
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
 
     public String getBloodTypeId() { return bloodTypeId; }
     public void setBloodTypeId(String bloodTypeId) { this.bloodTypeId = bloodTypeId; }
