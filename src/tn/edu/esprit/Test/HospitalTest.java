@@ -3,8 +3,8 @@ package tn.edu.esprit.Test;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
-import tn.edu.esprit.Entities.Hospital;
-import tn.edu.esprit.Services.HospitalServiceImpl;
+import tn.edu.esprit.entities.Hospital;
+import tn.edu.esprit.services.HospitalServiceImpl;
 
 public class HospitalTest {
 

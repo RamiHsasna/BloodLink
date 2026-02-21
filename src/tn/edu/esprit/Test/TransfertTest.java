@@ -4,11 +4,11 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-import tn.edu.esprit.Entities.BloodTransferRequest;
-import tn.edu.esprit.Entities.Hospital;
-import tn.edu.esprit.Entities.TransfertStatus;
-import tn.edu.esprit.Services.HospitalServiceImpl;
-import tn.edu.esprit.Services.TransfertServiceImpl;
+import tn.edu.esprit.entities.BloodTransferRequest;
+import tn.edu.esprit.entities.Hospital;
+import tn.edu.esprit.entities.TransfertStatus;
+import tn.edu.esprit.services.HospitalServiceImpl;
+import tn.edu.esprit.services.TransfertServiceImpl;
 
 public class TransfertTest {
 

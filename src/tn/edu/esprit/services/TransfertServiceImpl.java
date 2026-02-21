@@ -1,4 +1,4 @@
-package tn.edu.esprit.Services;
+package tn.edu.esprit.services;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import tn.edu.esprit.Entities.BloodTransferRequest;
-import tn.edu.esprit.Entities.TransfertStatus;
+import tn.edu.esprit.entities.BloodTransferRequest;
+import tn.edu.esprit.entities.TransfertStatus;
 import tn.edu.esprit.Tools.DataSource;
 
 public class TransfertServiceImpl implements TransfertService {

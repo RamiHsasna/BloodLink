@@ -1,12 +1,11 @@
-package tn.edu.esprit.Services;
+package tn.edu.esprit.services;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import tn.edu.esprit.Entities.BloodType;
+import tn.edu.esprit.entities.BloodType;
 import tn.edu.esprit.Tools.DataSource;
 
 public class BloodTypeServiceImpl implements BloodTypeService {
