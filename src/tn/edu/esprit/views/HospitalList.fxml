@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="tn.edu.esprit.controllers.HospitalListController"
+      styleClass="content-root"
+      spacing="0"
+      stylesheets="@../styles/dashboard.css">
+
+    <!-- Page Header -->
+    <HBox styleClass="page-header" alignment="CENTER_LEFT" spacing="16">
+        <padding>
+            <Insets top="28" right="32" bottom="20" left="32"/>
+        </padding>
+
+        <VBox spacing="4" HBox.hgrow="ALWAYS">
+            <Label text="Hospitals" styleClass="page-title"/>
+            <Label text="Manage and monitor all registered hospitals in the network."
+                   styleClass="page-description"/>
+        </VBox>
+
+        <Button fx:id="btnCreate" text="+ Add Hospital"
+                styleClass="btn-primary"
+                onAction="#onCreateHospital"/>
+    </HBox>
+
+    <!-- Search & Filter Bar -->
+    <HBox styleClass="search-bar-container" alignment="CENTER_LEFT" spacing="12">
+        <padding>
+            <Insets top="0" right="32" bottom="16" left="32"/>
+        </padding>
+
+        <HBox styleClass="search-input-wrapper" alignment="CENTER_LEFT" spacing="8" HBox.hgrow="ALWAYS"
+              maxWidth="420">
+            <padding>
+                <Insets top="0" right="12" bottom="0" left="14"/>
+            </padding>
+            <Label text="🔍" styleClass="search-icon"/>
+            <TextField fx:id="tfSearch" promptText="Search hospitals by name, city, or email..."
+                       styleClass="search-input" HBox.hgrow="ALWAYS"
+                       onKeyReleased="#onSearchChanged"/>
+        </HBox>
+
+        <Region HBox.hgrow="ALWAYS"/>
+
+        <HBox spacing="8" alignment="CENTER_RIGHT">
+            <ComboBox fx:id="cbCityFilter" promptText="All Cities" styleClass="filter-combo"
+                      prefWidth="160" onAction="#onCityFilterChanged"/>
+            <ComboBox fx:id="cbStatusFilter" promptText="All Status" styleClass="filter-combo"
+                      prefWidth="140" onAction="#onStatusFilterChanged"/>
+        </HBox>
+    </HBox>
+
+    <!-- Stats Summary Row -->
+    <HBox fx:id="statsRow" styleClass="stats-row" spacing="16" alignment="CENTER_LEFT">
+        <padding>
+            <Insets top="0" right="32" bottom="16" left="32"/>
+        </padding>
+
+        <HBox styleClass="stat-chip" alignment="CENTER_LEFT" spacing="6">
+            <padding>
+                <Insets top="6" right="14" bottom="6" left="14"/>
+            </padding>
+            <Label text="Total:" styleClass="stat-chip-label"/>
+            <Label fx:id="lblTotalCount" text="0" styleClass="stat-chip-value"/>
+        </HBox>
+
+        <HBox styleClass="stat-chip, stat-chip-active" alignment="CENTER_LEFT" spacing="6">
+            <padding>
+                <Insets top="6" right="14" bottom="6" left="14"/>
+            </padding>
+            <Label text="●" styleClass="status-dot-active"/>
+            <Label text="Active:" styleClass="stat-chip-label"/>
+            <Label fx:id="lblActiveCount" text="0" styleClass="stat-chip-value"/>
+        </HBox>
+
+        <HBox styleClass="stat-chip, stat-chip-inactive" alignment="CENTER_LEFT" spacing="6">
+            <padding>
+                <Insets top="6" right="14" bottom="6" left="14"/>
+            </padding>
+            <Label text="●" styleClass="status-dot-inactive"/>
+            <Label text="Inactive:" styleClass="stat-chip-label"/>
+            <Label fx:id="lblInactiveCount" text="0" styleClass="stat-chip-value"/>
+        </HBox>
+    </HBox>
+
+    <!-- Hospital Cards Scroll Area -->
+    <ScrollPane fx:id="scrollPane" styleClass="cards-scroll-pane" fitToWidth="true"
+                VBox.vgrow="ALWAYS" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">
+        <padding>
+            <Insets top="0" right="0" bottom="0" left="0"/>
+        </padding>
+
+        <VBox fx:id="cardsContainer" styleClass="cards-container" spacing="12">
+            <padding>
+                <Insets top="4" right="32" bottom="24" left="32"/>
+            </padding>
+
+            <!-- Hospital cards will be populated here dynamically by the controller -->
+
+            <!-- Empty State (shown when no hospitals exist) -->
+            <VBox fx:id="emptyState" styleClass="empty-state" alignment="CENTER" spacing="12"
+                  visible="false" managed="false">
+                <padding>
+                    <Insets top="60" right="40" bottom="60" left="40"/>
+                </padding>
+                <Label text="🏥" style="-fx-font-size: 48px;"/>
+                <Label text="No hospitals found" styleClass="empty-state-title"/>
+                <Label text="Get started by adding your first hospital to the network."
+                       styleClass="empty-state-description"/>
+                <Button text="+ Add Hospital" styleClass="btn-primary"
+                        onAction="#onCreateHospital"/>
+            </VBox>
+        </VBox>
+    </ScrollPane>
+
+</VBox>

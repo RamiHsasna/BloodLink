@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="tn.edu.esprit.controllers.InventoryViewController"
+      styleClass="content-root"
+      spacing="0"
+      stylesheets="@../styles/dashboard.css">
+
+    <!-- Page Header -->
+    <HBox styleClass="page-header" alignment="CENTER_LEFT" spacing="16">
+        <padding>
+            <Insets top="28" right="32" bottom="20" left="32"/>
+        </padding>
+
+        <VBox spacing="4" HBox.hgrow="ALWAYS">
+            <Label text="Inventaire" styleClass="page-title"/>
+            <Label text="Gestion des stocks sanguins" styleClass="page-description"/>
+        </VBox>
+
+        <!-- Date display -->
+        <HBox alignment="CENTER_LEFT" spacing="8" styleClass="inv-date-display">
+            <padding>
+                <Insets top="0" right="16" bottom="0" left="0"/>
+            </padding>
+            <Label text="📅" styleClass="inv-date-icon"/>
+            <Label fx:id="lblCurrentDate" text="" styleClass="inv-date-text"/>
+        </HBox>
+
+        <!-- Notification bell -->
+        <StackPane styleClass="inv-notification-bell" prefWidth="40" prefHeight="40">
+            <Label text="🔔" style="-fx-font-size: 18px;"/>
+            <Label fx:id="lblNotifBadge" text="" styleClass="inv-notif-badge"
+                   StackPane.alignment="TOP_RIGHT" visible="false" managed="false"/>
+        </StackPane>
+    </HBox>
+
+    <!-- Main scrollable content -->
+    <ScrollPane styleClass="cards-scroll-pane" fitToWidth="true"
+                VBox.vgrow="ALWAYS" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">
+
+        <VBox spacing="20">
+            <padding>
+                <Insets top="4" right="32" bottom="32" left="32"/>
+            </padding>
+
+            <!-- ============ BLOOD INVENTORY SECTION ============ -->
+            <VBox styleClass="inv-section-card" spacing="0">
+                <padding>
+                    <Insets top="24" right="28" bottom="28" left="28"/>
+                </padding>
+
+                <!-- Section Header: Title + Alert Badges -->
+                <HBox alignment="CENTER_LEFT" spacing="12">
+                    <VBox spacing="4" HBox.hgrow="ALWAYS">
+                        <Label text="Inventaire Sanguin" styleClass="inv-section-title"/>
+                        <Label fx:id="lblTotalStock" text="0 poches en stock" styleClass="inv-section-subtitle"/>
+                    </VBox>
+
+                    <HBox spacing="8" alignment="CENTER_RIGHT">
+                        <HBox fx:id="badgeCritical" styleClass="inv-alert-badge-critical" alignment="CENTER"
+                              spacing="6" visible="false" managed="false">
+                            <padding>
+                                <Insets top="5" right="12" bottom="5" left="10"/>
+                            </padding>
+                            <Label text="⚠" styleClass="inv-alert-badge-critical-icon"/>
+                            <Label fx:id="lblCriticalCount" text="0 critiques"
+                                   styleClass="inv-alert-badge-critical-text"/>
+                        </HBox>
+
+                        <HBox fx:id="badgeLow" styleClass="inv-alert-badge-low" alignment="CENTER"
+                              spacing="6" visible="false" managed="false">
+                            <padding>
+                                <Insets top="5" right="12" bottom="5" left="10"/>
+                            </padding>
+                            <Label fx:id="lblLowCount" text="0 faibles"
+                                   styleClass="inv-alert-badge-low-text"/>
+                        </HBox>
+                    </HBox>
+                </HBox>
+
+                <!-- Spacer -->
+                <Region prefHeight="20"/>
+
+                <!-- Blood Type Cards Grid (4 columns x 2 rows) -->
+                <GridPane fx:id="bloodTypeGrid" hgap="16" vgap="16">
+                    <columnConstraints>
+                        <ColumnConstraints hgrow="ALWAYS" percentWidth="25"/>
+                        <ColumnConstraints hgrow="ALWAYS" percentWidth="25"/>
+                        <ColumnConstraints hgrow="ALWAYS" percentWidth="25"/>
+                        <ColumnConstraints hgrow="ALWAYS" percentWidth="25"/>
+                    </columnConstraints>
+                    <rowConstraints>
+                        <RowConstraints vgrow="ALWAYS"/>
+                        <RowConstraints vgrow="ALWAYS"/>
+                    </rowConstraints>
+                    <!-- Cards will be populated dynamically by the controller -->
+                </GridPane>
+
+            </VBox>
+
+            <!-- ============ QUICK ACTIONS SECTION ============ -->
+            <VBox styleClass="inv-section-card" spacing="0">
+                <padding>
+                    <Insets top="24" right="28" bottom="28" left="28"/>
+                </padding>
+
+                <!-- Section Header -->
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label text="⚡" style="-fx-font-size: 18px;"/>
+                    <Label text="Actions Rapides" styleClass="inv-section-title"/>
+                </HBox>
+
+                <Region prefHeight="20"/>
+
+                <!-- Quick Action Cards Grid (2 columns x 2 rows) -->
+                <GridPane hgap="16" vgap="16">
+                    <columnConstraints>
+                        <ColumnConstraints hgrow="ALWAYS" percentWidth="50"/>
+                        <ColumnConstraints hgrow="ALWAYS" percentWidth="50"/>
+                    </columnConstraints>
+                    <rowConstraints>
+                        <RowConstraints vgrow="ALWAYS"/>
+                        <RowConstraints vgrow="ALWAYS"/>
+                    </rowConstraints>
+
+                    <!-- Row 0: Urgent Actions (colored) -->
+                    <VBox styleClass="inv-action-card-urgent" spacing="4" onMouseClicked="#onUrgentAlert"
+                          GridPane.columnIndex="0" GridPane.rowIndex="0">
+                        <padding>
+                            <Insets top="18" right="20" bottom="18" left="20"/>
+                        </padding>
+                        <HBox alignment="CENTER_LEFT" spacing="8">
+                            <Label text="⚠" styleClass="inv-action-icon-light"/>
+                            <Label text="Alerte d'urgence" styleClass="inv-action-title-light"/>
+                        </HBox>
+                        <Label text="Notifier les donneurs" styleClass="inv-action-subtitle-light"/>
+                    </VBox>
+
+                    <VBox styleClass="inv-action-card-transfer" spacing="4" onMouseClicked="#onRequestTransfer"
+                          GridPane.columnIndex="1" GridPane.rowIndex="0">
+                        <padding>
+                            <Insets top="18" right="20" bottom="18" left="20"/>
+                        </padding>
+                        <HBox alignment="CENTER_LEFT" spacing="8">
+                            <Label text="🔄" styleClass="inv-action-icon-light"/>
+                            <Label text="Demander transfert" styleClass="inv-action-title-light"/>
+                        </HBox>
+                        <Label text="Stock d'un autre hôpital" styleClass="inv-action-subtitle-light"/>
+                    </VBox>
+
+                    <!-- Row 1: Regular Actions (outlined) -->
+                    <VBox styleClass="inv-action-card-outlined" spacing="4" onMouseClicked="#onAddStock"
+                          GridPane.columnIndex="0" GridPane.rowIndex="1">
+                        <padding>
+                            <Insets top="18" right="20" bottom="18" left="20"/>
+                        </padding>
+                        <HBox alignment="CENTER_LEFT" spacing="8">
+                            <Label text="+" styleClass="inv-action-icon-dark"/>
+                            <Label text="Ajouter stock" styleClass="inv-action-title-dark"/>
+                        </HBox>
+                        <Label text="Enregistrer nouvelles poches" styleClass="inv-action-subtitle-dark"/>
+                    </VBox>
+
+                    <VBox styleClass="inv-action-card-outlined" spacing="4" onMouseClicked="#onGenerateReport"
+                          GridPane.columnIndex="1" GridPane.rowIndex="1">
+                        <padding>
+                            <Insets top="18" right="20" bottom="18" left="20"/>
+                        </padding>
+                        <HBox alignment="CENTER_LEFT" spacing="8">
+                            <Label text="📄" styleClass="inv-action-icon-dark"/>
+                            <Label text="Generer rapport" styleClass="inv-action-title-dark"/>
+                        </HBox>
+                        <Label text="Export des donnees" styleClass="inv-action-subtitle-dark"/>
+                    </VBox>
+                </GridPane>
+            </VBox>
+
+        </VBox>
+    </ScrollPane>
+
+</VBox>
