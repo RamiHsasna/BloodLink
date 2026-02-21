@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="tn.edu.esprit.gui.DonorEligibilityDashboardController" 
+      styleClass="main-content" spacing="20">
+    <padding>
+        <Insets top="30" right="40" bottom="30" left="40"/>
+    </padding>
+
+    <!-- Header Section -->
+    <HBox alignment="CENTER_LEFT" spacing="20">
+        <VBox HBox.hgrow="ALWAYS">
+            <Text text="Donor Eligibility" styleClass="page-title"/>
+            <Text text="Manage and monitor donor eligibility records in the network." styleClass="page-subtitle"/>
+        </VBox>
+        <Button text="+ Add Eligibility" styleClass="btn-primary" fx:id="addEligibilityBtn" onAction="#handleAddEligibility">
+            <padding>
+                <Insets top="12" right="24" bottom="12" left="24"/>
+            </padding>
+        </Button>
+    </HBox>
+
+    <!-- Search and Filter Bar -->
+    <HBox spacing="15" alignment="CENTER_LEFT">
+        <TextField fx:id="searchField" promptText="Search by donor ID or blood type..." 
+                  styleClass="search-field" HBox.hgrow="ALWAYS" onKeyReleased="#handleSearch">
+            <padding>
+                <Insets top="10" right="15" bottom="10" left="15"/>
+            </padding>
+        </TextField>
+        
+        <ComboBox fx:id="eligibilityFilter" promptText="All Eligibility" styleClass="filter-combo" prefWidth="180"
+                 onAction="#handleFilter">
+            <padding>
+                <Insets top="10" right="15" bottom="10" left="15"/>
+            </padding>
+        </ComboBox>
+    </HBox>
+
+    <!-- Stats Section -->
+    <HBox spacing="20">
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Text text="Total:" styleClass="stat-label"/>
+            <Text fx:id="totalRecordsLabel" text="0" styleClass="stat-value"/>
+        </HBox>
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Text text="•" styleClass="stat-dot-donor"/>
+            <Text text="Eligible:" styleClass="stat-label"/>
+            <Text fx:id="eligibleCountLabel" text="0" styleClass="stat-value-donor"/>
+        </HBox>
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Text text="•" styleClass="stat-dot-staff"/>
+            <Text text="Not Eligible:" styleClass="stat-label"/>
+            <Text fx:id="notEligibleCountLabel" text="0" styleClass="stat-value-staff"/>
+        </HBox>
+    </HBox>
+
+    <!-- Eligibility Records List -->
+    <ScrollPane fitToWidth="true" styleClass="content-scroll" VBox.vgrow="ALWAYS">
+        <VBox fx:id="eligibilityContainer" spacing="15" styleClass="users-container">
+            <padding>
+                <Insets top="5" right="5" bottom="5" left="5"/>
+            </padding>
+        </VBox>
+    </ScrollPane>
+</VBox>
