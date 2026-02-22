@@ -33,12 +33,16 @@ public class UserDashboardController {
     @FXML private StackPane contentArea;
     @FXML private VBox userManagementContent;
     @FXML private Button usersNavBtn;
+    @FXML private Button donationsNavBtn;
+    @FXML private Button donationEventsNavBtn;
     @FXML private Button eligibilityNavBtn;
 
     private ServiceUser serviceUser;
     private List<Users> allUsers;
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private Parent eligibilityContent;
+    private Parent donationsContent;
+    private Parent donationEventsContent;
 
     @FXML
     public void initialize() {
@@ -60,19 +64,76 @@ public class UserDashboardController {
     }
 
     @FXML
+    private void handleDonationsNav() {
+        showDonationsManagement();
+    }
+
+    @FXML
     private void handleEligibilityNav() {
         showEligibilityManagement();
+    }
+
+    @FXML
+    private void handleDonationEventsNav() {
+        showDonationEventsManagement();
     }
 
     private void showUserManagement() {
         // Update navigation buttons
         usersNavBtn.getStyleClass().add("nav-button-active");
+        donationsNavBtn.getStyleClass().remove("nav-button-active");
+        donationEventsNavBtn.getStyleClass().remove("nav-button-active");
         eligibilityNavBtn.getStyleClass().remove("nav-button-active");
         
         // Show user management content
         userManagementContent.setVisible(true);
         userManagementContent.setManaged(true);
         
+        if (donationsContent != null) {
+            donationsContent.setVisible(false);
+            donationsContent.setManaged(false);
+        }
+        if (donationEventsContent != null) {
+            donationEventsContent.setVisible(false);
+            donationEventsContent.setManaged(false);
+        }
+        if (eligibilityContent != null) {
+            eligibilityContent.setVisible(false);
+            eligibilityContent.setManaged(false);
+        }
+    }
+
+    private void showDonationsManagement() {
+        // Update navigation buttons
+        usersNavBtn.getStyleClass().remove("nav-button-active");
+        donationsNavBtn.getStyleClass().add("nav-button-active");
+        donationEventsNavBtn.getStyleClass().remove("nav-button-active");
+        eligibilityNavBtn.getStyleClass().remove("nav-button-active");
+        
+        // Hide user management content
+        userManagementContent.setVisible(false);
+        userManagementContent.setManaged(false);
+        
+        // Load donations content if not already loaded
+        if (donationsContent == null) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("DonationsDashboard.fxml"));
+                donationsContent = loader.load();
+                contentArea.getChildren().add(donationsContent);
+            } catch (IOException e) {
+                e.printStackTrace();
+                showAlert("Error", "Could not load donations interface: " + e.getMessage());
+                return;
+            }
+        }
+        
+        donationsContent.setVisible(true);
+        donationsContent.setManaged(true);
+        
+        if (donationEventsContent != null) {
+            donationEventsContent.setVisible(false);
+            donationEventsContent.setManaged(false);
+        }
         if (eligibilityContent != null) {
             eligibilityContent.setVisible(false);
             eligibilityContent.setManaged(false);
@@ -82,11 +143,22 @@ public class UserDashboardController {
     private void showEligibilityManagement() {
         // Update navigation buttons
         usersNavBtn.getStyleClass().remove("nav-button-active");
+        donationsNavBtn.getStyleClass().remove("nav-button-active");
+        donationEventsNavBtn.getStyleClass().remove("nav-button-active");
         eligibilityNavBtn.getStyleClass().add("nav-button-active");
         
         // Hide user management content
         userManagementContent.setVisible(false);
         userManagementContent.setManaged(false);
+        
+        if (donationsContent != null) {
+            donationsContent.setVisible(false);
+            donationsContent.setManaged(false);
+        }
+        if (donationEventsContent != null) {
+            donationEventsContent.setVisible(false);
+            donationEventsContent.setManaged(false);
+        }
         
         // Load eligibility content if not already loaded
         if (eligibilityContent == null) {
@@ -103,6 +175,43 @@ public class UserDashboardController {
         
         eligibilityContent.setVisible(true);
         eligibilityContent.setManaged(true);
+    }
+
+    private void showDonationEventsManagement() {
+        // Update navigation buttons
+        usersNavBtn.getStyleClass().remove("nav-button-active");
+        donationsNavBtn.getStyleClass().remove("nav-button-active");
+        donationEventsNavBtn.getStyleClass().add("nav-button-active");
+        eligibilityNavBtn.getStyleClass().remove("nav-button-active");
+        
+        // Hide user management content
+        userManagementContent.setVisible(false);
+        userManagementContent.setManaged(false);
+        
+        if (donationsContent != null) {
+            donationsContent.setVisible(false);
+            donationsContent.setManaged(false);
+        }
+        if (eligibilityContent != null) {
+            eligibilityContent.setVisible(false);
+            eligibilityContent.setManaged(false);
+        }
+        
+        // Load donation events content if not already loaded
+        if (donationEventsContent == null) {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("DonationEventDashboard.fxml"));
+                donationEventsContent = loader.load();
+                contentArea.getChildren().add(donationEventsContent);
+            } catch (IOException e) {
+                e.printStackTrace();
+                showAlert("Error", "Could not load donation events interface: " + e.getMessage());
+                return;
+            }
+        }
+        
+        donationEventsContent.setVisible(true);
+        donationEventsContent.setManaged(true);
     }
 
     private void loadUsers() {

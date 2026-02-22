@@ -306,6 +306,22 @@
     -fx-text-fill: #5b21b6;
 }
 
+/* Donation Status Badges */
+.badge-completed {
+    -fx-background-color: #d1fae5;
+    -fx-text-fill: #065f46;
+}
+
+.badge-pending {
+    -fx-background-color: #fef3c7;
+    -fx-text-fill: #92400e;
+}
+
+.badge-cancelled {
+    -fx-background-color: #fee2e2;
+    -fx-text-fill: #7f1d1d;
+}
+
 /* Detail Items */
 .detail-icon {
     -fx-font-size: 14px;
