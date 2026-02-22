@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="tn.edu.esprit.controllers.TransferListController"
+      styleClass="content-root"
+      spacing="0"
+      stylesheets="@../styles/dashboard.css">
+
+    <!-- Page Header -->
+    <HBox styleClass="page-header" alignment="CENTER_LEFT" spacing="16">
+        <padding>
+            <Insets top="28" right="32" bottom="20" left="32"/>
+        </padding>
+
+        <VBox spacing="4" HBox.hgrow="ALWAYS">
+            <Label text="Transferts" styleClass="page-title"/>
+            <Label text="Gestion des demandes de transfert inter-hopital."
+                   styleClass="page-description"/>
+        </VBox>
+
+        <Button fx:id="btnNewTransfer" text="+ Nouveau Transfert"
+                styleClass="btn-primary"
+                onAction="#onNewTransfer"/>
+    </HBox>
+
+    <!-- Stats Summary Row -->
+    <HBox fx:id="statsRow" styleClass="stats-row" spacing="12" alignment="CENTER_LEFT">
+        <padding>
+            <Insets top="0" right="32" bottom="16" left="32"/>
+        </padding>
+
+        <HBox styleClass="stat-chip" alignment="CENTER_LEFT" spacing="6">
+            <padding>
+                <Insets top="6" right="14" bottom="6" left="14"/>
+            </padding>
+            <Label text="Total:" styleClass="stat-chip-label"/>
+            <Label fx:id="lblTotalCount" text="0" styleClass="stat-chip-value"/>
+        </HBox>
+
+        <HBox styleClass="stat-chip, tf-stat-pending" alignment="CENTER_LEFT" spacing="6">
+            <padding>
+                <Insets top="6" right="14" bottom="6" left="14"/>
+            </padding>
+            <Label text="●" styleClass="tf-dot-pending"/>
+            <Label text="En attente:" styleClass="stat-chip-label"/>
+            <Label fx:id="lblPendingCount" text="0" styleClass="stat-chip-value"/>
+        </HBox>
+
+        <HBox styleClass="stat-chip, tf-stat-approved" alignment="CENTER_LEFT" spacing="6">
+            <padding>
+                <Insets top="6" right="14" bottom="6" left="14"/>
+            </padding>
+            <Label text="●" styleClass="tf-dot-approved"/>
+            <Label text="Approuve:" styleClass="stat-chip-label"/>
+            <Label fx:id="lblApprovedCount" text="0" styleClass="stat-chip-value"/>
+        </HBox>
+
+        <HBox styleClass="stat-chip, tf-stat-transit" alignment="CENTER_LEFT" spacing="6">
+            <padding>
+                <Insets top="6" right="14" bottom="6" left="14"/>
+            </padding>
+            <Label text="●" styleClass="tf-dot-transit"/>
+            <Label text="En transit:" styleClass="stat-chip-label"/>
+            <Label fx:id="lblInTransitCount" text="0" styleClass="stat-chip-value"/>
+        </HBox>
+
+        <HBox styleClass="stat-chip, tf-stat-delivered" alignment="CENTER_LEFT" spacing="6">
+            <padding>
+                <Insets top="6" right="14" bottom="6" left="14"/>
+            </padding>
+            <Label text="●" styleClass="tf-dot-delivered"/>
+            <Label text="Livre:" styleClass="stat-chip-label"/>
+            <Label fx:id="lblDeliveredCount" text="0" styleClass="stat-chip-value"/>
+        </HBox>
+    </HBox>
+
+    <!-- Search & Filter Bar -->
+    <HBox styleClass="search-bar-container" alignment="CENTER_LEFT" spacing="12">
+        <padding>
+            <Insets top="0" right="32" bottom="16" left="32"/>
+        </padding>
+
+        <HBox styleClass="search-input-wrapper" alignment="CENTER_LEFT" spacing="8" HBox.hgrow="ALWAYS"
+              maxWidth="400">
+            <padding>
+                <Insets top="0" right="12" bottom="0" left="14"/>
+            </padding>
+            <Label text="&#x1F50D;" styleClass="search-icon"/>
+            <TextField fx:id="tfSearch" promptText="Rechercher par hopital, groupe sanguin..."
+                       styleClass="search-input" HBox.hgrow="ALWAYS"
+                       onKeyReleased="#onSearchChanged"/>
+        </HBox>
+
+        <Region HBox.hgrow="ALWAYS"/>
+
+        <HBox spacing="8" alignment="CENTER_RIGHT">
+            <ComboBox fx:id="cbStatusFilter" promptText="Tous les statuts" styleClass="filter-combo"
+                      prefWidth="180" onAction="#onStatusFilterChanged"/>
+            <ComboBox fx:id="cbBloodTypeFilter" promptText="Groupe sanguin" styleClass="filter-combo"
+                      prefWidth="160" onAction="#onBloodTypeFilterChanged"/>
+        </HBox>
+    </HBox>
+
+    <!-- Transfer Cards Scroll Area -->
+    <ScrollPane fx:id="scrollPane" styleClass="cards-scroll-pane" fitToWidth="true"
+                VBox.vgrow="ALWAYS" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">
+        <padding>
+            <Insets top="0" right="0" bottom="0" left="0"/>
+        </padding>
+
+        <VBox fx:id="cardsContainer" styleClass="cards-container" spacing="12">
+            <padding>
+                <Insets top="4" right="32" bottom="24" left="32"/>
+            </padding>
+
+            <!-- Transfer cards will be populated here dynamically by the controller -->
+
+            <!-- Empty State -->
+            <VBox fx:id="emptyState" styleClass="empty-state" alignment="CENTER" spacing="12"
+                  visible="false" managed="false">
+                <padding>
+                    <Insets top="60" right="40" bottom="60" left="40"/>
+                </padding>
+                <Label text="&#x1F504;" style="-fx-font-size: 48px;"/>
+                <Label text="Aucun transfert trouve" styleClass="empty-state-title"/>
+                <Label text="Commencez par creer une nouvelle demande de transfert inter-hopital."
+                       styleClass="empty-state-description"/>
+                <Button text="+ Nouveau Transfert" styleClass="btn-primary"
+                        onAction="#onNewTransfer"/>
+            </VBox>
+        </VBox>
+    </ScrollPane>
+
+</VBox>

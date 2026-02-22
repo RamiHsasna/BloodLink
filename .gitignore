@@ -29,3 +29,4 @@ bin/
 ### Mac OS ###
 .DS_Store
 /database_schema.sql
+/.idea/libraries/lib.xml

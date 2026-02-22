@@ -58,8 +58,7 @@ public class MainDashboardController implements Initializable {
     @FXML
     private void onNavTransfers() {
         setActiveNav(navTransfers);
-        // TODO: loadView("/tn/edu/esprit/views/TransferList.fxml");
-        System.out.println("Transfers view not yet implemented.");
+        loadView("/tn/edu/esprit/views/TransferList.fxml");
     }
 
     @FXML

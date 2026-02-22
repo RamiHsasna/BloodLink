@@ -933,3 +933,191 @@
     -fx-font-size: 12.5px;
     -fx-padding: 0 0 0 24;
 }
+
+/* ============================================================
+   TRANSFER REQUEST STYLES
+   ============================================================ */
+
+/* ---------- Status Dots (stat chips in header) ---------- */
+.tf-dot-pending {
+    -fx-text-fill: #eab308;
+    -fx-font-size: 10px;
+}
+
+.tf-dot-approved {
+    -fx-text-fill: #3b82f6;
+    -fx-font-size: 10px;
+}
+
+.tf-dot-transit {
+    -fx-text-fill: #6366f1;
+    -fx-font-size: 10px;
+}
+
+.tf-dot-delivered {
+    -fx-text-fill: #22c55e;
+    -fx-font-size: 10px;
+}
+
+.tf-dot-cancelled {
+    -fx-text-fill: #ef4444;
+    -fx-font-size: 10px;
+}
+
+/* ---------- Stat Chip Variants ---------- */
+.tf-stat-pending {
+    -fx-background-color: #fefce8;
+    -fx-border-color: #fde68a;
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+    -fx-background-radius: 16;
+}
+
+.tf-stat-approved {
+    -fx-background-color: #eff6ff;
+    -fx-border-color: #bfdbfe;
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+    -fx-background-radius: 16;
+}
+
+.tf-stat-transit {
+    -fx-background-color: #eef2ff;
+    -fx-border-color: #c7d2fe;
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+    -fx-background-radius: 16;
+}
+
+.tf-stat-delivered {
+    -fx-background-color: #f0fdf4;
+    -fx-border-color: #bbf7d0;
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+    -fx-background-radius: 16;
+}
+
+/* ---------- Transfer Form Overrides ---------- */
+
+/* Make ComboBox inside modal form look consistent */
+.modal-body .form-input.combo-box,
+.modal-body .combo-box {
+    -fx-background-color: white;
+    -fx-border-color: #d1d5db;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 6 12;
+    -fx-font-size: 13px;
+    -fx-cursor: hand;
+}
+
+.modal-body .combo-box:hover {
+    -fx-border-color: #94a3b8;
+}
+
+.modal-body .combo-box:focused,
+.modal-body .combo-box:showing {
+    -fx-border-color: #dc2626;
+    -fx-effect: dropshadow(gaussian, rgba(220, 38, 38, 0.12), 6, 0, 0, 0);
+}
+
+.modal-body .combo-box .list-cell {
+    -fx-font-size: 13px;
+    -fx-text-fill: #334155;
+    -fx-padding: 4 8;
+}
+
+.modal-body .combo-box-popup .list-view {
+    -fx-background-color: white;
+    -fx-border-color: #e2e8f0;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 10, 0, 0, 4);
+}
+
+.modal-body .combo-box-popup .list-view .list-cell:hover {
+    -fx-background-color: #f8fafc;
+}
+
+.modal-body .combo-box-popup .list-view .list-cell:selected {
+    -fx-background-color: #fee2e2;
+    -fx-text-fill: #dc2626;
+}
+
+/* Spinner inside modal form */
+.modal-body .spinner {
+    -fx-background-color: white;
+    -fx-border-color: #d1d5db;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-font-size: 13px;
+}
+
+.modal-body .spinner:focused {
+    -fx-border-color: #dc2626;
+    -fx-effect: dropshadow(gaussian, rgba(220, 38, 38, 0.12), 6, 0, 0, 0);
+}
+
+.modal-body .spinner .increment-arrow-button,
+.modal-body .spinner .decrement-arrow-button {
+    -fx-background-color: #f8fafc;
+    -fx-border-color: #e2e8f0;
+    -fx-cursor: hand;
+}
+
+.modal-body .spinner .increment-arrow-button:hover,
+.modal-body .spinner .decrement-arrow-button:hover {
+    -fx-background-color: #f1f5f9;
+}
+
+/* DatePicker inside modal form */
+.modal-body .date-picker {
+    -fx-background-color: white;
+    -fx-border-color: #d1d5db;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-font-size: 13px;
+}
+
+.modal-body .date-picker:focused {
+    -fx-border-color: #dc2626;
+    -fx-effect: dropshadow(gaussian, rgba(220, 38, 38, 0.12), 6, 0, 0, 0);
+}
+
+.modal-body .date-picker .arrow-button {
+    -fx-background-color: transparent;
+    -fx-cursor: hand;
+}
+
+.modal-body .date-picker-popup {
+    -fx-background-color: white;
+    -fx-border-color: #e2e8f0;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.12), 12, 0, 0, 4);
+}
+
+/* TextArea inside modal form */
+.modal-body .text-area {
+    -fx-background-color: white;
+    -fx-border-color: #d1d5db;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-font-size: 13px;
+    -fx-padding: 8 12;
+}
+
+.modal-body .text-area:focused {
+    -fx-border-color: #dc2626;
+    -fx-effect: dropshadow(gaussian, rgba(220, 38, 38, 0.12), 6, 0, 0, 0);
+}
+
+.modal-body .text-area .content {
+    -fx-background-color: white;
+    -fx-background-radius: 8;
+}
