@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="tn.edu.esprit.gui.DonationEventDashboardController" 
+      styleClass="main-content" spacing="20">
+    
+    <padding>
+        <Insets top="30" right="40" bottom="30" left="40"/>
+    </padding>
+
+    <!-- Header Section -->
+    <HBox alignment="CENTER_LEFT" spacing="20">
+        <VBox HBox.hgrow="ALWAYS">
+            <Text text="Donation Events" styleClass="page-title"/>
+            <Text text="Manage and monitor all blood donation events in the network." styleClass="page-subtitle"/>
+        </VBox>
+        <Button text="+ Add Event" styleClass="btn-primary" fx:id="addEventBtn" onAction="#handleAddEvent">
+            <padding>
+                <Insets top="12" right="24" bottom="12" left="24"/>
+            </padding>
+        </Button>
+    </HBox>
+
+    <!-- Search and Filter Bar -->
+    <HBox spacing="15" alignment="CENTER_LEFT">
+        <TextField fx:id="searchField" promptText="Search events by name, hospital, location..." 
+                  styleClass="search-field" HBox.hgrow="ALWAYS" onKeyReleased="#handleSearch">
+            <padding>
+                <Insets top="10" right="15" bottom="10" left="15"/>
+            </padding>
+        </TextField>
+        
+        <ComboBox fx:id="statusFilter" promptText="All Status" styleClass="filter-combo" prefWidth="180"
+                 onAction="#handleFilter">
+            <padding>
+                <Insets top="10" right="15" bottom="10" left="15"/>
+            </padding>
+        </ComboBox>
+    </HBox>
+
+    <!-- Stats Section -->
+    <HBox spacing="20">
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Text text="Total:" styleClass="stat-label"/>
+            <Text fx:id="totalEventsLabel" text="0" styleClass="stat-value"/>
+        </HBox>
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Text text="•" styleClass="stat-dot-donor"/>
+            <Text text="Active:" styleClass="stat-label"/>
+            <Text fx:id="activeEventsLabel" text="0" styleClass="stat-value-donor"/>
+        </HBox>
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Text text="•" styleClass="stat-dot-staff"/>
+            <Text text="Completed:" styleClass="stat-label"/>
+            <Text fx:id="completedEventsLabel" text="0" styleClass="stat-value-staff"/>
+        </HBox>
+    </HBox>
+
+    <!-- Events List -->
+    <ScrollPane fitToWidth="true" styleClass="content-scroll" VBox.vgrow="ALWAYS">
+        <VBox fx:id="eventsContainer" spacing="15" styleClass="users-container" style="-fx-border-color: #e2e8f0; -fx-border-width: 1;">
+            <padding>
+                <Insets top="5" right="5" bottom="5" left="5"/>
+            </padding>
+            <Label text="Loading events..."/>
+        </VBox>
+    </ScrollPane>
+</VBox>
