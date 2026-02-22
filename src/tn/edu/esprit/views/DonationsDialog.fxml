@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="tn.edu.esprit.controllers.DonationsDialogController"
+      styleClass="dialog-container" spacing="15" prefWidth="500">
+
+    <padding>
+        <Insets top="20" right="25" bottom="20" left="25"/>
+    </padding>
+
+    <!-- Header -->
+    <VBox spacing="5">
+        <Text fx:id="dialogTitle" text="Add Donation" styleClass="dialog-title"/>
+        <Text text="Register a new blood donation in the BloodLink network." styleClass="dialog-subtitle"/>
+    </VBox>
+
+    <!-- Form -->
+    <ScrollPane fitToWidth="true" styleClass="form-scroll">
+        <VBox spacing="12">
+            <!-- Donor ID -->
+            <VBox spacing="5">
+                <Label text="Donor" styleClass="form-label"/>
+                <ComboBox fx:id="donorIdCombo" promptText="Select a donor" styleClass="form-field" maxWidth="Infinity">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </ComboBox>
+            </VBox>
+
+            <!-- Hospital ID -->
+            <VBox spacing="5">
+                <Label text="Hospital" styleClass="form-label"/>
+                <ComboBox fx:id="hospitalIdCombo" promptText="Select a hospital" styleClass="form-field" maxWidth="Infinity">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </ComboBox>
+            </VBox>
+
+            <!-- Donation Event ID -->
+            <VBox spacing="5">
+                <Label text="Donation Event" styleClass="form-label"/>
+                <ComboBox fx:id="donationEventIdCombo" promptText="Select a donation event" styleClass="form-field" maxWidth="Infinity">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </ComboBox>
+            </VBox>
+
+            <!-- Blood Type ID -->
+            <VBox spacing="5">
+                <Label text="Blood Type ID" styleClass="form-label"/>
+                <TextField fx:id="bloodTypeIdField" promptText="e.g. O+ " styleClass="form-field">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </TextField>
+            </VBox>
+
+            <!-- Donation Date -->
+            <VBox spacing="5">
+                <Label text="Donation Date" styleClass="form-label"/>
+                <DatePicker fx:id="donationDatePicker" styleClass="form-field">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </DatePicker>
+            </VBox>
+
+            <!-- Units Collected -->
+            <VBox spacing="5">
+                <Label text="Units Collected" styleClass="form-label"/>
+                <TextField fx:id="unitsCollectedField" promptText="e.g. 1" styleClass="form-field">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </TextField>
+            </VBox>
+
+            <!-- Volume Collected (ml) -->
+            <VBox spacing="5">
+                <Label text="Volume Collected (ml)" styleClass="form-label"/>
+                <TextField fx:id="volumeCollectedField" promptText="e.g. 450.00" styleClass="form-field">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </TextField>
+            </VBox>
+
+            <!-- Status -->
+            <VBox spacing="5">
+                <Label text="Status" styleClass="form-label"/>
+                <ComboBox fx:id="statusCombo" promptText="Select status" styleClass="form-field" maxWidth="Infinity">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </ComboBox>
+            </VBox>
+
+            <!-- Screening Passed -->
+            <VBox spacing="5">
+                <Label text="Screening Passed" styleClass="form-label"/>
+                <ComboBox fx:id="screeningCombo" promptText="Select result" styleClass="form-field" maxWidth="Infinity">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </ComboBox>
+            </VBox>
+
+            <!-- Medical Notes -->
+            <VBox spacing="5">
+                <Label text="Medical Notes" styleClass="form-label"/>
+                <TextArea fx:id="medicalNotesField" promptText="Add any relevant medical notes..."
+                         styleClass="form-field" prefRowCount="3" wrapText="true">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </TextArea>
+            </VBox>
+
+        </VBox>
+    </ScrollPane>
+
+    <!-- Action Buttons -->
+    <HBox spacing="8" alignment="CENTER_RIGHT">
+        <Button text="Cancel" styleClass="btn-cancel" onAction="#handleCancel">
+            <padding>
+                <Insets top="12" right="24" bottom="12" left="24"/>
+            </padding>
+        </Button>
+        <Button fx:id="saveButton" text="Create Donation" styleClass="btn-primary" onAction="#handleSave">
+            <padding>
+                <Insets top="12" right="24" bottom="12" left="24"/>
+            </padding>
+        </Button>
+    </HBox>
+</VBox>

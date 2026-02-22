@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="tn.edu.esprit.controllers.UserDialogController"
+      styleClass="dialog-container" spacing="20" prefWidth="600">
+
+    <padding>
+        <Insets top="30" right="40" bottom="30" left="40"/>
+    </padding>
+
+    <!-- Header -->
+    <VBox spacing="5">
+        <Text fx:id="dialogTitle" text="Add User" styleClass="dialog-title"/>
+        <Text text="Register a new user in the BloodLink network." styleClass="dialog-subtitle"/>
+    </VBox>
+
+    <!-- Form -->
+    <ScrollPane fitToWidth="true" styleClass="form-scroll">
+        <VBox spacing="20">
+            <!-- First Name -->
+            <VBox spacing="8">
+                <Label text="First Name" styleClass="form-label"/>
+                <TextField fx:id="firstNameField" promptText="e.g. John" styleClass="form-field">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </TextField>
+            </VBox>
+
+            <!-- Last Name -->
+            <VBox spacing="8">
+                <Label text="Last Name" styleClass="form-label"/>
+                <TextField fx:id="lastNameField" promptText="e.g. Doe" styleClass="form-field">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </TextField>
+            </VBox>
+
+            <!-- Email -->
+            <VBox spacing="8">
+                <Label text="Email" styleClass="form-label"/>
+                <TextField fx:id="emailField" promptText="e.g. john.doe@example.com" styleClass="form-field">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </TextField>
+            </VBox>
+
+            <!-- Phone -->
+            <VBox spacing="8">
+                <Label text="Phone" styleClass="form-label"/>
+                <TextField fx:id="phoneField" promptText="e.g. +216 12 345 678" styleClass="form-field">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </TextField>
+            </VBox>
+
+            <!-- Password -->
+            <VBox spacing="8" fx:id="passwordBox">
+                <Label text="Password" styleClass="form-label"/>
+                <PasswordField fx:id="passwordField" promptText="Enter password" styleClass="form-field">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </PasswordField>
+            </VBox>
+
+            <!-- User Type -->
+            <VBox spacing="8">
+                <Label text="User Type" styleClass="form-label"/>
+                <ComboBox fx:id="userTypeCombo" promptText="Select user type" styleClass="form-field" maxWidth="Infinity">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </ComboBox>
+            </VBox>
+
+        </VBox>
+    </ScrollPane>
+
+    <!-- Action Buttons -->
+    <HBox spacing="15" alignment="CENTER_RIGHT">
+        <Button text="Cancel" styleClass="btn-cancel" onAction="#handleCancel">
+            <padding>
+                <Insets top="12" right="24" bottom="12" left="24"/>
+            </padding>
+        </Button>
+        <Button fx:id="saveButton" text="Create User" styleClass="btn-primary" onAction="#handleSave">
+            <padding>
+                <Insets top="12" right="24" bottom="12" left="24"/>
+            </padding>
+        </Button>
+    </HBox>
+
+</VBox>
