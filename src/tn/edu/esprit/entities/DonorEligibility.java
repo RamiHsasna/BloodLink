@@ -7,7 +7,7 @@ import java.util.UUID;
 public class DonorEligibility {
 
     private UUID donorEligibilityId;   // donor_eligibility_id
-    private String donorId;            // donor_id
+    private String id;            // donor_id
     private Boolean isCurrentlyEligible;
     private Integer daysUntilEligible;
     private LocalDate lastCalculatedAt;
@@ -18,10 +18,10 @@ public class DonorEligibility {
     public DonorEligibility() {
     }
 
-    public DonorEligibility(UUID donorEligibilityId, String donorId, Boolean isCurrentlyEligible, Integer daysUntilEligible,
+    public DonorEligibility(UUID donorEligibilityId, String id, Boolean isCurrentlyEligible, Integer daysUntilEligible,
                             LocalDate lastCalculatedAt, BigDecimal latitudeCache, BigDecimal longitudeCache, String bloodTypeCache) {
         this.donorEligibilityId = donorEligibilityId;
-        this.donorId = donorId;
+        this.id = id;
         this.isCurrentlyEligible = isCurrentlyEligible;
         this.daysUntilEligible = daysUntilEligible;
         this.lastCalculatedAt = lastCalculatedAt;
@@ -39,12 +39,12 @@ public class DonorEligibility {
         this.donorEligibilityId = donorEligibilityId;
     }
 
-    public String getDonorId() {
-        return donorId;
+    public String getId() {
+        return id;
     }
 
-    public void setDonorId(String donorId) {
-        this.donorId = donorId;
+    public void setId(String id) {
+        this.id = id;
     }
 
     public Boolean getIsCurrentlyEligible() {

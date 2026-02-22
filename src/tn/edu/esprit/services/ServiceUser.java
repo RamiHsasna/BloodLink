@@ -24,8 +24,7 @@ public class ServiceUser implements IService<Users> {
     public void ajouter(Users u) {
         try {
             String req = "INSERT INTO users "
-                    + "(user_id, email, password_hash, first_name, last_name, phone, user_type, created_at) VALUES ('"
-                    + u.getId() + "', '"
+                    + "( email, password_hash, first_name, last_name, phone, user_type, created_at) VALUES ('"
                     + u.getEmail() + "', '"
                     + u.getPasswordHash() + "', '"
                     + u.getFirst_name() + "', '"
