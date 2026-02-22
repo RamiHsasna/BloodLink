@@ -50,6 +50,15 @@
                     <Insets top="0" right="12" bottom="0" left="12"/>
                 </padding>
 
+                <HBox fx:id="navUsers" styleClass="nav-item" alignment="CENTER_LEFT"
+                      spacing="12" onMouseClicked="#onNavUsers">
+                    <padding>
+                        <Insets top="10" right="16" bottom="10" left="16"/>
+                    </padding>
+                    <Label text="👤" styleClass="nav-icon"/>
+                    <Label text="Users" styleClass="nav-label"/>
+                </HBox>
+
                 <HBox fx:id="navHospitals" styleClass="nav-item, nav-item-active" alignment="CENTER_LEFT"
                       spacing="12" onMouseClicked="#onNavHospitals">
                     <padding>
@@ -57,6 +66,24 @@
                     </padding>
                     <Label text="🏥" styleClass="nav-icon"/>
                     <Label text="Hospitals" styleClass="nav-label"/>
+                </HBox>
+
+                <HBox fx:id="navDonations" styleClass="nav-item" alignment="CENTER_LEFT"
+                      spacing="12" onMouseClicked="#onNavDonations">
+                    <padding>
+                        <Insets top="10" right="16" bottom="10" left="16"/>
+                    </padding>
+                    <Label text="💉" styleClass="nav-icon"/>
+                    <Label text="Donations" styleClass="nav-label"/>
+                </HBox>
+
+                <HBox fx:id="navDonationEvents" styleClass="nav-item" alignment="CENTER_LEFT"
+                      spacing="12" onMouseClicked="#onNavDonationEvents">
+                    <padding>
+                        <Insets top="10" right="16" bottom="10" left="16"/>
+                    </padding>
+                    <Label text="📅" styleClass="nav-icon"/>
+                    <Label text="Donation Events" styleClass="nav-label"/>
                 </HBox>
 
                 <HBox fx:id="navInventory" styleClass="nav-item" alignment="CENTER_LEFT"
@@ -84,6 +111,15 @@
                     </padding>
                     <Label text="🧬" styleClass="nav-icon"/>
                     <Label text="Blood Types" styleClass="nav-label"/>
+                </HBox>
+
+                <HBox fx:id="navEligibility" styleClass="nav-item" alignment="CENTER_LEFT"
+                      spacing="12" onMouseClicked="#onNavEligibility">
+                    <padding>
+                        <Insets top="10" right="16" bottom="10" left="16"/>
+                    </padding>
+                    <Label text="✅" styleClass="nav-icon"/>
+                    <Label text="Donor Eligibility" styleClass="nav-label"/>
                 </HBox>
             </VBox>
 

@@ -21,7 +21,16 @@ public class MainDashboardController implements Initializable {
 
     // Navigation items
     @FXML
+    private HBox navUsers;
+
+    @FXML
     private HBox navHospitals;
+
+    @FXML
+    private HBox navDonations;
+
+    @FXML
+    private HBox navDonationEvents;
 
     @FXML
     private HBox navInventory;
@@ -31,6 +40,9 @@ public class MainDashboardController implements Initializable {
 
     @FXML
     private HBox navBloodTypes;
+
+    @FXML
+    private HBox navEligibility;
 
     private HBox activeNavItem;
 
@@ -44,9 +56,27 @@ public class MainDashboardController implements Initializable {
     // ==================== NAVIGATION HANDLERS ====================
 
     @FXML
+    private void onNavUsers() {
+        setActiveNav(navUsers);
+        loadView("/tn/edu/esprit/views/UserDashboard.fxml");
+    }
+
+    @FXML
     private void onNavHospitals() {
         setActiveNav(navHospitals);
         loadView("/tn/edu/esprit/views/HospitalList.fxml");
+    }
+
+    @FXML
+    private void onNavDonations() {
+        setActiveNav(navDonations);
+        loadView("/tn/edu/esprit/views/DonationsDashboard.fxml");
+    }
+
+    @FXML
+    private void onNavDonationEvents() {
+        setActiveNav(navDonationEvents);
+        loadView("/tn/edu/esprit/views/DonationEventDashboard.fxml");
     }
 
     @FXML
@@ -66,6 +96,12 @@ public class MainDashboardController implements Initializable {
         setActiveNav(navBloodTypes);
         // TODO: loadView("/tn/edu/esprit/views/BloodTypeList.fxml");
         System.out.println("Blood Types view not yet implemented.");
+    }
+
+    @FXML
+    private void onNavEligibility() {
+        setActiveNav(navEligibility);
+        loadView("/tn/edu/esprit/views/DonorEligibilityDashboard.fxml");
     }
 
     // ==================== HELPERS ====================
