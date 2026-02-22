@@ -50,6 +50,18 @@
                     </padding>
                 </Button>
 
+                <Button fx:id="donationsNavBtn" text="Donations" styleClass="nav-button" maxWidth="Infinity" onAction="#handleDonationsNav">
+                    <padding>
+                        <Insets top="15" right="20" bottom="15" left="35"/>
+                    </padding>
+                </Button>
+
+                <Button fx:id="donationEventsNavBtn" text="Donation Events" styleClass="nav-button" maxWidth="Infinity" onAction="#handleDonationEventsNav">
+                    <padding>
+                        <Insets top="15" right="20" bottom="15" left="35"/>
+                    </padding>
+                </Button>
+
                 <Button text="Blood Inventory" styleClass="nav-button" maxWidth="Infinity">
                     <padding>
                         <Insets top="15" right="20" bottom="15" left="35"/>
