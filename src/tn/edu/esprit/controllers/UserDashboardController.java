@@ -226,7 +226,7 @@ public class UserDashboardController {
             loadUsers();
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("Error", "Could not open add user dialog: " + e.getMessage());
+            showAlert("Error", "Could not add users currently. Please try again or restart the application.");
         }
     }
 
@@ -243,6 +243,11 @@ public class UserDashboardController {
             dialogStage.setTitle("Edit User");
             dialogStage.initModality(Modality.APPLICATION_MODAL);
             dialogStage.setScene(new Scene(root));
+            dialogStage.setWidth(560);
+            dialogStage.setMaxWidth(560);
+            dialogStage.setHeight(680);
+            dialogStage.setMaxHeight(680);
+            dialogStage.setResizable(false);
             dialogStage.getScene().getStylesheets().add(
                     getClass().getResource("/tn/edu/esprit/styles/dashboard.css").toExternalForm());
 
@@ -255,7 +260,7 @@ public class UserDashboardController {
             loadUsers();
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("Error", "Could not open edit user dialog: " + e.getMessage());
+            showAlert("Error", "Could not edit users currently. Please try again or restart the application.");
         }
     }
 

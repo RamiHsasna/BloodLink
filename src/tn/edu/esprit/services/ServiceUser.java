@@ -22,9 +22,14 @@ public class ServiceUser implements IService<Users> {
 
     @Override
     public void ajouter(Users u) {
+        boolean originalAutoCommit = true;
         try {
+            originalAutoCommit = cnx.getAutoCommit();
+            cnx.setAutoCommit(false);
+
             String req = "INSERT INTO users "
-                    + "( email, password_hash, first_name, last_name, phone, user_type, created_at) VALUES ('"
+                    + "(user_id, email, password_hash, first_name, last_name, phone, user_type, created_at) VALUES ('"
+                    + u.getId() + "', '"
                     + u.getEmail() + "', '"
                     + u.getPasswordHash() + "', '"
                     + u.getFirst_name() + "', '"
@@ -34,9 +39,24 @@ public class ServiceUser implements IService<Users> {
                     + u.getCreatedAt() + "')";
             Statement stm = cnx.createStatement();
             stm.executeUpdate(req);
+
+            syncDonorProfile(u);
+
+            cnx.commit();
             System.out.println("User ajouté avec succès !");
         } catch (SQLException ex) {
+            try {
+                cnx.rollback();
+            } catch (SQLException rollbackEx) {
+                System.out.println("Erreur rollback ajout User : " + rollbackEx.getMessage());
+            }
             System.out.println("Erreur ajout User : " + ex.getMessage());
+        } finally {
+            try {
+                cnx.setAutoCommit(originalAutoCommit);
+            } catch (SQLException ex) {
+                System.out.println("Erreur restauration auto-commit : " + ex.getMessage());
+            }
         }
     }
 
@@ -67,6 +87,15 @@ public class ServiceUser implements IService<Users> {
 
             Statement stm = cnx.createStatement();
             int rows = stm.executeUpdate(req);
+
+            if (rows > 0) {
+                Users updated = new Users();
+                updated.setId(u.getId());
+                updated.setFirst_name(firstName);
+                updated.setLast_name(lastName);
+                updated.setUserType(userType);
+                syncDonorProfile(updated);
+            }
 
             System.out.println(rows > 0 ? "✅ Utilisateur modifié avec succès !" : "⚠️ Aucun utilisateur trouvé avec cet ID !");
         } catch (SQLException ex) {
@@ -135,5 +164,44 @@ public class ServiceUser implements IService<Users> {
             System.out.println("Erreur getOne User : " + ex.getMessage());
         }
         return user;
+    }
+
+    private void syncDonorProfile(Users u) throws SQLException {
+        if (u == null || u.getId() == null || u.getUserType() != UserType.DONOR) {
+            return;
+        }
+
+        if (donorExists(u.getId())) {
+            return;
+        }
+
+        String bloodTypeId = getDefaultBloodTypeId();
+        String req = "INSERT INTO donors (user_id, first_name, last_name, blood_type_id, is_currently_eligible, total_donations, created_at) VALUES ('"
+                + u.getId() + "', '"
+                + u.getFirst_name() + "', '"
+                + u.getLast_name() + "', "
+                + (bloodTypeId != null ? "'" + bloodTypeId + "'" : "NULL") + ", "
+                + "true, 0, NOW())";
+
+        Statement stm = cnx.createStatement();
+        stm.executeUpdate(req);
+    }
+
+    private boolean donorExists(String userId) throws SQLException {
+        String req = "SELECT 1 FROM donors WHERE user_id = '" + userId + "'";
+        Statement stm = cnx.createStatement();
+        ResultSet rs = stm.executeQuery(req);
+        return rs.next();
+    }
+
+    private String getDefaultBloodTypeId() throws SQLException {
+        String req = "SELECT blood_type_id FROM blood_type ORDER BY blood_type_id LIMIT 1";
+        try (Statement stm = cnx.createStatement();
+             ResultSet rs = stm.executeQuery(req)) {
+            if (rs.next()) {
+                return rs.getString("blood_type_id");
+            }
+        }
+        return null;
     }
 }
