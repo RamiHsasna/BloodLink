@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1"
+    fx:controller="tn.edu.esprit.controller.DonorAlertsCrudController">
+  <padding>
+    <Insets top="20" right="20" bottom="20" left="20"/>
+  </padding>
+  <top>
+    <Label text="Donor Alerts CRUD" style="-fx-font-size: 20px; -fx-font-weight: bold;"
+        BorderPane.alignment="CENTER_LEFT">
+      <BorderPane.margin>
+        <Insets bottom="15"/>
+      </BorderPane.margin>
+    </Label>
+  </top>
+  <center>
+    <TableView fx:id="table" prefHeight="400.0">
+      <columns>
+        <TableColumn fx:id="donorAlertIdCol" text="Donor Alert ID"/>
+        <TableColumn fx:id="alertIdCol" text="Alert ID"/>
+        <TableColumn fx:id="donorIdCol" text="Donor ID"/>
+        <TableColumn fx:id="isNotifiedCol" text="Is Notified"/>
+        <TableColumn fx:id="notificationSentAtCol" text="Notification Sent At"/>
+        <TableColumn fx:id="isReadCol" text="Is Read"/>
+        <TableColumn fx:id="readAtCol" text="Read At"/>
+        <TableColumn fx:id="donorResponseCol" text="Donor Response"/>
+      </columns>
+      <BorderPane.margin>
+        <Insets bottom="15"/>
+      </BorderPane.margin>
+    </TableView>
+  </center>
+  <bottom>
+    <VBox spacing="12">
+      <padding>
+        <Insets top="10"/>
+      </padding>
+      <ScrollPane fitToWidth="true" prefViewportHeight="220">
+        <content>
+          <GridPane hgap="10" vgap="10">
+            <Label text="Donor Alert ID" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <TextField fx:id="donorAlertIdField" promptText="donor_alert_id (for update/delete)" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+            <Label text="Alert ID" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <ComboBox fx:id="alertIdComboBox" promptText="Select alert" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+            <Label text="Donor ID" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+            <ComboBox fx:id="donorIdComboBox" promptText="Select donor" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+            <Label text="Is Notified" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+            <CheckBox fx:id="isNotifiedCheckBox" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+            <Label text="Notification Sent At" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+            <DatePicker fx:id="notificationSentAtPicker" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+            <Label text="Is Read" GridPane.columnIndex="0" GridPane.rowIndex="5"/>
+            <CheckBox fx:id="isReadCheckBox" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
+            <Label text="Read At" GridPane.columnIndex="0" GridPane.rowIndex="6"/>
+            <DatePicker fx:id="readAtPicker" GridPane.columnIndex="1" GridPane.rowIndex="6"/>
+            <Label text="Donor Response" GridPane.columnIndex="0" GridPane.rowIndex="7"/>
+            <ComboBox fx:id="donorResponseComboBox" promptText="Select response" GridPane.columnIndex="1" GridPane.rowIndex="7"/>
+          </GridPane>
+        </content>
+      </ScrollPane>
+      <HBox spacing="10" alignment="CENTER_LEFT">
+        <Button text="Add" onAction="#handleAdd"/>
+        <Button text="Update" onAction="#handleUpdate"/>
+        <Button text="Delete" onAction="#handleDelete"/>
+        <Button text="Clear" onAction="#handleClear"/>
+        <Button text="Back" onAction="#handleBack"/>
+      </HBox>
+    </VBox>
+  </bottom>
+</BorderPane>

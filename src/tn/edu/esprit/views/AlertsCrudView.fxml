@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1"
+    fx:controller="tn.edu.esprit.controller.AlertsCrudController">
+  <padding>
+    <Insets top="20" right="20" bottom="20" left="20"/>
+  </padding>
+  <top>
+    <Label text="Alerts CRUD" style="-fx-font-size: 20px; -fx-font-weight: bold;"
+        BorderPane.alignment="CENTER_LEFT">
+      <BorderPane.margin>
+        <Insets bottom="15"/>
+      </BorderPane.margin>
+    </Label>
+  </top>
+  <center>
+    <TableView fx:id="table" prefHeight="400.0">
+      <columns>
+        <TableColumn fx:id="alertIdCol" text="Alert ID"/>
+        <TableColumn fx:id="hospitalIdCol" text="Hospital ID"/>
+        <TableColumn fx:id="staffIdCol" text="Staff ID"/>
+        <TableColumn fx:id="bloodTypeIdCol" text="Blood Type ID"/>
+        <TableColumn fx:id="severityCol" text="Severity"/>
+        <TableColumn fx:id="quantityNeededCol" text="Quantity"/>
+        <TableColumn fx:id="titleCol" text="Title"/>
+        <TableColumn fx:id="messageCol" text="Message"/>
+        <TableColumn fx:id="isResolvedCol" text="Resolved"/>
+        <TableColumn fx:id="targetRadiusCol" text="Target Radius (km)"/>
+        <TableColumn fx:id="createdAtCol" text="Created At"/>
+        <TableColumn fx:id="resolvedAtCol" text="Resolved At"/>
+      </columns>
+      <BorderPane.margin>
+        <Insets bottom="15"/>
+      </BorderPane.margin>
+    </TableView>
+  </center>
+  <bottom>
+    <VBox spacing="12">
+      <padding>
+        <Insets top="10"/>
+      </padding>
+      <GridPane hgap="10" vgap="10">
+        <Label text="Alert ID" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+        <TextField fx:id="alertIdField" promptText="Alert ID (for update/delete)" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+        <Label text="Hospital ID" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+        <ComboBox fx:id="hospitalIdComboBox" promptText="Select hospital" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+        <Label text="Staff ID" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+        <ComboBox fx:id="staffIdComboBox" promptText="Select staff" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+        <Label text="Blood Type ID" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+        <TextField fx:id="bloodTypeIdField" promptText="blood_type_id" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+        <Label text="Severity" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+        <ComboBox fx:id="severityComboBox" promptText="Select severity" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+        <Label text="Quantity Needed" GridPane.columnIndex="0" GridPane.rowIndex="5"/>
+        <TextField fx:id="quantityNeededField" promptText="quantity_needed" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
+        <Label text="Title" GridPane.columnIndex="0" GridPane.rowIndex="6"/>
+        <TextField fx:id="titleField" promptText="title" GridPane.columnIndex="1" GridPane.rowIndex="6"/>
+        <Label text="Message" GridPane.columnIndex="0" GridPane.rowIndex="7"/>
+        <TextField fx:id="messageField" promptText="message" GridPane.columnIndex="1" GridPane.rowIndex="7"/>
+        <Label text="Is Resolved" GridPane.columnIndex="0" GridPane.rowIndex="8"/>
+        <CheckBox fx:id="isResolvedCheckBox" GridPane.columnIndex="1" GridPane.rowIndex="8"/>
+        <Label text="Target Radius" GridPane.columnIndex="0" GridPane.rowIndex="9"/>
+        <TextField fx:id="targetRadiusField" promptText="target_radius_km" GridPane.columnIndex="1" GridPane.rowIndex="9"/>
+        <Label text="Created At" GridPane.columnIndex="0" GridPane.rowIndex="10"/>
+        <DatePicker fx:id="createdAtPicker" GridPane.columnIndex="1" GridPane.rowIndex="10"/>
+        <Label text="Resolved At" GridPane.columnIndex="0" GridPane.rowIndex="11"/>
+        <DatePicker fx:id="resolvedAtPicker" GridPane.columnIndex="1" GridPane.rowIndex="11"/>
+      </GridPane>
+      <HBox spacing="10" alignment="CENTER_LEFT">
+        <Button text="Add" onAction="#handleAdd"/>
+        <Button text="Update" onAction="#handleUpdate"/>
+        <Button text="Delete" onAction="#handleDelete"/>
+        <Button text="Clear" onAction="#handleClear"/>
+        <Button text="Back" onAction="#handleBack"/>
+      </HBox>
+    </VBox>
+  </bottom>
+</BorderPane>
