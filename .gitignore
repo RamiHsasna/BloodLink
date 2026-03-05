@@ -29,4 +29,5 @@ bin/
 ### Mac OS ###
 .DS_Store
 /database_schema.sql
+/database_migration_inventory_fix.sql
 /.idea/libraries/lib.xml
