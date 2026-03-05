@@ -1,5 +1,13 @@
 package tn.edu.esprit.controllers;
 
+import java.net.URL;
+import java.sql.Date;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.stream.Collectors;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
@@ -10,32 +18,43 @@ import tn.edu.esprit.entities.BloodInventory;
 import tn.edu.esprit.entities.InventoryStatus;
 import tn.edu.esprit.services.InventoryServiceImpl;
 
-import java.net.URL;
-import java.sql.Date;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.TextStyle;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
-import java.util.stream.Collectors;
-
 public class InventoryViewController implements Initializable {
 
-    @FXML private GridPane bloodTypeGrid;
-    @FXML private Label lblCurrentDate;
-    @FXML private Label lblTotalStock;
-    @FXML private Label lblCriticalCount;
-    @FXML private Label lblLowCount;
-    @FXML private Label lblNotifBadge;
-    @FXML private HBox badgeCritical;
-    @FXML private HBox badgeLow;
+    @FXML
+    private GridPane bloodTypeGrid;
 
-    private final InventoryServiceImpl inventoryService = new InventoryServiceImpl();
+    @FXML
+    private Label lblCurrentDate;
+
+    @FXML
+    private Label lblTotalStock;
+
+    @FXML
+    private Label lblCriticalCount;
+
+    @FXML
+    private Label lblLowCount;
+
+    @FXML
+    private HBox badgeCritical;
+
+    @FXML
+    private HBox badgeLow;
+
+    private final InventoryServiceImpl inventoryService =
+        new InventoryServiceImpl();
     private List<BloodInventory> allInventories;
 
     // The 8 standard blood types in display order
     private static final String[] BLOOD_TYPE_ORDER = {
-            "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"
+        "A+",
+        "A-",
+        "B+",
+        "B-",
+        "AB+",
+        "AB-",
+        "O+",
+        "O-",
     };
 
     // Maximum stock for progress bar calculation (adjust to your needs)
@@ -43,12 +62,17 @@ public class InventoryViewController implements Initializable {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        // Set today's date in French-style format
+        // Set today's date in English format
         LocalDate today = LocalDate.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEEE dd MMMM yyyy", Locale.FRENCH);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(
+            "EEEE dd MMMM yyyy",
+            Locale.ENGLISH
+        );
         String dateStr = today.format(formatter);
         // Capitalize first letter
-        lblCurrentDate.setText(dateStr.substring(0, 1).toUpperCase() + dateStr.substring(1));
+        lblCurrentDate.setText(
+            dateStr.substring(0, 1).toUpperCase() + dateStr.substring(1)
+        );
 
         refreshData();
     }
@@ -64,23 +88,36 @@ public class InventoryViewController implements Initializable {
     // ==================== HEADER STATS ====================
 
     private void updateHeaderStats(List<BloodInventory> inventories) {
-        int totalStock = inventories.stream()
-                .mapToInt(inv -> inv.getQuantityUnitsInt() != null ? inv.getQuantityUnitsInt() : 0)
-                .sum();
-        lblTotalStock.setText(totalStock + " poches en stock");
+        int totalStock = inventories
+            .stream()
+            .mapToInt(inv ->
+                inv.getQuantityUnitsInt() != null
+                    ? inv.getQuantityUnitsInt()
+                    : 0
+            )
+            .sum();
+        lblTotalStock.setText(totalStock + " units in stock");
 
         // Aggregate by blood type to determine status counts
-        Map<String, BloodTypeSummary> summaries = aggregateByBloodType(inventories);
+        Map<String, BloodTypeSummary> summaries = aggregateByBloodType(
+            inventories
+        );
 
-        long criticalCount = summaries.values().stream()
-                .filter(s -> s.status == InventoryStatus.CRITICAL).count();
-        long lowCount = summaries.values().stream()
-                .filter(s -> s.status == InventoryStatus.LOW).count();
+        long criticalCount = summaries
+            .values()
+            .stream()
+            .filter(s -> s.status == InventoryStatus.CRITICAL)
+            .count();
+        long lowCount = summaries
+            .values()
+            .stream()
+            .filter(s -> s.status == InventoryStatus.LOW)
+            .count();
 
         if (criticalCount > 0) {
             badgeCritical.setVisible(true);
             badgeCritical.setManaged(true);
-            lblCriticalCount.setText(criticalCount + " critique" + (criticalCount > 1 ? "s" : ""));
+            lblCriticalCount.setText(criticalCount + " critical");
         } else {
             badgeCritical.setVisible(false);
             badgeCritical.setManaged(false);
@@ -89,21 +126,10 @@ public class InventoryViewController implements Initializable {
         if (lowCount > 0) {
             badgeLow.setVisible(true);
             badgeLow.setManaged(true);
-            lblLowCount.setText(lowCount + " faible" + (lowCount > 1 ? "s" : ""));
+            lblLowCount.setText(lowCount + " low");
         } else {
             badgeLow.setVisible(false);
             badgeLow.setManaged(false);
-        }
-
-        // Notification badge
-        long totalAlerts = criticalCount + lowCount;
-        if (totalAlerts > 0) {
-            lblNotifBadge.setText(String.valueOf(totalAlerts));
-            lblNotifBadge.setVisible(true);
-            lblNotifBadge.setManaged(true);
-        } else {
-            lblNotifBadge.setVisible(false);
-            lblNotifBadge.setManaged(false);
         }
     }
 
@@ -112,13 +138,22 @@ public class InventoryViewController implements Initializable {
     private void buildBloodTypeGrid(List<BloodInventory> inventories) {
         bloodTypeGrid.getChildren().clear();
 
-        Map<String, BloodTypeSummary> summaries = aggregateByBloodType(inventories);
+        Map<String, BloodTypeSummary> summaries = aggregateByBloodType(
+            inventories
+        );
 
         int col = 0;
         int row = 0;
         for (String bloodType : BLOOD_TYPE_ORDER) {
-            BloodTypeSummary summary = summaries.getOrDefault(bloodType,
-                    new BloodTypeSummary(bloodType, 0, null, InventoryStatus.CRITICAL));
+            BloodTypeSummary summary = summaries.getOrDefault(
+                bloodType,
+                new BloodTypeSummary(
+                    bloodType,
+                    0,
+                    null,
+                    InventoryStatus.CRITICAL
+                )
+            );
 
             VBox card = createBloodTypeCard(summary);
             bloodTypeGrid.add(card, col, row);
@@ -133,7 +168,7 @@ public class InventoryViewController implements Initializable {
 
     /**
      * Creates a single blood type card matching the screenshot design:
-     * - Blood type badge (colored) + Status badge (Optimal/Faible/Critique)
+     * - Blood type badge (colored) + Status badge (Optimal/Low/Critical)
      * - Stock row with quantity
      * - Progress bar
      * - Expiry date row with days remaining
@@ -162,21 +197,21 @@ public class InventoryViewController implements Initializable {
                 break;
             case LOW:
                 borderColor = "#fbbf24"; // yellow border
-                statusText = "Faible";
+                statusText = "Low";
                 statusBgColor = "#fef9c3";
                 statusTextColor = "#a16207";
                 progressBarColor = "#f59e0b";
                 break;
             case CRITICAL:
                 borderColor = "#ef4444"; // red border
-                statusText = "Critique";
+                statusText = "Critical";
                 statusBgColor = "#fee2e2";
                 statusTextColor = "#dc2626";
                 progressBarColor = "#ef4444";
                 break;
             case EXPIRED:
                 borderColor = "#6b7280"; // gray border
-                statusText = "Expiré";
+                statusText = "Expired";
                 statusBgColor = "#f3f4f6";
                 statusTextColor = "#6b7280";
                 progressBarColor = "#6b7280";
@@ -191,14 +226,20 @@ public class InventoryViewController implements Initializable {
         }
 
         // Apply card border based on status
-        if (summary.status == InventoryStatus.LOW || summary.status == InventoryStatus.CRITICAL || summary.status == InventoryStatus.EXPIRED) {
+        if (
+            summary.status == InventoryStatus.LOW ||
+            summary.status == InventoryStatus.CRITICAL ||
+            summary.status == InventoryStatus.EXPIRED
+        ) {
             card.setStyle(
-                    "-fx-background-color: white; -fx-background-radius: 12; " +
-                    "-fx-border-color: " + borderColor + "; -fx-border-width: 1.5; -fx-border-radius: 12;"
+                "-fx-background-color: white; -fx-background-radius: 12; " +
+                    "-fx-border-color: " +
+                    borderColor +
+                    "; -fx-border-width: 1.5; -fx-border-radius: 12;"
             );
         } else {
             card.setStyle(
-                    "-fx-background-color: white; -fx-background-radius: 12; " +
+                "-fx-background-color: white; -fx-background-radius: 12; " +
                     "-fx-border-color: #e2e8f0; -fx-border-width: 1; -fx-border-radius: 12;"
             );
         }
@@ -209,9 +250,11 @@ public class InventoryViewController implements Initializable {
         topRow.setSpacing(8);
 
         // Blood type colored badge
-         Label bloodTypeBadge = new Label(summary.bloodType);
+        Label bloodTypeBadge = new Label(summary.bloodType);
         bloodTypeBadge.setStyle(
-                "-fx-background-color: " + progressBarColor + "; -fx-background-radius: 8; " +
+            "-fx-background-color: " +
+                progressBarColor +
+                "; -fx-background-radius: 8; " +
                 "-fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold; " +
                 "-fx-padding: 4 10 4 10; -fx-min-width: 42; -fx-alignment: center;"
         );
@@ -222,8 +265,12 @@ public class InventoryViewController implements Initializable {
         // Status badge
         Label statusBadge = new Label(statusText);
         statusBadge.setStyle(
-                "-fx-background-color: " + statusBgColor + "; -fx-background-radius: 12; " +
-                "-fx-text-fill: " + statusTextColor + "; -fx-font-size: 11px; -fx-font-weight: bold; " +
+            "-fx-background-color: " +
+                statusBgColor +
+                "; -fx-background-radius: 12; " +
+                "-fx-text-fill: " +
+                statusTextColor +
+                "; -fx-font-size: 11px; -fx-font-weight: bold; " +
                 "-fx-padding: 3 10 3 10;"
         );
 
@@ -244,13 +291,20 @@ public class InventoryViewController implements Initializable {
         Region spacer2 = new Region();
         HBox.setHgrow(spacer2, Priority.ALWAYS);
 
-        Label stockValue = new Label(summary.totalQuantity + " poches");
-        stockValue.setStyle("-fx-text-fill: #0f172a; -fx-font-size: 13px; -fx-font-weight: bold;");
+        Label stockValue = new Label(summary.totalQuantity + " units");
+        stockValue.setStyle(
+            "-fx-text-fill: #0f172a; -fx-font-size: 13px; -fx-font-weight: bold;"
+        );
 
-        stockRow.getChildren().addAll(stockIcon, stockLabel, spacer2, stockValue);
+        stockRow
+            .getChildren()
+            .addAll(stockIcon, stockLabel, spacer2, stockValue);
 
         // ---- Row 3: Progress Bar ----
-        double progress = Math.min(1.0, (double) summary.totalQuantity / MAX_STOCK_FOR_BAR);
+        double progress = Math.min(
+            1.0,
+            (double) summary.totalQuantity / MAX_STOCK_FOR_BAR
+        );
 
         StackPane progressBarContainer = new StackPane();
         progressBarContainer.setAlignment(Pos.CENTER_LEFT);
@@ -260,20 +314,28 @@ public class InventoryViewController implements Initializable {
 
         // Background track
         Region track = new Region();
-        track.setStyle("-fx-background-color: #f1f5f9; -fx-background-radius: 3;");
+        track.setStyle(
+            "-fx-background-color: #f1f5f9; -fx-background-radius: 3;"
+        );
         track.setMaxWidth(Double.MAX_VALUE);
         track.setPrefHeight(6);
 
         // Fill bar
         Region fill = new Region();
-        fill.setStyle("-fx-background-color: " + progressBarColor + "; -fx-background-radius: 3;");
+        fill.setStyle(
+            "-fx-background-color: " +
+                progressBarColor +
+                "; -fx-background-radius: 3;"
+        );
         fill.setPrefHeight(6);
         fill.setMaxHeight(6);
 
         progressBarContainer.getChildren().addAll(track, fill);
 
         // Bind fill width to a fraction of the container width
-        fill.maxWidthProperty().bind(progressBarContainer.widthProperty().multiply(progress));
+        fill
+            .maxWidthProperty()
+            .bind(progressBarContainer.widthProperty().multiply(progress));
 
         // ---- Row 4: Expiry Row ----
         HBox expiryRow = new HBox();
@@ -291,10 +353,13 @@ public class InventoryViewController implements Initializable {
         if (summary.nearestExpiry != null) {
             LocalDate expiryDate = summary.nearestExpiry.toLocalDate();
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-            expiryText = "Expire le " + expiryDate.format(fmt);
+            expiryText = "Expires " + expiryDate.format(fmt);
 
-            long daysUntil = ChronoUnit.DAYS.between(LocalDate.now(), expiryDate);
-            daysText = (daysUntil >= 0 ? "" : "") + daysUntil + "j";
+            long daysUntil = ChronoUnit.DAYS.between(
+                LocalDate.now(),
+                expiryDate
+            );
+            daysText = (daysUntil >= 0 ? "" : "") + daysUntil + "d";
 
             if (daysUntil <= 0) {
                 daysColor = "#dc2626"; // red - expired or expiring today
@@ -312,12 +377,20 @@ public class InventoryViewController implements Initializable {
         HBox.setHgrow(spacer3, Priority.ALWAYS);
 
         Label daysLabel = new Label(daysText);
-        daysLabel.setStyle("-fx-text-fill: " + daysColor + "; -fx-font-size: 12px; -fx-font-weight: bold;");
+        daysLabel.setStyle(
+            "-fx-text-fill: " +
+                daysColor +
+                "; -fx-font-size: 12px; -fx-font-weight: bold;"
+        );
 
-        expiryRow.getChildren().addAll(expiryIcon, expiryLabel, spacer3, daysLabel);
+        expiryRow
+            .getChildren()
+            .addAll(expiryIcon, expiryLabel, spacer3, daysLabel);
 
         // ---- Assemble Card ----
-        card.getChildren().addAll(topRow, stockRow, progressBarContainer, expiryRow);
+        card
+            .getChildren()
+            .addAll(topRow, stockRow, progressBarContainer, expiryRow);
 
         return card;
     }
@@ -330,32 +403,52 @@ public class InventoryViewController implements Initializable {
      * - Nearest expiration date
      * - Overall status (worst status among items, or derived from quantity)
      */
-    private Map<String, BloodTypeSummary> aggregateByBloodType(List<BloodInventory> inventories) {
-        Map<String, List<BloodInventory>> grouped = inventories.stream()
-                .filter(inv -> inv.getBloodTypeId() != null)
-                .collect(Collectors.groupingBy(BloodInventory::getBloodTypeId));
+    private Map<String, BloodTypeSummary> aggregateByBloodType(
+        List<BloodInventory> inventories
+    ) {
+        Map<String, List<BloodInventory>> grouped = inventories
+            .stream()
+            .filter(inv -> inv.getBloodTypeId() != null)
+            .collect(Collectors.groupingBy(BloodInventory::getBloodTypeId));
 
         Map<String, BloodTypeSummary> summaries = new LinkedHashMap<>();
 
-        for (Map.Entry<String, List<BloodInventory>> entry : grouped.entrySet()) {
+        for (Map.Entry<
+            String,
+            List<BloodInventory>
+        > entry : grouped.entrySet()) {
             String bloodType = entry.getKey();
             List<BloodInventory> items = entry.getValue();
 
-            int totalQty = items.stream()
-                    .mapToInt(inv -> inv.getQuantityUnitsInt() != null ? inv.getQuantityUnitsInt() : 0)
-                    .sum();
+            int totalQty = items
+                .stream()
+                .mapToInt(inv ->
+                    inv.getQuantityUnitsInt() != null
+                        ? inv.getQuantityUnitsInt()
+                        : 0
+                )
+                .sum();
 
             // Find nearest expiration date
-            Date nearestExpiry = items.stream()
-                    .map(BloodInventory::getExpirationDate)
-                    .filter(Objects::nonNull)
-                    .min(Comparator.naturalOrder())
-                    .orElse(null);
+            Date nearestExpiry = items
+                .stream()
+                .map(BloodInventory::getExpirationDate)
+                .filter(Objects::nonNull)
+                .min(Comparator.naturalOrder())
+                .orElse(null);
 
             // Determine overall status - use the worst status present, or derive from quantity
             InventoryStatus worstStatus = deriveStatus(items, totalQty);
 
-            summaries.put(bloodType, new BloodTypeSummary(bloodType, totalQty, nearestExpiry, worstStatus));
+            summaries.put(
+                bloodType,
+                new BloodTypeSummary(
+                    bloodType,
+                    totalQty,
+                    nearestExpiry,
+                    worstStatus
+                )
+            );
         }
 
         return summaries;
@@ -365,11 +458,20 @@ public class InventoryViewController implements Initializable {
      * Derives the overall status for a blood type group.
      * Uses explicit status from items if available, otherwise derives from total quantity.
      */
-    private InventoryStatus deriveStatus(List<BloodInventory> items, int totalQty) {
+    private InventoryStatus deriveStatus(
+        List<BloodInventory> items,
+        int totalQty
+    ) {
         // Check if any item has an explicit status set
-        boolean hasCritical = items.stream().anyMatch(i -> i.getStatus() == InventoryStatus.CRITICAL);
-        boolean hasExpired = items.stream().anyMatch(i -> i.getStatus() == InventoryStatus.EXPIRED);
-        boolean hasLow = items.stream().anyMatch(i -> i.getStatus() == InventoryStatus.LOW);
+        boolean hasCritical = items
+            .stream()
+            .anyMatch(i -> i.getStatus() == InventoryStatus.CRITICAL);
+        boolean hasExpired = items
+            .stream()
+            .anyMatch(i -> i.getStatus() == InventoryStatus.EXPIRED);
+        boolean hasLow = items
+            .stream()
+            .anyMatch(i -> i.getStatus() == InventoryStatus.LOW);
 
         if (hasExpired) return InventoryStatus.EXPIRED;
         if (hasCritical) return InventoryStatus.CRITICAL;
@@ -386,36 +488,44 @@ public class InventoryViewController implements Initializable {
     @FXML
     private void onUrgentAlert() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Alerte d'urgence");
-        alert.setHeaderText("Notification d'urgence");
-        alert.setContentText("Cette fonctionnalité enverra une notification urgente à tous les donneurs éligibles.");
+        alert.setTitle("Urgent Alert");
+        alert.setHeaderText("Urgent Notification");
+        alert.setContentText(
+            "This feature will send an urgent notification to all eligible donors."
+        );
         alert.showAndWait();
     }
 
     @FXML
     private void onRequestTransfer() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Demander transfert");
-        alert.setHeaderText("Transfert inter-hôpital");
-        alert.setContentText("Cette fonctionnalité permettra de demander un transfert de stock depuis un autre hôpital.");
+        alert.setTitle("Request Transfer");
+        alert.setHeaderText("Inter-hospital Transfer");
+        alert.setContentText(
+            "This feature will allow you to request a stock transfer from another hospital."
+        );
         alert.showAndWait();
     }
 
     @FXML
     private void onAddStock() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Ajouter stock");
-        alert.setHeaderText("Enregistrer nouvelles poches");
-        alert.setContentText("Cette fonctionnalité permettra d'enregistrer de nouvelles poches de sang dans l'inventaire.");
+        alert.setTitle("Add Stock");
+        alert.setHeaderText("Register New Blood Units");
+        alert.setContentText(
+            "This feature will allow you to register new blood units into the inventory."
+        );
         alert.showAndWait();
     }
 
     @FXML
     private void onGenerateReport() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Generer rapport");
-        alert.setHeaderText("Export des données");
-        alert.setContentText("Cette fonctionnalité permettra de générer et exporter un rapport de l'inventaire.");
+        alert.setTitle("Generate Report");
+        alert.setHeaderText("Data Export");
+        alert.setContentText(
+            "This feature will allow you to generate and export an inventory report."
+        );
         alert.showAndWait();
     }
 
@@ -425,12 +535,18 @@ public class InventoryViewController implements Initializable {
      * Holds aggregated data for a single blood type to display in the grid.
      */
     private static class BloodTypeSummary {
+
         final String bloodType;
         final int totalQuantity;
         final Date nearestExpiry;
         final InventoryStatus status;
 
-        BloodTypeSummary(String bloodType, int totalQuantity, Date nearestExpiry, InventoryStatus status) {
+        BloodTypeSummary(
+            String bloodType,
+            int totalQuantity,
+            Date nearestExpiry,
+            InventoryStatus status
+        ) {
             this.bloodType = bloodType;
             this.totalQuantity = totalQuantity;
             this.nearestExpiry = nearestExpiry;
