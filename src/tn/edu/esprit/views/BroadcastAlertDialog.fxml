@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx/17"
+    xmlns:fx="http://javafx.com/fxml/1" fx:controller="tn.edu.esprit.controllers.BroadcastAlertDialogController" spacing="20" style="-fx-background-color: white; -fx-padding: 30; -fx-border-radius: 8; -fx-background-radius: 8; -fx-min-width: 500;">
+
+    <VBox spacing="5">
+        <Label text="Diffuser une alerte d'urgence" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #ef4444;"/>
+        <Label text="Envoyer une demande urgente de sang aux donneurs eligibles proches. Cela declenchera aussi le systeme de correspondance automatique." style="-fx-font-size: 13px; -fx-text-fill: #64748b;" wrapText="true"/>
+    </VBox>
+
+    <Separator />
+
+    <GridPane hgap="15" vgap="15">
+        <columnConstraints>
+            <ColumnConstraints percentWidth="50"/>
+            <ColumnConstraints percentWidth="50"/>
+        </columnConstraints>
+
+        <VBox spacing="8" GridPane.columnIndex="0" GridPane.rowIndex="0" GridPane.columnSpan="2">
+            <Label text="Titre de l'alerte" style="-fx-font-weight: bold; -fx-text-fill: #334155;"/>
+            <TextField fx:id="txtTitle" promptText="Ex.: URGENT: Sang A- requis a l'hopital general" styleClass="form-input"/>
+            <Label fx:id="lblTitleError" textFill="#ef4444" visible="false" managed="false" style="-fx-font-size: 11px;"/>
+        </VBox>
+
+        <VBox spacing="8" GridPane.columnIndex="0" GridPane.rowIndex="1">
+            <Label text="Groupe sanguin requis" style="-fx-font-weight: bold; -fx-text-fill: #334155;"/>
+            <TextField fx:id="txtBloodType" promptText="Ex.: A-, O+" styleClass="form-input"/>
+            <Label fx:id="lblBloodTypeError" textFill="#ef4444" visible="false" managed="false" style="-fx-font-size: 11px;"/>
+        </VBox>
+
+        <VBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="1">
+            <Label text="Niveau de severite" style="-fx-font-weight: bold; -fx-text-fill: #334155;"/>
+            <ComboBox fx:id="cbSeverity" promptText="Selectionner la severite..." maxWidth="Infinity" styleClass="form-input"/>
+            <Label fx:id="lblSeverityError" textFill="#ef4444" visible="false" managed="false" style="-fx-font-size: 11px;"/>
+        </VBox>
+
+        <VBox spacing="8" GridPane.columnIndex="0" GridPane.rowIndex="2">
+            <Label text="Quantite requise (unites)" style="-fx-font-weight: bold; -fx-text-fill: #334155;"/>
+            <TextField fx:id="txtQuantity" promptText="Valeur numerique" styleClass="form-input"/>
+            <Label fx:id="lblQuantityError" textFill="#ef4444" visible="false" managed="false" style="-fx-font-size: 11px;"/>
+        </VBox>
+
+        <VBox spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="2">
+            <Label text="Rayon cible (km)" style="-fx-font-weight: bold; -fx-text-fill: #334155;"/>
+            <TextField fx:id="txtRadius" promptText="Ex.: 20" styleClass="form-input"/>
+            <Label fx:id="lblRadiusError" textFill="#ef4444" visible="false" managed="false" style="-fx-font-size: 11px;"/>
+        </VBox>
+
+        <VBox spacing="8" GridPane.columnIndex="0" GridPane.rowIndex="3" GridPane.columnSpan="2">
+            <Label text="Message detaille / consignes" style="-fx-font-weight: bold; -fx-text-fill: #334155;"/>
+            <TextArea fx:id="taMessage" promptText="Ajouter des consignes precises pour les donneurs..." prefRowCount="4" wrapText="true" styleClass="form-input"/>
+            <Label fx:id="lblMessageError" textFill="#ef4444" visible="false" managed="false" style="-fx-font-size: 11px;"/>
+        </VBox>
+    </GridPane>
+
+    <!-- Resultat correspondance - cache au depart -->
+    <VBox fx:id="matchingResultPanel" spacing="10" visible="false" managed="false" style="-fx-background-color: #f0fdf4; -fx-border-color: #86efac; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 16;">
+        <Label fx:id="lblMatchingTitle" text="Resultat de correspondance" style="-fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: #166534;"/>
+        <Label fx:id="lblMatchingDonorCount" text="" style="-fx-font-size: 13px; -fx-text-fill: #15803d;" wrapText="true"/>
+        <Label fx:id="lblMatchingMessage" text="" style="-fx-font-size: 12px; -fx-text-fill: #334155; -fx-background-color: white; -fx-padding: 10; -fx-border-color: #d1d5db; -fx-border-radius: 6; -fx-background-radius: 6;" wrapText="true"/>
+    </VBox>
+
+    <!-- Indicateur de traitement - cache au depart -->
+    <HBox fx:id="matchingProcessingBox" spacing="10" alignment="CENTER_LEFT" visible="false" managed="false" style="-fx-padding: 10 0;">
+        <ProgressIndicator fx:id="matchingSpinner" prefWidth="24" prefHeight="24"/>
+        <Label text="Le moteur traite la correspondance des donneurs..." style="-fx-font-size: 13px; -fx-text-fill: #6366f1; -fx-font-style: italic;"/>
+    </HBox>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT" style="-fx-padding: 10 0 0 0;">
+        <Label fx:id="lblStatusMessage" visible="false" managed="false" style="-fx-font-weight: bold; -fx-padding: 0 10 0 0;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="Annuler" fx:id="btnCancel" onAction="#handleCancel" style="-fx-background-color: transparent; -fx-border-color: #cbd5e1; -fx-border-radius: 4; -fx-text-fill: #475569; -fx-padding: 10 20; -fx-cursor: hand; -fx-font-weight: bold;"/>
+        <Button text="Diffuser l'alerte &amp; lancer la correspondance" fx:id="btnSubmit" onAction="#handleSubmit" style="-fx-background-color: #ef4444; -fx-text-fill: white; -fx-border-radius: 4; -fx-background-radius: 4; -fx-font-weight: bold; -fx-padding: 10 20; -fx-cursor: hand;"/>
+    </HBox>
+</VBox>
