@@ -44,6 +44,12 @@ public class MainDashboardController implements Initializable {
     @FXML
     private HBox navEligibility;
 
+    @FXML
+    private HBox navAlerts;
+
+    @FXML
+    private HBox navAuditLogs;
+
     private HBox activeNavItem;
 
     @Override
@@ -104,6 +110,18 @@ public class MainDashboardController implements Initializable {
         loadView("/tn/edu/esprit/views/DonorEligibilityDashboard.fxml");
     }
 
+    @FXML
+    private void onNavAlerts() {
+        setActiveNav(navAlerts);
+        loadView("/tn/edu/esprit/views/DashboardAlerts.fxml");
+    }
+
+    @FXML
+    private void onNavAuditLogs() {
+        setActiveNav(navAuditLogs);
+        loadView("/tn/edu/esprit/views/DashboardLogs.fxml");
+    }
+
     // ==================== HELPERS ====================
 
     /**
@@ -112,8 +130,7 @@ public class MainDashboardController implements Initializable {
     private void loadView(String fxmlPath) {
         try {
             FXMLLoader loader = new FXMLLoader(
-                getClass().getResource(fxmlPath)
-            );
+                    getClass().getResource(fxmlPath));
             Node view = loader.load();
             contentArea.getChildren().clear();
             contentArea.getChildren().add(view);
