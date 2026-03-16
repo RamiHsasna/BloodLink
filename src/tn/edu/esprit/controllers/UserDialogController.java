@@ -5,14 +5,22 @@ import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import tn.edu.esprit.entities.BloodType;
+import tn.edu.esprit.entities.Donor;
 import tn.edu.esprit.entities.UserType;
 import tn.edu.esprit.entities.Users;
+import tn.edu.esprit.services.BloodTypeServiceImpl;
+import tn.edu.esprit.services.ServiceDonor;
 import tn.edu.esprit.services.ServiceUser;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public class UserDialogController {
+
+    private static final int MIN_PASSWORD_LENGTH = 8;
 
     public enum Mode {
         ADD, EDIT
@@ -28,7 +36,26 @@ public class UserDialogController {
     @FXML private ComboBox<String> userTypeCombo;
     @FXML private Button saveButton;
 
+    // Inline error labels
+    @FXML private Label firstNameError;
+    @FXML private Label lastNameError;
+    @FXML private Label emailError;
+    @FXML private Label phoneError;
+    @FXML private Label passwordHint;
+    @FXML private Label userTypeError;
+
+    // Donor-specific fields
+    @FXML private VBox donorFieldsBox;
+    @FXML private ComboBox<String> bloodTypeCombo;
+    @FXML private Label bloodTypeError;
+    @FXML private DatePicker lastDonationDatePicker;
+    @FXML private TextField latitudeField;
+    @FXML private TextField longitudeField;
+    @FXML private Spinner<Integer> totalDonationsSpinner;
+
     private ServiceUser serviceUser;
+    private ServiceDonor serviceDonor;
+    private List<BloodType> bloodTypes;
     private Stage dialogStage;
     private Users userToEdit;
     private Mode mode;
@@ -37,9 +64,88 @@ public class UserDialogController {
     @FXML
     public void initialize() {
         serviceUser = new ServiceUser();
+        serviceDonor = new ServiceDonor();
 
         // Initialize user type combo
         userTypeCombo.getItems().addAll("Donor", "Hospital Staff");
+
+        // Load blood types for donor combo
+        BloodTypeServiceImpl bloodTypeService = new BloodTypeServiceImpl();
+        bloodTypes = bloodTypeService.getAllBloodTypes();
+        for (BloodType bt : bloodTypes) {
+            bloodTypeCombo.getItems().add(bt.getAboType() + bt.getRhFactor());
+        }
+
+        // Total donations spinner (0–999)
+        totalDonationsSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 999, 0));
+        totalDonationsSpinner.setEditable(true);
+
+        // --- Real-time validation listeners ---
+        addRequiredFieldListener(firstNameField, firstNameError, "First name is required");
+        addRequiredFieldListener(lastNameField, lastNameError, "Last name is required");
+        addRequiredFieldListener(phoneField, phoneError, "Phone is required");
+
+        // Email: required + format check
+        emailField.textProperty().addListener((obs, oldVal, newVal) -> {
+            String val = newVal != null ? newVal.trim() : "";
+            if (val.isEmpty()) {
+                showFieldError(emailField, emailError, "Email is required");
+            } else if (!isValidEmail(val)) {
+                showFieldError(emailField, emailError, "Invalid email format");
+            } else {
+                clearFieldError(emailField, emailError);
+            }
+        });
+        emailField.focusedProperty().addListener((obs, wasFocused, isNowFocused) -> {
+            if (!isNowFocused) {
+                String val = emailField.getText() != null ? emailField.getText().trim() : "";
+                if (val.isEmpty()) {
+                    showFieldError(emailField, emailError, "Email is required");
+                } else if (!isValidEmail(val)) {
+                    showFieldError(emailField, emailError, "Invalid email format");
+                }
+            }
+        });
+
+        // Password: live length counter
+        passwordField.textProperty().addListener((obs, oldVal, newVal) -> {
+            int len = newVal != null ? newVal.length() : 0;
+            if (len == 0) {
+                passwordHint.setText("Password must be at least " + MIN_PASSWORD_LENGTH + " characters");
+                passwordHint.getStyleClass().removeAll("password-hint-ok", "password-hint-warn");
+                passwordHint.getStyleClass().add("password-hint-warn");
+                passwordField.getStyleClass().remove("field-error");
+            } else if (len < MIN_PASSWORD_LENGTH) {
+                passwordHint.setText(len + " / " + MIN_PASSWORD_LENGTH + " characters — " + (MIN_PASSWORD_LENGTH - len) + " more needed");
+                passwordHint.getStyleClass().removeAll("password-hint-ok", "password-hint-warn");
+                passwordHint.getStyleClass().add("password-hint-warn");
+                if (!passwordField.getStyleClass().contains("field-error")) {
+                    passwordField.getStyleClass().add("field-error");
+                }
+            } else {
+                passwordHint.setText("Password length is good (" + len + " characters)");
+                passwordHint.getStyleClass().removeAll("password-hint-ok", "password-hint-warn");
+                passwordHint.getStyleClass().add("password-hint-ok");
+                passwordField.getStyleClass().remove("field-error");
+            }
+        });
+
+        // User type combo — show/hide donor section
+        userTypeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                clearFieldError(userTypeCombo, userTypeError);
+            }
+            boolean isDonor = "Donor".equals(newVal);
+            donorFieldsBox.setVisible(isDonor);
+            donorFieldsBox.setManaged(isDonor);
+        });
+
+        // Blood type combo validation
+        bloodTypeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                clearFieldError(bloodTypeCombo, bloodTypeError);
+            }
+        });
     }
 
     public void setDialogStage(Stage dialogStage) {
@@ -90,11 +196,12 @@ public class UserDialogController {
 
             if (mode == Mode.ADD) {
                 String password = passwordField.getText();
+                String userId = UUID.randomUUID().toString();
 
                 Users newUser = new Users(
-                    UUID.randomUUID().toString(),
+                    userId,
                     email,
-                    password, // In production, this should be hashed
+                    password,
                     firstName,
                     lastName,
                     phone,
@@ -109,9 +216,15 @@ public class UserDialogController {
                         .findFirst()
                         .orElse(null);
                 if (saved == null) {
-                    showAlert(Alert.AlertType.ERROR, "Error", "User was not found after save. Check database constraints.");
+                    showAlert(Alert.AlertType.ERROR, "Failed","Could not save the user. The email address may already be in use. Please try again.");
                     return;
                 }
+
+                // If donor, update the auto-created donor row with form data
+                if (userType == UserType.DONOR) {
+                    updateDonorWithFormData(userId, firstName, lastName);
+                }
+
                 showAlert(Alert.AlertType.INFORMATION, "Success", "User added successfully!");
             } else {
                 userToEdit.setFirst_name(firstName);
@@ -123,9 +236,15 @@ public class UserDialogController {
                 serviceUser.modifier(userToEdit);
                 Users updated = serviceUser.getOne(userToEdit);
                 if (!isUserUpdated(updated, userToEdit)) {
-                    showAlert(Alert.AlertType.ERROR, "Error", "User update failed. Check database constraints.");
+                    showAlert(Alert.AlertType.ERROR, "Failed", "Could not update the user. The email address may already be in use. Please try again.");
                     return;
                 }
+
+                // If edited to donor type, update donor row with form data
+                if (userType == UserType.DONOR && donorFieldsBox.isVisible()) {
+                    updateDonorWithFormData(userToEdit.getId(), firstName, lastName);
+                }
+
                 showAlert(Alert.AlertType.INFORMATION, "Success", "User updated successfully!");
             }
 
@@ -136,7 +255,50 @@ public class UserDialogController {
             dialogStage.close();
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert(Alert.AlertType.ERROR, "Error", "Failed to save user: " + e.getMessage());
+            showAlert(Alert.AlertType.ERROR, "Error", "Something went wrong while saving the user. Please check your input and try again.");
+        }
+    }
+
+    private void updateDonorWithFormData(String userId, String firstName, String lastName) {
+        try {
+            String selectedBloodTypeDisplay = bloodTypeCombo.getValue();
+            String bloodTypeId = null;
+            if (selectedBloodTypeDisplay != null) {
+                for (BloodType bt : bloodTypes) {
+                    if ((bt.getAboType() + bt.getRhFactor()).equals(selectedBloodTypeDisplay)) {
+                        bloodTypeId = bt.getBloodTypeId();
+                        break;
+                    }
+                }
+            }
+
+            LocalDate lastDonationDate = lastDonationDatePicker.getValue();
+
+            Double latitude = null;
+            if (latitudeField.getText() != null && !latitudeField.getText().trim().isEmpty()) {
+                latitude = Double.parseDouble(latitudeField.getText().trim());
+            }
+            Double longitude = null;
+            if (longitudeField.getText() != null && !longitudeField.getText().trim().isEmpty()) {
+                longitude = Double.parseDouble(longitudeField.getText().trim());
+            }
+
+            int totalDonations = totalDonationsSpinner.getValue() != null ? totalDonationsSpinner.getValue() : 0;
+
+            Donor donor = new Donor();
+            donor.setUserId(userId);
+            donor.setFirstName(firstName);
+            donor.setLastName(lastName);
+            donor.setBloodTypeId(bloodTypeId);
+            donor.setLastDonationDate(lastDonationDate);
+            donor.setCurrentlyEligible(true);
+            donor.setLatitude(latitude);
+            donor.setLongitude(longitude);
+            donor.setTotalDonations(totalDonations);
+
+            serviceDonor.modifier(donor);
+        } catch (NumberFormatException e) {
+            showAlert(Alert.AlertType.WARNING, "Warning", "Invalid latitude or longitude value. Donor location was not saved.");
         }
     }
 
@@ -146,41 +308,72 @@ public class UserDialogController {
     }
 
     private boolean validateInput() {
-        StringBuilder errors = new StringBuilder();
+        boolean valid = true;
 
         if (firstNameField.getText().trim().isEmpty()) {
-            errors.append("- First name is required\n");
+            showFieldError(firstNameField, firstNameError, "First name is required");
+            valid = false;
+        } else {
+            clearFieldError(firstNameField, firstNameError);
         }
 
         if (lastNameField.getText().trim().isEmpty()) {
-            errors.append("- Last name is required\n");
+            showFieldError(lastNameField, lastNameError, "Last name is required");
+            valid = false;
+        } else {
+            clearFieldError(lastNameField, lastNameError);
         }
 
         if (emailField.getText().trim().isEmpty()) {
-            errors.append("- Email is required\n");
+            showFieldError(emailField, emailError, "Email is required");
+            valid = false;
         } else if (!isValidEmail(emailField.getText().trim())) {
-            errors.append("- Email format is invalid\n");
+            showFieldError(emailField, emailError, "Invalid email format");
+            valid = false;
+        } else {
+            clearFieldError(emailField, emailError);
         }
 
         if (phoneField.getText().trim().isEmpty()) {
-            errors.append("- Phone is required\n");
+            showFieldError(phoneField, phoneError, "Phone is required");
+            valid = false;
+        } else {
+            clearFieldError(phoneField, phoneError);
         }
 
-        if (mode == Mode.ADD && passwordField.getText().isEmpty()) {
-            errors.append("- Password is required\n");
+        if (mode == Mode.ADD) {
+            String pw = passwordField.getText();
+            if (pw == null || pw.isEmpty()) {
+                if (!passwordField.getStyleClass().contains("field-error")) {
+                    passwordField.getStyleClass().add("field-error");
+                }
+                passwordHint.setText("Password is required");
+                passwordHint.getStyleClass().removeAll("password-hint-ok", "password-hint-warn");
+                passwordHint.getStyleClass().add("password-hint-warn");
+                valid = false;
+            } else if (pw.length() < MIN_PASSWORD_LENGTH) {
+                valid = false;
+            }
         }
 
         if (userTypeCombo.getValue() == null) {
-            errors.append("- User type is required\n");
+            showFieldError(userTypeCombo, userTypeError, "User type is required");
+            valid = false;
+        } else {
+            clearFieldError(userTypeCombo, userTypeError);
         }
 
-        if (errors.length() > 0) {
-            showAlert(Alert.AlertType.ERROR, "Validation Error",
-                     "Please fix the following errors:\n\n" + errors.toString());
-            return false;
+        // Donor-specific validation
+        if ("Donor".equals(userTypeCombo.getValue())) {
+            if (bloodTypeCombo.getValue() == null) {
+                showFieldError(bloodTypeCombo, bloodTypeError, "Blood type is required for donors");
+                valid = false;
+            } else {
+                clearFieldError(bloodTypeCombo, bloodTypeError);
+            }
         }
 
-        return true;
+        return valid;
     }
 
     private boolean isValidEmail(String email) {
@@ -223,5 +416,35 @@ public class UserDialogController {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    // --- Inline validation helpers ---
+
+    private void addRequiredFieldListener(TextField field, Label errorLabel, String message) {
+        field.textProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null && !newVal.trim().isEmpty()) {
+                clearFieldError(field, errorLabel);
+            }
+        });
+        field.focusedProperty().addListener((obs, wasFocused, isNowFocused) -> {
+            if (!isNowFocused && (field.getText() == null || field.getText().trim().isEmpty())) {
+                showFieldError(field, errorLabel, message);
+            }
+        });
+    }
+
+    private void showFieldError(Control field, Label errorLabel, String message) {
+        if (!field.getStyleClass().contains("field-error")) {
+            field.getStyleClass().add("field-error");
+        }
+        errorLabel.setText(message);
+        errorLabel.setVisible(true);
+        errorLabel.setManaged(true);
+    }
+
+    private void clearFieldError(Control field, Label errorLabel) {
+        field.getStyleClass().remove("field-error");
+        errorLabel.setVisible(false);
+        errorLabel.setManaged(false);
     }
 }

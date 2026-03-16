@@ -18,8 +18,8 @@
         </padding>
 
         <VBox spacing="4" HBox.hgrow="ALWAYS">
-            <Label text="Inventaire" styleClass="page-title"/>
-            <Label text="Gestion des stocks sanguins" styleClass="page-description"/>
+            <Label text="Inventory" styleClass="page-title"/>
+            <Label text="Blood stock management" styleClass="page-description"/>
         </VBox>
 
         <!-- Date display -->
@@ -31,12 +31,7 @@
             <Label fx:id="lblCurrentDate" text="" styleClass="inv-date-text"/>
         </HBox>
 
-        <!-- Notification bell -->
-        <StackPane styleClass="inv-notification-bell" prefWidth="40" prefHeight="40">
-            <Label text="🔔" style="-fx-font-size: 18px;"/>
-            <Label fx:id="lblNotifBadge" text="" styleClass="inv-notif-badge"
-                   StackPane.alignment="TOP_RIGHT" visible="false" managed="false"/>
-        </StackPane>
+
     </HBox>
 
     <!-- Main scrollable content -->
@@ -57,8 +52,8 @@
                 <!-- Section Header: Title + Alert Badges -->
                 <HBox alignment="CENTER_LEFT" spacing="12">
                     <VBox spacing="4" HBox.hgrow="ALWAYS">
-                        <Label text="Inventaire Sanguin" styleClass="inv-section-title"/>
-                        <Label fx:id="lblTotalStock" text="0 poches en stock" styleClass="inv-section-subtitle"/>
+                        <Label text="Blood Inventory" styleClass="inv-section-title"/>
+                        <Label fx:id="lblTotalStock" text="0 units in stock" styleClass="inv-section-subtitle"/>
                     </VBox>
 
                     <HBox spacing="8" alignment="CENTER_RIGHT">
@@ -68,7 +63,7 @@
                                 <Insets top="5" right="12" bottom="5" left="10"/>
                             </padding>
                             <Label text="⚠" styleClass="inv-alert-badge-critical-icon"/>
-                            <Label fx:id="lblCriticalCount" text="0 critiques"
+                            <Label fx:id="lblCriticalCount" text="0 critical"
                                    styleClass="inv-alert-badge-critical-text"/>
                         </HBox>
 
@@ -77,7 +72,7 @@
                             <padding>
                                 <Insets top="5" right="12" bottom="5" left="10"/>
                             </padding>
-                            <Label fx:id="lblLowCount" text="0 faibles"
+                            <Label fx:id="lblLowCount" text="0 low"
                                    styleClass="inv-alert-badge-low-text"/>
                         </HBox>
                     </HBox>
@@ -112,7 +107,7 @@
                 <!-- Section Header -->
                 <HBox alignment="CENTER_LEFT" spacing="10">
                     <Label text="⚡" style="-fx-font-size: 18px;"/>
-                    <Label text="Actions Rapides" styleClass="inv-section-title"/>
+                    <Label text="Quick Actions" styleClass="inv-section-title"/>
                 </HBox>
 
                 <Region prefHeight="20"/>
@@ -136,9 +131,9 @@
                         </padding>
                         <HBox alignment="CENTER_LEFT" spacing="8">
                             <Label text="⚠" styleClass="inv-action-icon-light"/>
-                            <Label text="Alerte d'urgence" styleClass="inv-action-title-light"/>
+                            <Label text="Urgent Alert" styleClass="inv-action-title-light"/>
                         </HBox>
-                        <Label text="Notifier les donneurs" styleClass="inv-action-subtitle-light"/>
+                        <Label text="Notify donors" styleClass="inv-action-subtitle-light"/>
                     </VBox>
 
                     <VBox styleClass="inv-action-card-transfer" spacing="4" onMouseClicked="#onRequestTransfer"
@@ -148,9 +143,9 @@
                         </padding>
                         <HBox alignment="CENTER_LEFT" spacing="8">
                             <Label text="🔄" styleClass="inv-action-icon-light"/>
-                            <Label text="Demander transfert" styleClass="inv-action-title-light"/>
+                            <Label text="Request Transfer" styleClass="inv-action-title-light"/>
                         </HBox>
-                        <Label text="Stock d'un autre hôpital" styleClass="inv-action-subtitle-light"/>
+                        <Label text="Stock from another hospital" styleClass="inv-action-subtitle-light"/>
                     </VBox>
 
                     <!-- Row 1: Regular Actions (outlined) -->
@@ -161,9 +156,9 @@
                         </padding>
                         <HBox alignment="CENTER_LEFT" spacing="8">
                             <Label text="+" styleClass="inv-action-icon-dark"/>
-                            <Label text="Ajouter stock" styleClass="inv-action-title-dark"/>
+                            <Label text="Add Stock" styleClass="inv-action-title-dark"/>
                         </HBox>
-                        <Label text="Enregistrer nouvelles poches" styleClass="inv-action-subtitle-dark"/>
+                        <Label text="Register new blood units" styleClass="inv-action-subtitle-dark"/>
                     </VBox>
 
                     <VBox styleClass="inv-action-card-outlined" spacing="4" onMouseClicked="#onGenerateReport"
@@ -173,9 +168,9 @@
                         </padding>
                         <HBox alignment="CENTER_LEFT" spacing="8">
                             <Label text="📄" styleClass="inv-action-icon-dark"/>
-                            <Label text="Generer rapport" styleClass="inv-action-title-dark"/>
+                            <Label text="Generate Report" styleClass="inv-action-title-dark"/>
                         </HBox>
-                        <Label text="Export des donnees" styleClass="inv-action-subtitle-dark"/>
+                        <Label text="Export data" styleClass="inv-action-subtitle-dark"/>
                     </VBox>
                 </GridPane>
             </VBox>

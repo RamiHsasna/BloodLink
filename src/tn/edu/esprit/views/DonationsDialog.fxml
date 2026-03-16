@@ -7,7 +7,7 @@
 
 <VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="tn.edu.esprit.controllers.DonationsDialogController"
-      styleClass="dialog-container" spacing="15" prefWidth="500">
+      styleClass="dialog-container" spacing="15" prefWidth="500" prefHeight="750">
 
     <padding>
         <Insets top="20" right="25" bottom="20" left="25"/>

@@ -6,11 +6,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.shape.Circle?>
 
-<BorderPane xmlns:fx="http://javafx.com/fxml"
-            fx:controller="tn.edu.esprit.controllers.MainDashboardController"
-            prefWidth="1200" prefHeight="750"
-            styleClass="root-pane"
-            stylesheets="@../styles/dashboard.css">
+<BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="tn.edu.esprit.controllers.MainDashboardController" prefWidth="1200" prefHeight="750" styleClass="root-pane" stylesheets="@../styles/dashboard.css">
 
     <!-- LEFT: Dark Sidebar -->
     <left>
@@ -50,8 +46,7 @@
                     <Insets top="0" right="12" bottom="0" left="12"/>
                 </padding>
 
-                <HBox fx:id="navUsers" styleClass="nav-item" alignment="CENTER_LEFT"
-                      spacing="12" onMouseClicked="#onNavUsers">
+                <HBox fx:id="navUsers" styleClass="nav-item" alignment="CENTER_LEFT" spacing="12" onMouseClicked="#onNavUsers">
                     <padding>
                         <Insets top="10" right="16" bottom="10" left="16"/>
                     </padding>
@@ -59,8 +54,7 @@
                     <Label text="Users" styleClass="nav-label"/>
                 </HBox>
 
-                <HBox fx:id="navHospitals" styleClass="nav-item, nav-item-active" alignment="CENTER_LEFT"
-                      spacing="12" onMouseClicked="#onNavHospitals">
+                <HBox fx:id="navHospitals" styleClass="nav-item, nav-item-active" alignment="CENTER_LEFT" spacing="12" onMouseClicked="#onNavHospitals">
                     <padding>
                         <Insets top="10" right="16" bottom="10" left="16"/>
                     </padding>
@@ -68,8 +62,7 @@
                     <Label text="Hospitals" styleClass="nav-label"/>
                 </HBox>
 
-                <HBox fx:id="navDonations" styleClass="nav-item" alignment="CENTER_LEFT"
-                      spacing="12" onMouseClicked="#onNavDonations">
+                <HBox fx:id="navDonations" styleClass="nav-item" alignment="CENTER_LEFT" spacing="12" onMouseClicked="#onNavDonations">
                     <padding>
                         <Insets top="10" right="16" bottom="10" left="16"/>
                     </padding>
@@ -77,8 +70,7 @@
                     <Label text="Donations" styleClass="nav-label"/>
                 </HBox>
 
-                <HBox fx:id="navDonationEvents" styleClass="nav-item" alignment="CENTER_LEFT"
-                      spacing="12" onMouseClicked="#onNavDonationEvents">
+                <HBox fx:id="navDonationEvents" styleClass="nav-item" alignment="CENTER_LEFT" spacing="12" onMouseClicked="#onNavDonationEvents">
                     <padding>
                         <Insets top="10" right="16" bottom="10" left="16"/>
                     </padding>
@@ -86,8 +78,7 @@
                     <Label text="Donation Events" styleClass="nav-label"/>
                 </HBox>
 
-                <HBox fx:id="navInventory" styleClass="nav-item" alignment="CENTER_LEFT"
-                      spacing="12" onMouseClicked="#onNavInventory">
+                <HBox fx:id="navInventory" styleClass="nav-item" alignment="CENTER_LEFT" spacing="12" onMouseClicked="#onNavInventory">
                     <padding>
                         <Insets top="10" right="16" bottom="10" left="16"/>
                     </padding>
@@ -95,8 +86,7 @@
                     <Label text="Blood Inventory" styleClass="nav-label"/>
                 </HBox>
 
-                <HBox fx:id="navTransfers" styleClass="nav-item" alignment="CENTER_LEFT"
-                      spacing="12" onMouseClicked="#onNavTransfers">
+                <HBox fx:id="navTransfers" styleClass="nav-item" alignment="CENTER_LEFT" spacing="12" onMouseClicked="#onNavTransfers">
                     <padding>
                         <Insets top="10" right="16" bottom="10" left="16"/>
                     </padding>
@@ -104,8 +94,7 @@
                     <Label text="Transfers" styleClass="nav-label"/>
                 </HBox>
 
-                <HBox fx:id="navBloodTypes" styleClass="nav-item" alignment="CENTER_LEFT"
-                      spacing="12" onMouseClicked="#onNavBloodTypes">
+                <HBox fx:id="navBloodTypes" styleClass="nav-item" alignment="CENTER_LEFT" spacing="12" onMouseClicked="#onNavBloodTypes">
                     <padding>
                         <Insets top="10" right="16" bottom="10" left="16"/>
                     </padding>
@@ -113,13 +102,28 @@
                     <Label text="Blood Types" styleClass="nav-label"/>
                 </HBox>
 
-                <HBox fx:id="navEligibility" styleClass="nav-item" alignment="CENTER_LEFT"
-                      spacing="12" onMouseClicked="#onNavEligibility">
+                <HBox fx:id="navEligibility" styleClass="nav-item" alignment="CENTER_LEFT" spacing="12" onMouseClicked="#onNavEligibility">
                     <padding>
                         <Insets top="10" right="16" bottom="10" left="16"/>
                     </padding>
                     <Label text="✅" styleClass="nav-icon"/>
                     <Label text="Donor Eligibility" styleClass="nav-label"/>
+                </HBox>
+
+                <HBox fx:id="navAlerts" styleClass="nav-item" alignment="CENTER_LEFT" spacing="12" onMouseClicked="#onNavAlerts">
+                    <padding>
+                        <Insets top="10" right="16" bottom="10" left="16"/>
+                    </padding>
+                    <Label text="🚨" styleClass="nav-icon"/>
+                    <Label text="Alerts" styleClass="nav-label"/>
+                </HBox>
+
+                <HBox fx:id="navAuditLogs" styleClass="nav-item" alignment="CENTER_LEFT" spacing="12" onMouseClicked="#onNavAuditLogs">
+                    <padding>
+                        <Insets top="10" right="16" bottom="10" left="16"/>
+                    </padding>
+                    <Label text="📋" styleClass="nav-icon"/>
+                    <Label text="Audit Logs" styleClass="nav-label"/>
                 </HBox>
             </VBox>
 

@@ -1,5 +1,11 @@
 package tn.edu.esprit.controllers;
 
+import java.net.URL;
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.*;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
@@ -12,42 +18,75 @@ import tn.edu.esprit.entities.TransfertStatus;
 import tn.edu.esprit.services.HospitalServiceImpl;
 import tn.edu.esprit.services.TransfertServiceImpl;
 
-import java.net.URL;
-import java.sql.Timestamp;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.*;
-
 public class TransferFormController implements Initializable {
 
     // ---- FXML Fields ----
-    @FXML private VBox modalCard;
-    @FXML private Label lblFormTitle;
-    @FXML private Label lblFormSubtitle;
-    @FXML private ComboBox<Hospital> cbRequestingHospital;
-    @FXML private ComboBox<Hospital> cbApprovingHospital;
-    @FXML private ComboBox<String> cbBloodType;
-    @FXML private Spinner<Integer> spQuantity;
-    @FXML private TextArea taReason;
-    @FXML private DatePicker dpExpectedDelivery;
-    @FXML private TextArea taNotes;
-    @FXML private Button btnSubmit;
-    @FXML private Button btnCancel;
-    @FXML private Button btnClose;
-    @FXML private Label lblStatusMessage;
+    @FXML
+    private VBox modalCard;
+
+    @FXML
+    private Label lblFormTitle;
+
+    @FXML
+    private Label lblFormSubtitle;
+
+    @FXML
+    private ComboBox<Hospital> cbRequestingHospital;
+
+    @FXML
+    private ComboBox<Hospital> cbApprovingHospital;
+
+    @FXML
+    private ComboBox<String> cbBloodType;
+
+    @FXML
+    private Spinner<Integer> spQuantity;
+
+    @FXML
+    private TextArea taReason;
+
+    @FXML
+    private DatePicker dpExpectedDelivery;
+
+    @FXML
+    private TextArea taNotes;
+
+    @FXML
+    private Button btnSubmit;
+
+    @FXML
+    private Button btnCancel;
+
+    @FXML
+    private Button btnClose;
+
+    @FXML
+    private Label lblStatusMessage;
 
     // Error labels
-    @FXML private Label lblRequestingHospitalError;
-    @FXML private Label lblApprovingHospitalError;
-    @FXML private Label lblBloodTypeError;
-    @FXML private Label lblQuantityError;
-    @FXML private Label lblReasonError;
-    @FXML private Label lblExpectedDeliveryError;
+    @FXML
+    private Label lblRequestingHospitalError;
+
+    @FXML
+    private Label lblApprovingHospitalError;
+
+    @FXML
+    private Label lblBloodTypeError;
+
+    @FXML
+    private Label lblQuantityError;
+
+    @FXML
+    private Label lblReasonError;
+
+    @FXML
+    private Label lblExpectedDeliveryError;
 
     // ---- State ----
-    private final TransfertServiceImpl transferService = new TransfertServiceImpl();
-    private final HospitalServiceImpl hospitalService = new HospitalServiceImpl();
+    private final TransfertServiceImpl transferService =
+        new TransfertServiceImpl();
+    private final HospitalServiceImpl hospitalService =
+        new HospitalServiceImpl();
 
     private TransferListController transferListController;
     private StackPane parentContainer;
@@ -56,7 +95,16 @@ public class TransferFormController implements Initializable {
 
     private List<Hospital> allHospitals = new ArrayList<>();
 
-    private static final String[] BLOOD_TYPES = {"A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"};
+    private static final String[] BLOOD_TYPES = {
+        "A+",
+        "A-",
+        "B+",
+        "B-",
+        "AB+",
+        "AB-",
+        "O+",
+        "O-",
+    };
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -78,11 +126,16 @@ public class TransferFormController implements Initializable {
     }
 
     private void setupHospitalComboBoxes() {
-        StringConverter<Hospital> hospitalConverter = new StringConverter<Hospital>() {
+        StringConverter<Hospital> hospitalConverter = new StringConverter<
+            Hospital
+        >() {
             @Override
             public String toString(Hospital hospital) {
                 if (hospital == null) return null;
-                String city = hospital.getCity() != null ? " (" + hospital.getCity() + ")" : "";
+                String city =
+                    hospital.getCity() != null
+                        ? " (" + hospital.getCity() + ")"
+                        : "";
                 return hospital.getName() + city;
             }
 
@@ -114,14 +167,22 @@ public class TransferFormController implements Initializable {
 
             cbApprovingHospital.getItems().clear();
             for (Hospital h : activeHospitals) {
-                if (selected == null || !h.getHospitalId().equals(selected.getHospitalId())) {
+                if (
+                    selected == null ||
+                    !h.getHospitalId().equals(selected.getHospitalId())
+                ) {
                     cbApprovingHospital.getItems().add(h);
                 }
             }
 
             // Restore previous selection if still valid
-            if (currentApproving != null && (selected == null
-                    || !currentApproving.getHospitalId().equals(selected.getHospitalId()))) {
+            if (
+                currentApproving != null &&
+                (selected == null ||
+                    !currentApproving
+                        .getHospitalId()
+                        .equals(selected.getHospitalId()))
+            ) {
                 cbApprovingHospital.setValue(currentApproving);
             }
         });
@@ -133,7 +194,7 @@ public class TransferFormController implements Initializable {
 
     private void setupQuantitySpinner() {
         SpinnerValueFactory<Integer> valueFactory =
-                new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 500, 1);
+            new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 500, 1);
         spQuantity.setValueFactory(valueFactory);
     }
 
@@ -160,14 +221,20 @@ public class TransferFormController implements Initializable {
         this.isEditMode = true;
         this.editingTransfer = transfer;
 
-        lblFormTitle.setText("Modifier le Transfert");
-        lblFormSubtitle.setText("Modifier les informations de la demande de transfert #" + transfer.getTransferId() + ".");
-        btnSubmit.setText("Enregistrer les modifications");
+        lblFormTitle.setText("Edit Transfer");
+        lblFormSubtitle.setText(
+            "Edit the details of transfer request #" +
+                transfer.getTransferId() +
+                "."
+        );
+        btnSubmit.setText("Save Changes");
 
         // Pre-fill requesting hospital
         if (transfer.getRequestingHospitalId() != null) {
             for (Hospital h : cbRequestingHospital.getItems()) {
-                if (h.getHospitalId().equals(transfer.getRequestingHospitalId())) {
+                if (
+                    h.getHospitalId().equals(transfer.getRequestingHospitalId())
+                ) {
                     cbRequestingHospital.setValue(h);
                     break;
                 }
@@ -177,7 +244,9 @@ public class TransferFormController implements Initializable {
         // Pre-fill approving hospital
         if (transfer.getApprovingHospitalId() != null) {
             for (Hospital h : cbApprovingHospital.getItems()) {
-                if (h.getHospitalId().equals(transfer.getApprovingHospitalId())) {
+                if (
+                    h.getHospitalId().equals(transfer.getApprovingHospitalId())
+                ) {
                     cbApprovingHospital.setValue(h);
                     break;
                 }
@@ -191,7 +260,9 @@ public class TransferFormController implements Initializable {
 
         // Pre-fill quantity
         if (transfer.getQuantityUnitsRequested() != null) {
-            spQuantity.getValueFactory().setValue(transfer.getQuantityUnitsRequested());
+            spQuantity
+                .getValueFactory()
+                .setValue(transfer.getQuantityUnitsRequested());
         }
 
         // Pre-fill reason
@@ -201,7 +272,9 @@ public class TransferFormController implements Initializable {
 
         // Pre-fill expected delivery date
         if (transfer.getDeliveryExpectedAt() != null) {
-            dpExpectedDelivery.setValue(transfer.getDeliveryExpectedAt().toLocalDateTime().toLocalDate());
+            dpExpectedDelivery.setValue(
+                transfer.getDeliveryExpectedAt().toLocalDateTime().toLocalDate()
+            );
         }
 
         // Pre-fill notes
@@ -235,9 +308,8 @@ public class TransferFormController implements Initializable {
                 transferListController.refreshData();
             }
             closeModal();
-
         } catch (Exception e) {
-            showStatusMessage("Erreur: " + e.getMessage(), true);
+            showStatusMessage("Error: " + e.getMessage(), true);
             e.printStackTrace();
         }
     }
@@ -263,16 +335,28 @@ public class TransferFormController implements Initializable {
         Hospital approving = cbApprovingHospital.getValue();
 
         editingTransfer.setRequestingHospitalId(requesting.getHospitalId());
-        editingTransfer.setApprovingHospitalId(approving != null ? approving.getHospitalId() : null);
+        editingTransfer.setApprovingHospitalId(
+            approving != null ? approving.getHospitalId() : null
+        );
         editingTransfer.setBloodTypeId(cbBloodType.getValue());
         editingTransfer.setQuantityUnitsRequested(spQuantity.getValue());
-        editingTransfer.setReason(taReason.getText() != null ? taReason.getText().trim() : null);
-        editingTransfer.setNotes(taNotes.getText() != null && !taNotes.getText().trim().isEmpty()
-                ? taNotes.getText().trim() : null);
+        editingTransfer.setReason(
+            taReason.getText() != null ? taReason.getText().trim() : null
+        );
+        editingTransfer.setNotes(
+            taNotes.getText() != null && !taNotes.getText().trim().isEmpty()
+                ? taNotes.getText().trim()
+                : null
+        );
 
         if (dpExpectedDelivery.getValue() != null) {
-            LocalDateTime expectedDateTime = LocalDateTime.of(dpExpectedDelivery.getValue(), LocalTime.MIDNIGHT);
-            editingTransfer.setDeliveryExpectedAt(Timestamp.valueOf(expectedDateTime));
+            LocalDateTime expectedDateTime = LocalDateTime.of(
+                dpExpectedDelivery.getValue(),
+                LocalTime.MIDNIGHT
+            );
+            editingTransfer.setDeliveryExpectedAt(
+                Timestamp.valueOf(expectedDateTime)
+            );
         } else {
             editingTransfer.setDeliveryExpectedAt(null);
         }
@@ -290,17 +374,27 @@ public class TransferFormController implements Initializable {
         Hospital approving = cbApprovingHospital.getValue();
 
         transfer.setRequestingHospitalId(requesting.getHospitalId());
-        transfer.setApprovingHospitalId(approving != null ? approving.getHospitalId() : null);
+        transfer.setApprovingHospitalId(
+            approving != null ? approving.getHospitalId() : null
+        );
         transfer.setBloodTypeId(cbBloodType.getValue());
         transfer.setQuantityUnitsRequested(spQuantity.getValue());
         transfer.setQuantityUnitsApproved(0);
         transfer.setStatus(TransfertStatus.PENDING);
-        transfer.setReason(taReason.getText() != null ? taReason.getText().trim() : null);
-        transfer.setNotes(taNotes.getText() != null && !taNotes.getText().trim().isEmpty()
-                ? taNotes.getText().trim() : null);
+        transfer.setReason(
+            taReason.getText() != null ? taReason.getText().trim() : null
+        );
+        transfer.setNotes(
+            taNotes.getText() != null && !taNotes.getText().trim().isEmpty()
+                ? taNotes.getText().trim()
+                : null
+        );
 
         if (dpExpectedDelivery.getValue() != null) {
-            LocalDateTime expectedDateTime = LocalDateTime.of(dpExpectedDelivery.getValue(), LocalTime.MIDNIGHT);
+            LocalDateTime expectedDateTime = LocalDateTime.of(
+                dpExpectedDelivery.getValue(),
+                LocalTime.MIDNIGHT
+            );
             transfer.setDeliveryExpectedAt(Timestamp.valueOf(expectedDateTime));
         }
 
@@ -321,53 +415,93 @@ public class TransferFormController implements Initializable {
 
         // Requesting hospital — required
         if (cbRequestingHospital.getValue() == null) {
-            showFieldError(null, lblRequestingHospitalError, "Veuillez selectionner l'hopital demandeur.");
+            showFieldError(
+                null,
+                lblRequestingHospitalError,
+                "Please select the requesting hospital."
+            );
             valid = false;
         }
 
         // Approving hospital — required
         if (cbApprovingHospital.getValue() == null) {
-            showFieldError(null, lblApprovingHospitalError, "Veuillez selectionner l'hopital fournisseur.");
+            showFieldError(
+                null,
+                lblApprovingHospitalError,
+                "Please select the supplying hospital."
+            );
             valid = false;
         }
 
         // Same hospital check
-        if (cbRequestingHospital.getValue() != null && cbApprovingHospital.getValue() != null) {
-            if (cbRequestingHospital.getValue().getHospitalId()
-                    .equals(cbApprovingHospital.getValue().getHospitalId())) {
-                showFieldError(null, lblApprovingHospitalError,
-                        "L'hopital fournisseur doit etre different de l'hopital demandeur.");
+        if (
+            cbRequestingHospital.getValue() != null &&
+            cbApprovingHospital.getValue() != null
+        ) {
+            if (
+                cbRequestingHospital
+                    .getValue()
+                    .getHospitalId()
+                    .equals(cbApprovingHospital.getValue().getHospitalId())
+            ) {
+                showFieldError(
+                    null,
+                    lblApprovingHospitalError,
+                    "The supplying hospital must be different from the requesting hospital."
+                );
                 valid = false;
             }
         }
 
         // Blood type — required
-        if (cbBloodType.getValue() == null || cbBloodType.getValue().isEmpty()) {
-            showFieldError(null, lblBloodTypeError, "Veuillez selectionner un groupe sanguin.");
+        if (
+            cbBloodType.getValue() == null || cbBloodType.getValue().isEmpty()
+        ) {
+            showFieldError(
+                null,
+                lblBloodTypeError,
+                "Please select a blood type."
+            );
             valid = false;
         }
 
         // Quantity — must be at least 1
         if (spQuantity.getValue() == null || spQuantity.getValue() < 1) {
-            showFieldError(null, lblQuantityError, "La quantite doit etre d'au moins 1 unite.");
+            showFieldError(
+                null,
+                lblQuantityError,
+                "Quantity must be at least 1 unit."
+            );
             valid = false;
         }
 
         // Reason — required
-        String reason = taReason.getText() != null ? taReason.getText().trim() : "";
+        String reason =
+            taReason.getText() != null ? taReason.getText().trim() : "";
         if (reason.isEmpty()) {
-            showFieldError(null, lblReasonError, "Veuillez indiquer le motif de la demande.");
+            showFieldError(
+                null,
+                lblReasonError,
+                "Please provide a reason for the request."
+            );
             valid = false;
         } else if (reason.length() < 5) {
-            showFieldError(null, lblReasonError, "Le motif doit contenir au moins 5 caracteres.");
+            showFieldError(
+                null,
+                lblReasonError,
+                "The reason must contain at least 5 characters."
+            );
             valid = false;
         }
 
         // Expected delivery — optional, but if set must be in the future
         if (dpExpectedDelivery.getValue() != null) {
             if (dpExpectedDelivery.getValue().isBefore(LocalDate.now())) {
-                showFieldError(null, lblExpectedDeliveryError,
-                        "La date de livraison doit etre aujourd'hui ou dans le futur.");
+                showFieldError(
+                    null,
+                    lblExpectedDeliveryError,
+                    "The delivery date must be today or in the future."
+                );
                 valid = false;
             }
         }
@@ -380,7 +514,11 @@ public class TransferFormController implements Initializable {
     /**
      * Shows an inline error message below a field.
      */
-    private void showFieldError(Control field, Label errorLabel, String message) {
+    private void showFieldError(
+        Control field,
+        Label errorLabel,
+        String message
+    ) {
         if (field != null) {
             field.getStyleClass().add("form-input-error");
         }
@@ -425,8 +563,12 @@ public class TransferFormController implements Initializable {
      */
     private void showStatusMessage(String message, boolean isError) {
         lblStatusMessage.setText(message);
-        lblStatusMessage.getStyleClass().removeAll("form-status-success", "form-status-error");
-        lblStatusMessage.getStyleClass().add(isError ? "form-status-error" : "form-status-success");
+        lblStatusMessage
+            .getStyleClass()
+            .removeAll("form-status-success", "form-status-error");
+        lblStatusMessage
+            .getStyleClass()
+            .add(isError ? "form-status-error" : "form-status-success");
         lblStatusMessage.setVisible(true);
         lblStatusMessage.setManaged(true);
     }
@@ -437,7 +579,9 @@ public class TransferFormController implements Initializable {
     private void closeModal() {
         if (parentContainer != null) {
             if (!parentContainer.getChildren().isEmpty()) {
-                parentContainer.getChildren().remove(parentContainer.getChildren().size() - 1);
+                parentContainer
+                    .getChildren()
+                    .remove(parentContainer.getChildren().size() - 1);
             }
         }
     }

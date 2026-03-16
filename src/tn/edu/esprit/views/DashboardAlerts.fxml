@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx/17"
+    xmlns:fx="http://javafx.com/fxml/1" fx:controller="tn.edu.esprit.controllers.DashboardAlertsController" spacing="20" styleClass="content-root" stylesheets="@../styles/dashboard.css">
+
+    <padding>
+        <Insets top="30" right="40" bottom="30" left="40"/>
+    </padding>
+
+    <!-- Page Header -->
+    <VBox spacing="4" styleClass="page-header">
+        <Label text="Alertes d'urgence" styleClass="page-title"/>
+        <Label text="Diffuser et gerer les demandes urgentes de sang." styleClass="page-description"/>
+    </VBox>
+
+    <!-- Toolbar: Search + Filter + Actions -->
+    <HBox alignment="CENTER_LEFT" spacing="12">
+        <HBox alignment="CENTER_LEFT" spacing="8" styleClass="search-input-wrapper">
+            <padding>
+                <Insets left="12" right="4" top="2" bottom="2"/>
+            </padding>
+            <Label text="🔍" styleClass="search-icon"/>
+            <TextField fx:id="searchField" promptText="Rechercher..." prefWidth="260" styleClass="search-input"/>
+        </HBox>
+        <ComboBox fx:id="filterSelector" styleClass="section-selector" prefWidth="180" promptText="Filtrer par severite"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="btnRefresh" text="⟳ Rafraichir" onAction="#handleRefresh" styleClass="btn-secondary"/>
+        <Button fx:id="btnBroadcast" text="Diffuser une alerte" onAction="#handleBroadcast" styleClass="btn-primary"/>
+    </HBox>
+
+    <!-- Stat Chips Row -->
+    <HBox fx:id="statsRow" spacing="12" alignment="CENTER_LEFT"/>
+
+    <!-- Alerts Cards -->
+    <ScrollPane fx:id="scrollAlerts" fitToWidth="true" styleClass="cards-scroll-pane" VBox.vgrow="ALWAYS">
+        <VBox fx:id="containerAlerts" spacing="12" styleClass="cards-container">
+            <padding>
+                <Insets top="4" right="4" bottom="20" left="4"/>
+            </padding>
+        </VBox>
+    </ScrollPane>
+
+</VBox>

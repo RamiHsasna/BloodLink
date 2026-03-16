@@ -10,5 +10,6 @@
     <orderEntry type="library" exported="" name="postgresql-42.7.9" level="project" />
     <orderEntry type="library" exported="" name="postgresql-42.7.10" level="project" />
     <orderEntry type="library" name="lib" level="project" />
+    <orderEntry type="library" name="java" level="project" />
   </component>
 </module>
