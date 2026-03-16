@@ -4,14 +4,16 @@ import tn.edu.esprit.entities.Donor;
 import tn.edu.esprit.Tools.DataSource;
 
 import java.sql.*;
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 public class ServiceDonor implements IService<Donor> {
+
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
 
     private Connection cnx;
 
@@ -36,7 +38,7 @@ public class ServiceDonor implements IService<Donor> {
                     : "NULL") + ", "
                     + "'" + d.getBloodTypeId() + "', "
                     + (d.getLastDonationDate() != null
-                    ? "'" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(d.getLastDonationDate()) + "'"
+                    ? "'" + d.getLastDonationDate().format(DATE_FORMATTER) + "'"
                     : "NULL") + ", "
                     + (d.isCurrentlyEligible() ? "true" : "false") + ", "
                     + (d.getLatitude() != null ? d.getLatitude() : "NULL") + ", "
@@ -65,8 +67,6 @@ public class ServiceDonor implements IService<Donor> {
                 return;
             }
 
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-
                 String firstName = d.getFirstName() != null
                     ? d.getFirstName()
                     : existing.getFirstName();
@@ -81,18 +81,14 @@ public class ServiceDonor implements IService<Donor> {
 
 
             String lastDonationDate = d.getLastDonationDate() != null
-                    ? "'" + sdf.format(d.getLastDonationDate()) + "'"
+            ? "'" + d.getLastDonationDate().format(DATE_FORMATTER) + "'"
                     : (existing.getLastDonationDate() != null
-                    ? "'" + sdf.format(existing.getLastDonationDate()) + "'"
+            ? "'" + existing.getLastDonationDate().format(DATE_FORMATTER) + "'"
                     : "NULL");
 
-            int totalDonations = d.getTotalDonations() != 0
-                    ? d.getTotalDonations()
-                    : existing.getTotalDonations();
+                int totalDonations = d.getTotalDonations();
 
-            boolean isCurrentlyEligible = d.isCurrentlyEligible() != existing.isCurrentlyEligible()
-                    ? d.isCurrentlyEligible()
-                    : existing.isCurrentlyEligible();
+                boolean isCurrentlyEligible = d.isCurrentlyEligible();
 
             Double latitude = d.getLatitude() != null
                     ? d.getLatitude()

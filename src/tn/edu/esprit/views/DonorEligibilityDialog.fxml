@@ -25,11 +25,11 @@
             <!-- Donor ID -->
             <VBox spacing="8">
                 <Label text="Donor ID (User ID)" styleClass="form-label"/>
-                <TextField fx:id="donorIdField" promptText="e.g. 123e4567-e89b-12d3-a456-426614174000" styleClass="form-field">
+                <ComboBox fx:id="donorIdCombo" promptText="Select a donor" styleClass="form-field" maxWidth="Infinity">
                     <padding>
                         <Insets top="10" right="15" bottom="10" left="15"/>
                     </padding>
-                </TextField>
+                </ComboBox>
             </VBox>
 
             <!-- Blood Type Cache -->
