@@ -7,15 +7,21 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import tn.edu.esprit.entities.BloodType;
 import tn.edu.esprit.entities.Donor;
+import tn.edu.esprit.entities.Hospital;
+import tn.edu.esprit.entities.HospitalStaff;
 import tn.edu.esprit.entities.UserType;
 import tn.edu.esprit.entities.Users;
 import tn.edu.esprit.services.BloodTypeServiceImpl;
+import tn.edu.esprit.services.HospitalServiceImpl;
 import tn.edu.esprit.services.ServiceDonor;
+import tn.edu.esprit.services.ServiceHospitalStaff;
 import tn.edu.esprit.services.ServiceUser;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class UserDialogController {
@@ -53,9 +59,19 @@ public class UserDialogController {
     @FXML private TextField longitudeField;
     @FXML private Spinner<Integer> totalDonationsSpinner;
 
+    // Hospital staff-specific fields
+    @FXML private VBox hospitalStaffFieldsBox;
+    @FXML private ComboBox<String> staffRoleCombo;
+    @FXML private ComboBox<String> hospitalCombo;
+    @FXML private TextField departmentField;
+    @FXML private Label staffRoleError;
+    @FXML private Label hospitalError;
+
     private ServiceUser serviceUser;
     private ServiceDonor serviceDonor;
+    private ServiceHospitalStaff serviceHospitalStaff;
     private List<BloodType> bloodTypes;
+    private final Map<String, String> hospitalDisplayToId = new HashMap<>();
     private Stage dialogStage;
     private Users userToEdit;
     private Mode mode;
@@ -65,6 +81,7 @@ public class UserDialogController {
     public void initialize() {
         serviceUser = new ServiceUser();
         serviceDonor = new ServiceDonor();
+        serviceHospitalStaff = new ServiceHospitalStaff();
 
         // Initialize user type combo
         userTypeCombo.getItems().addAll("Donor", "Hospital Staff");
@@ -76,6 +93,9 @@ public class UserDialogController {
             bloodTypeCombo.getItems().add(bt.getAboType() + bt.getRhFactor());
         }
 
+        staffRoleCombo.getItems().addAll("MANAGER", "TECHNICIAN");
+        loadHospitalOptions();
+
         // Total donations spinner (0–999)
         totalDonationsSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 999, 0));
         totalDonationsSpinner.setEditable(true);
@@ -83,7 +103,26 @@ public class UserDialogController {
         // --- Real-time validation listeners ---
         addRequiredFieldListener(firstNameField, firstNameError, "First name is required");
         addRequiredFieldListener(lastNameField, lastNameError, "Last name is required");
-        addRequiredFieldListener(phoneField, phoneError, "Phone is required");
+        phoneField.textProperty().addListener((obs, oldVal, newVal) -> {
+            String val = newVal != null ? newVal.trim() : "";
+            if (val.isEmpty()) {
+                showFieldError(phoneField, phoneError, "Phone is required");
+            } else if (!isValidPhone(val)) {
+                showFieldError(phoneField, phoneError, "Invalid phone format");
+            } else {
+                clearFieldError(phoneField, phoneError);
+            }
+        });
+        phoneField.focusedProperty().addListener((obs, wasFocused, isNowFocused) -> {
+            if (!isNowFocused) {
+                String val = phoneField.getText() != null ? phoneField.getText().trim() : "";
+                if (val.isEmpty()) {
+                    showFieldError(phoneField, phoneError, "Phone is required");
+                } else if (!isValidPhone(val)) {
+                    showFieldError(phoneField, phoneError, "Invalid phone format");
+                }
+            }
+        });
 
         // Email: required + format check
         emailField.textProperty().addListener((obs, oldVal, newVal) -> {
@@ -130,20 +169,35 @@ public class UserDialogController {
             }
         });
 
-        // User type combo — show/hide donor section
+        // User type combo — show/hide donor and hospital staff sections
         userTypeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
                 clearFieldError(userTypeCombo, userTypeError);
             }
             boolean isDonor = "Donor".equals(newVal);
+            boolean isHospitalStaff = "Hospital Staff".equals(newVal);
             donorFieldsBox.setVisible(isDonor);
             donorFieldsBox.setManaged(isDonor);
+            hospitalStaffFieldsBox.setVisible(isHospitalStaff);
+            hospitalStaffFieldsBox.setManaged(isHospitalStaff);
         });
 
         // Blood type combo validation
         bloodTypeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
                 clearFieldError(bloodTypeCombo, bloodTypeError);
+            }
+        });
+
+        staffRoleCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                clearFieldError(staffRoleCombo, staffRoleError);
+            }
+        });
+
+        hospitalCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                clearFieldError(hospitalCombo, hospitalError);
             }
         });
     }
@@ -173,6 +227,12 @@ public class UserDialogController {
 
             String userTypeDisplay = user.getUserType() == UserType.DONOR ? "Donor" : "Hospital Staff";
             userTypeCombo.setValue(userTypeDisplay);
+
+            if (user.getUserType() == UserType.DONOR) {
+                loadDonorData(user.getId());
+            } else if (user.getUserType() == UserType.HOSPITAL_STAFF) {
+                loadHospitalStaffData(user.getId());
+            }
         }
     }
 
@@ -223,6 +283,10 @@ public class UserDialogController {
                 // If donor, update the auto-created donor row with form data
                 if (userType == UserType.DONOR) {
                     updateDonorWithFormData(userId, firstName, lastName);
+                } else {
+                    if (!updateHospitalStaffWithFormData(userId)) {
+                        return;
+                    }
                 }
 
                 showAlert(Alert.AlertType.INFORMATION, "Success", "User added successfully!");
@@ -243,6 +307,10 @@ public class UserDialogController {
                 // If edited to donor type, update donor row with form data
                 if (userType == UserType.DONOR && donorFieldsBox.isVisible()) {
                     updateDonorWithFormData(userToEdit.getId(), firstName, lastName);
+                } else if (userType == UserType.HOSPITAL_STAFF && hospitalStaffFieldsBox.isVisible()) {
+                    if (!updateHospitalStaffWithFormData(userToEdit.getId())) {
+                        return;
+                    }
                 }
 
                 showAlert(Alert.AlertType.INFORMATION, "Success", "User updated successfully!");
@@ -261,6 +329,10 @@ public class UserDialogController {
 
     private void updateDonorWithFormData(String userId, String firstName, String lastName) {
         try {
+            Donor existingDonor = new Donor();
+            existingDonor.setUserId(userId);
+            Donor currentDonor = serviceDonor.getOne(existingDonor);
+
             String selectedBloodTypeDisplay = bloodTypeCombo.getValue();
             String bloodTypeId = null;
             if (selectedBloodTypeDisplay != null) {
@@ -291,7 +363,7 @@ public class UserDialogController {
             donor.setLastName(lastName);
             donor.setBloodTypeId(bloodTypeId);
             donor.setLastDonationDate(lastDonationDate);
-            donor.setCurrentlyEligible(true);
+            donor.setCurrentlyEligible(currentDonor == null || currentDonor.isCurrentlyEligible());
             donor.setLatitude(latitude);
             donor.setLongitude(longitude);
             donor.setTotalDonations(totalDonations);
@@ -300,6 +372,56 @@ public class UserDialogController {
         } catch (NumberFormatException e) {
             showAlert(Alert.AlertType.WARNING, "Warning", "Invalid latitude or longitude value. Donor location was not saved.");
         }
+    }
+
+    private void loadDonorData(String userId) {
+        Donor probe = new Donor();
+        probe.setUserId(userId);
+        Donor donor = serviceDonor.getOne(probe);
+        if (donor == null) {
+            return;
+        }
+
+        if (donor.getBloodTypeId() != null) {
+            for (BloodType bloodType : bloodTypes) {
+                if (donor.getBloodTypeId().equals(bloodType.getBloodTypeId())) {
+                    bloodTypeCombo.setValue(bloodType.getAboType() + bloodType.getRhFactor());
+                    break;
+                }
+            }
+        }
+
+        lastDonationDatePicker.setValue(donor.getLastDonationDate());
+        latitudeField.setText(donor.getLatitude() != null ? String.valueOf(donor.getLatitude()) : "");
+        longitudeField.setText(donor.getLongitude() != null ? String.valueOf(donor.getLongitude()) : "");
+        totalDonationsSpinner.getValueFactory().setValue(donor.getTotalDonations());
+    }
+
+    private boolean updateHospitalStaffWithFormData(String userId) {
+        String selectedHospital = hospitalCombo.getValue();
+        String hospitalId = hospitalDisplayToId.get(selectedHospital);
+
+        HospitalStaff staff = new HospitalStaff();
+        staff.setId(userId);
+        staff.setRole(staffRoleCombo.getValue());
+        staff.setHospitalId(hospitalId);
+        staff.setFirstName(firstNameField.getText() != null ? firstNameField.getText().trim() : null);
+        staff.setLastName(lastNameField.getText() != null ? lastNameField.getText().trim() : null);
+
+        String department = departmentField.getText();
+        if (department != null) {
+            department = department.trim();
+        }
+        staff.setDepartment((department == null || department.isEmpty()) ? null : department);
+
+        serviceHospitalStaff.modifier(staff);
+
+        HospitalStaff savedStaff = serviceHospitalStaff.getOne(staff);
+        if (!isHospitalStaffUpdated(savedStaff, staff)) {
+            showAlert(Alert.AlertType.ERROR, "Failed", "Could not update the hospital staff profile. Please try again.");
+            return false;
+        }
+        return true;
     }
 
     @FXML
@@ -337,6 +459,9 @@ public class UserDialogController {
         if (phoneField.getText().trim().isEmpty()) {
             showFieldError(phoneField, phoneError, "Phone is required");
             valid = false;
+        } else if (!isValidPhone(phoneField.getText().trim())) {
+            showFieldError(phoneField, phoneError, "Invalid phone format");
+            valid = false;
         } else {
             clearFieldError(phoneField, phoneError);
         }
@@ -373,11 +498,79 @@ public class UserDialogController {
             }
         }
 
+        // Hospital staff-specific validation
+        if ("Hospital Staff".equals(userTypeCombo.getValue())) {
+            if (staffRoleCombo.getValue() == null) {
+                showFieldError(staffRoleCombo, staffRoleError, "Role is required for hospital staff");
+                valid = false;
+            } else {
+                clearFieldError(staffRoleCombo, staffRoleError);
+            }
+
+            if (hospitalCombo.getValue() == null || hospitalDisplayToId.get(hospitalCombo.getValue()) == null) {
+                showFieldError(hospitalCombo, hospitalError, "Hospital is required for hospital staff");
+                valid = false;
+            } else {
+                clearFieldError(hospitalCombo, hospitalError);
+            }
+        }
+
         return valid;
+    }
+
+    private void loadHospitalOptions() {
+        hospitalDisplayToId.clear();
+        hospitalCombo.getItems().clear();
+
+        HospitalServiceImpl hospitalService = new HospitalServiceImpl();
+        List<Hospital> hospitals = hospitalService.getAllHospitals();
+        for (Hospital hospital : hospitals) {
+            if (hospital.getHospitalId() == null) {
+                continue;
+            }
+            String id = hospital.getHospitalId().toString();
+            String name = hospital.getName() != null ? hospital.getName() : "Unnamed Hospital";
+            String display = name + " (" + id + ")";
+            hospitalDisplayToId.put(display, id);
+            hospitalCombo.getItems().add(display);
+        }
+    }
+
+    private void loadHospitalStaffData(String userId) {
+        HospitalStaff probe = new HospitalStaff();
+        probe.setId(userId);
+        HospitalStaff staff = serviceHospitalStaff.getOne(probe);
+        if (staff == null) {
+            return;
+        }
+
+        if (staff.getRole() != null) {
+            if (!staffRoleCombo.getItems().contains(staff.getRole())) {
+                staffRoleCombo.getItems().add(0, staff.getRole());
+            }
+            staffRoleCombo.setValue(staff.getRole());
+        }
+
+        if (staff.getDepartment() != null) {
+            departmentField.setText(staff.getDepartment());
+        }
+
+        if (staff.getHospitalId() != null) {
+            for (Map.Entry<String, String> entry : hospitalDisplayToId.entrySet()) {
+                if (staff.getHospitalId().equals(entry.getValue())) {
+                    hospitalCombo.setValue(entry.getKey());
+                    break;
+                }
+            }
+        }
     }
 
     private boolean isValidEmail(String email) {
         return email.matches("^[A-Za-z0-9+_.-]+@(.+)$");
+    }
+
+    private boolean isValidPhone(String phone) {
+        return phone.matches("^\\d+$");
     }
 
     private boolean isUserUpdated(Users actual, Users expected) {
@@ -408,6 +601,26 @@ public class UserDialogController {
             return false;
         }
         return left.equals(right);
+    }
+
+    private boolean isHospitalStaffUpdated(HospitalStaff actual, HospitalStaff expected) {
+        if (actual == null || expected == null) {
+            return false;
+        }
+
+        if (!safeEquals(actual.getRole(), expected.getRole())) {
+            return false;
+        }
+        if (!safeEquals(actual.getHospitalId(), expected.getHospitalId())) {
+            return false;
+        }
+        if (!safeEquals(actual.getDepartment(), expected.getDepartment())) {
+            return false;
+        }
+        if (!safeEquals(actual.getFirstName(), expected.getFirstName())) {
+            return false;
+        }
+        return safeEquals(actual.getLastName(), expected.getLastName());
     }
 
     private void showAlert(Alert.AlertType type, String title, String message) {

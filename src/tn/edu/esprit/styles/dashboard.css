@@ -1462,6 +1462,739 @@
     -fx-padding: 18;
 }
 
+/* ============================================================
+   ALERT MANAGEMENT STYLES
+   ============================================================ */
+
+/* ---------- ALERT BADGES (header) ---------- */
+.inv-alert-badge-critical {
+    -fx-background-color: #dc2626;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+}
+
+.inv-alert-badge-critical:hover {
+    -fx-background-color: #b91c1c;
+}
+
+.inv-alert-badge-critical-icon {
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+}
+
+.inv-alert-badge-critical-text {
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.inv-alert-badge-low {
+    -fx-background-color: #fef9c3;
+    -fx-background-radius: 8;
+    -fx-border-color: #fde68a;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-cursor: hand;
+}
+
+.inv-alert-badge-low:hover {
+    -fx-background-color: #fef08a;
+}
+
+.inv-alert-badge-low-text {
+    -fx-text-fill: #a16207;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+/* ---------- BLOOD TYPE CARD ---------- */
+.inv-blood-card {
+    -fx-background-color: white;
+    -fx-background-radius: 12;
+    -fx-border-color: #e2e8f0;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.03), 4, 0, 0, 1);
+}
+
+.inv-blood-card:hover {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.08), 8, 0, 0, 3);
+}
+
+/* ---------- QUICK ACTION CARDS ---------- */
+
+/* Urgent action - red/pink gradient */
+.inv-action-card-urgent {
+    -fx-background-color: linear-gradient(to right, #dc2626, #f43f5e);
+    -fx-background-radius: 12;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(220, 38, 38, 0.2), 8, 0, 0, 3);
+}
+
+.inv-action-card-urgent:hover {
+    -fx-background-color: linear-gradient(to right, #b91c1c, #e11d48);
+    -fx-effect: dropshadow(gaussian, rgba(220, 38, 38, 0.35), 12, 0, 0, 4);
+}
+
+.inv-action-card-urgent:pressed {
+    -fx-background-color: linear-gradient(to right, #991b1b, #be123c);
+}
+
+/* Transfer action - pink gradient */
+.inv-action-card-transfer {
+    -fx-background-color: linear-gradient(to right, #f43f5e, #fb7185);
+    -fx-background-radius: 12;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(244, 63, 94, 0.2), 8, 0, 0, 3);
+}
+
+.inv-action-card-transfer:hover {
+    -fx-background-color: linear-gradient(to right, #e11d48, #f43f5e);
+    -fx-effect: dropshadow(gaussian, rgba(244, 63, 94, 0.35), 12, 0, 0, 4);
+}
+
+.inv-action-card-transfer:pressed {
+    -fx-background-color: linear-gradient(to right, #be123c, #e11d48);
+}
+
+/* Outlined action cards */
+.inv-action-card-outlined {
+    -fx-background-color: #f8fafc;
+    -fx-background-radius: 12;
+    -fx-border-color: #e2e8f0;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-cursor: hand;
+}
+
+.inv-action-card-outlined:hover {
+    -fx-background-color: #f1f5f9;
+    -fx-border-color: #cbd5e1;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.06), 6, 0, 0, 2);
+}
+
+.inv-action-card-outlined:pressed {
+    -fx-background-color: #e2e8f0;
+}
+
+/* Action card text - light (for colored backgrounds) */
+.inv-action-icon-light {
+    -fx-text-fill: rgba(255, 255, 255, 0.85);
+    -fx-font-size: 16px;
+}
+
+.inv-action-title-light {
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.inv-action-subtitle-light {
+    -fx-text-fill: rgba(255, 255, 255, 0.7);
+    -fx-font-size: 12.5px;
+    -fx-padding: 0 0 0 24;
+}
+
+/* Action card text - dark (for outlined backgrounds) */
+.inv-action-icon-dark {
+    -fx-text-fill: #475569;
+    -fx-font-size: 16px;
+}
+
+.inv-action-title-dark {
+    -fx-text-fill: #0f172a;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.inv-action-subtitle-dark {
+    -fx-text-fill: #94a3b8;
+    -fx-font-size: 12.5px;
+    -fx-padding: 0 0 0 24;
+}
+
+/* ============================================================
+   TRANSFER REQUEST STYLES
+   ============================================================ */
+
+/* ---------- Status Dots (stat chips in header) ---------- */
+.tf-dot-pending {
+    -fx-text-fill: #eab308;
+    -fx-font-size: 10px;
+}
+
+.tf-dot-approved {
+    -fx-text-fill: #3b82f6;
+    -fx-font-size: 10px;
+}
+
+.tf-dot-transit {
+    -fx-text-fill: #6366f1;
+    -fx-font-size: 10px;
+}
+
+.tf-dot-delivered {
+    -fx-text-fill: #22c55e;
+    -fx-font-size: 10px;
+}
+
+.tf-dot-cancelled {
+    -fx-text-fill: #ef4444;
+    -fx-font-size: 10px;
+}
+
+/* ---------- Stat Chip Variants ---------- */
+.tf-stat-pending {
+    -fx-background-color: #fefce8;
+    -fx-border-color: #fde68a;
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+    -fx-background-radius: 16;
+}
+
+.tf-stat-approved {
+    -fx-background-color: #eff6ff;
+    -fx-border-color: #bfdbfe;
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+    -fx-background-radius: 16;
+}
+
+.tf-stat-transit {
+    -fx-background-color: #eef2ff;
+    -fx-border-color: #c7d2fe;
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+    -fx-background-radius: 16;
+}
+
+.tf-stat-delivered {
+    -fx-background-color: #f0fdf4;
+    -fx-border-color: #bbf7d0;
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+    -fx-background-radius: 16;
+}
+
+/* ---------- Transfer Form Overrides ---------- */
+
+/* Make ComboBox inside modal form look consistent */
+.modal-body .form-input.combo-box,
+.modal-body .combo-box {
+    -fx-background-color: white;
+    -fx-border-color: #d1d5db;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 6 12;
+    -fx-font-size: 13px;
+    -fx-cursor: hand;
+}
+
+.modal-body .combo-box:hover {
+    -fx-border-color: #94a3b8;
+}
+
+.modal-body .combo-box:focused,
+.modal-body .combo-box:showing {
+    -fx-border-color: #dc2626;
+    -fx-effect: dropshadow(gaussian, rgba(220, 38, 38, 0.12), 6, 0, 0, 0);
+}
+
+.modal-body .combo-box .list-cell {
+    -fx-font-size: 13px;
+    -fx-text-fill: #334155;
+    -fx-padding: 4 8;
+}
+
+.modal-body .combo-box-popup .list-view {
+    -fx-background-color: white;
+    -fx-border-color: #e2e8f0;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 10, 0, 0, 4);
+}
+
+.modal-body .combo-box-popup .list-view .list-cell:hover {
+    -fx-background-color: #f8fafc;
+}
+
+.modal-body .combo-box-popup .list-view .list-cell:selected {
+    -fx-background-color: #fee2e2;
+    -fx-text-fill: #dc2626;
+}
+
+/* ============================================================
+   LOG MANAGEMENT STYLES
+   ============================================================ */
+
+/* --- Premium V0 Style Tabs --- */
+.logs-tab-pane {
+    -fx-background-color: transparent;
+}
+
+.logs-tab-pane .tab-header-area {
+    -fx-padding: 0 0 10 0;
+    -fx-background-color: transparent;
+}
+
+.logs-tab-pane .tab-header-background {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent #e2e8f0 transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.logs-tab-pane .headers-region {
+    -fx-background-color: transparent;
+}
+
+.logs-tab-pane .control-buttons-tab {
+    -fx-background-color: transparent;
+}
+
+.logs-tab-pane .tab-down-button {
+    -fx-background-color: white;
+    -fx-background-radius: 6;
+    -fx-border-color: #e2e8f0;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-padding: 3 8 3 8;
+}
+
+.logs-tab-pane .tab-down-button:hover {
+    -fx-background-color: #f8fafc;
+    -fx-border-color: #cbd5e1;
+}
+
+.logs-tab-pane .tab-down-button .arrow {
+    -fx-background-color: #475569;
+}
+
+.logs-tab-pane .tab {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-padding: 8 20 8 20;
+    -fx-cursor: hand;
+}
+
+.logs-tab-pane .tab:selected {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent #dc2626 transparent;
+    -fx-border-width: 0 0 2 0;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.logs-tab-pane .tab .tab-label {
+    -fx-text-fill: #64748b;
+    -fx-font-size: 14px;
+    -fx-font-weight: normal;
+}
+
+.logs-tab-pane .tab:hover .tab-label {
+    -fx-text-fill: #334155;
+}
+
+.logs-tab-pane .tab:selected .tab-label {
+    -fx-text-fill: #0f172a;
+    -fx-font-weight: bold;
+}
+
+.logs-tab-pane .tab-content-area {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-border-color: transparent;
+}
+
+/* --- Donor responses tab summary cards --- */
+.donor-summary-card {
+    -fx-background-color: #f8fafc;
+    -fx-background-radius: 10;
+    -fx-border-color: #e2e8f0;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-padding: 12 14 12 14;
+}
+
+.donor-summary-card-read {
+    -fx-background-color: #f0f9ff;
+    -fx-border-color: #bfdbfe;
+}
+
+.donor-summary-card-positive {
+    -fx-background-color: #f0fdf4;
+    -fx-border-color: #bbf7d0;
+}
+
+.donor-summary-title {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #64748b;
+}
+
+.donor-summary-value {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #0f172a;
+}
+
+.donor-summary-subtitle {
+    -fx-font-size: 11px;
+    -fx-text-fill: #94a3b8;
+}
+
+/* ============================================================
+   AUDIT LOGS & ALERTS – Card-based view
+   ============================================================ */
+
+/* ---------- Section Selector ---------- */
+.section-selector {
+    -fx-background-color: white;
+    -fx-background-radius: 10;
+    -fx-border-color: #e2e8f0;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-padding: 8 16 8 16;
+    -fx-font-size: 13.5px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+
+.section-selector:hover {
+    -fx-border-color: #cbd5e1;
+}
+
+.section-selector .list-cell {
+    -fx-text-fill: #334155;
+    -fx-font-size: 13.5px;
+}
+
+.section-selector-popup .list-view {
+    -fx-background-color: white;
+    -fx-border-color: #e2e8f0;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 10, 0, 0, 3);
+}
+
+.section-selector-popup .list-view .list-cell {
+    -fx-padding: 8 16 8 16;
+    -fx-font-size: 13px;
+    -fx-text-fill: #334155;
+}
+
+.section-selector-popup .list-view .list-cell:hover {
+    -fx-background-color: #f8fafc;
+}
+
+.section-selector-popup .list-view .list-cell:selected {
+    -fx-background-color: #fef2f2;
+    -fx-text-fill: #dc2626;
+}
+
+/* ---------- Log Card ---------- */
+.log-card {
+    -fx-background-color: white;
+    -fx-background-radius: 12;
+    -fx-border-color: #e8ecf1;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.04), 6, 0, 0, 2);
+    -fx-padding: 16 20 16 20;
+}
+
+.log-card:hover {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.09), 12, 0, 0, 4);
+    -fx-border-color: #d1d5db;
+}
+
+.log-card-header {
+    -fx-background-color: transparent;
+}
+
+.log-card-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #0f172a;
+}
+
+.log-card-subtitle {
+    -fx-font-size: 12px;
+    -fx-text-fill: #94a3b8;
+}
+
+.log-card-body {
+    -fx-background-color: transparent;
+}
+
+.log-card-detail-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #94a3b8;
+    -fx-min-width: 90;
+}
+
+.log-card-detail-value {
+    -fx-font-size: 13px;
+    -fx-text-fill: #334155;
+}
+
+.log-card-footer {
+    -fx-background-color: transparent;
+}
+
+.log-card-divider {
+    -fx-background-color: transparent;
+    -fx-border-color: #f1f5f9;
+    -fx-border-width: 1 0 0 0;
+}
+
+/* ---------- Log Card Action Buttons ---------- */
+.btn-log-edit {
+    -fx-background-color: #f8fafc;
+    -fx-text-fill: #334155;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 6 14 6 14;
+    -fx-background-radius: 7;
+    -fx-border-radius: 7;
+    -fx-border-color: #e2e8f0;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+
+.btn-log-edit:hover {
+    -fx-background-color: #f1f5f9;
+    -fx-border-color: #cbd5e1;
+}
+
+.btn-log-delete {
+    -fx-background-color: #fef2f2;
+    -fx-text-fill: #dc2626;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 6 14 6 14;
+    -fx-background-radius: 7;
+    -fx-border-radius: 7;
+    -fx-border-color: #fecaca;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+
+.btn-log-delete:hover {
+    -fx-background-color: #fee2e2;
+    -fx-border-color: #fca5a5;
+}
+
+.btn-log-resolve {
+    -fx-background-color: #f0fdf4;
+    -fx-text-fill: #15803d;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 6 14 6 14;
+    -fx-background-radius: 7;
+    -fx-border-radius: 7;
+    -fx-border-color: #bbf7d0;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+
+.btn-log-resolve:hover {
+    -fx-background-color: #dcfce7;
+    -fx-border-color: #86efac;
+}
+
+.btn-log-resolve-done {
+    -fx-background-color: #f1f5f9;
+    -fx-text-fill: #94a3b8;
+    -fx-font-size: 12px;
+    -fx-padding: 6 14 6 14;
+    -fx-background-radius: 7;
+    -fx-border-radius: 7;
+    -fx-border-color: #e2e8f0;
+    -fx-border-width: 1;
+}
+
+/* ---------- Status Transition Arrow ---------- */
+.log-status-arrow {
+    -fx-text-fill: #94a3b8;
+    -fx-font-size: 14px;
+}
+
+/* ---------- Badge Variants for Cards ---------- */
+.badge {
+    -fx-padding: 3 10 3 10;
+    -fx-background-radius: 12;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.badge-success {
+    -fx-background-color: #dcfce7;
+    -fx-text-fill: #15803d;
+}
+
+.badge-warning {
+    -fx-background-color: #fef3c7;
+    -fx-text-fill: #92400e;
+}
+
+.badge-critical {
+    -fx-background-color: #fee2e2;
+    -fx-text-fill: #dc2626;
+}
+
+.badge-info {
+    -fx-background-color: #dbeafe;
+    -fx-text-fill: #1d4ed8;
+}
+
+.badge-neutral {
+    -fx-background-color: #f1f5f9;
+    -fx-text-fill: #475569;
+}
+
+/* ---------- Stats Row for Logs ---------- */
+.logs-stat-chip {
+    -fx-background-color: white;
+    -fx-background-radius: 10;
+    -fx-border-color: #e2e8f0;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-padding: 10 16 10 16;
+}
+
+.logs-stat-icon {
+    -fx-font-size: 20px;
+}
+
+.logs-stat-value {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #0f172a;
+}
+
+.logs-stat-label {
+    -fx-font-size: 11.5px;
+    -fx-text-fill: #64748b;
+}
+
+/* ---------- Empty State for Sections ---------- */
+.logs-empty-state {
+    -fx-background-color: white;
+    -fx-background-radius: 12;
+    -fx-border-color: #e8ecf1;
+    -fx-border-width: 1;
+    -fx-border-style: dashed;
+    -fx-border-radius: 12;
+    -fx-padding: 40 20 40 20;
+}
+
+.logs-empty-icon {
+    -fx-font-size: 36px;
+    -fx-text-fill: #cbd5e1;
+}
+
+.logs-empty-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #64748b;
+}
+
+.logs-empty-subtitle {
+    -fx-font-size: 13px;
+    -fx-text-fill: #94a3b8;
+}
+
+/* Premium Badges for Table Cells */
+.table-badge {
+    -fx-padding: 4 12;
+    -fx-background-radius: 20;
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+}
+
+.table-badge-success {
+    -fx-background-color: #dcfce7;
+    -fx-text-fill: #166534;
+}
+
+.table-badge-warning {
+    -fx-background-color: #fef08a;
+    -fx-text-fill: #854d0e;
+}
+
+.table-badge-critical {
+    -fx-background-color: #fee2e2;
+    -fx-text-fill: #991b1b;
+}
+
+.table-badge-info {
+    -fx-background-color: #dbeafe;
+    -fx-text-fill: #1e40af;
+}
+
+.table-badge-neutral {
+    -fx-background-color: #f1f5f9;
+    -fx-text-fill: #475569;
+}
+
+/* --- Premium V0 Style Tables --- */
+.premium-table {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.premium-table .column-header-background {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent #e2e8f0 transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.premium-table .column-header,
+.premium-table .filler {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 12 10 12 10;
+    -fx-alignment: center-left;
+}
+
+.premium-table .column-header .label {
+    -fx-text-fill: #334155;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-alignment: center-left;
+}
+
+.premium-table .table-row-cell {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent #f1f5f9 transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 4 0 4 0;
+}
+
+.premium-table .table-row-cell:odd {
+    -fx-background-color: #fafbfc;
+}
+
+.premium-table .table-row-cell:hover {
+    -fx-background-color: #f8fafc;
+}
+
+.premium-table .table-cell {
+    -fx-text-fill: #334155;
+    -fx-font-size: 14px;
+    -fx-border-color: transparent;
+    -fx-padding: 12 10 12 10;
+}
+
+.premium-table .scroll-bar {
+    -fx-background-color: transparent;
+}
+
 /* --- Main Content Background (gui views) --- */
 .main-content {
     -fx-background-color: #f5f7fa;
