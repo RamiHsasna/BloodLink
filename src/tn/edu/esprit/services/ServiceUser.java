@@ -1,6 +1,7 @@
 package tn.edu.esprit.services;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -166,6 +167,44 @@ public class ServiceUser implements IService<Users> {
             System.out.println("Erreur getOne User : " + ex.getMessage());
         }
         return user;
+    }
+
+    public Users authenticate(String email, String password) {
+        if (email == null || password == null) {
+            return null;
+        }
+
+        String trimmedEmail = email.trim();
+        if (trimmedEmail.isEmpty() || password.isEmpty()) {
+            return null;
+        }
+
+        String req = "SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND password_hash = ? LIMIT 1";
+        try (PreparedStatement ps = cnx.prepareStatement(req)) {
+            ps.setString(1, trimmedEmail);
+            ps.setString(2, password);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Users user = new Users();
+                    user.setId(rs.getString("user_id"));
+                    user.setEmail(rs.getString("email"));
+                    user.setPasswordHash(rs.getString("password_hash"));
+                    user.setFirst_name(rs.getString("first_name"));
+                    user.setLast_name(rs.getString("last_name"));
+                    user.setPhone(rs.getString("phone"));
+                    user.setUserType(UserType.valueOf(rs.getString("user_type")));
+                    if (rs.getTimestamp("created_at") != null) {
+                        user.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+                    }
+                    return user;
+                }
+            }
+        } catch (SQLException ex) {
+            System.out.println("Erreur authentification User : " + ex.getMessage());
+        }
+
+        return null;
     }
 
     private void syncDonorProfile(Users u) throws SQLException {
