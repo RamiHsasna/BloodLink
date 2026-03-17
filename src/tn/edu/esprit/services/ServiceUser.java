@@ -41,6 +41,7 @@ public class ServiceUser implements IService<Users> {
             stm.executeUpdate(req);
 
             syncDonorProfile(u);
+            syncHospitalStaffProfile(u);
 
             cnx.commit();
             System.out.println("User ajouté avec succès !");
@@ -95,6 +96,7 @@ public class ServiceUser implements IService<Users> {
                 updated.setLast_name(lastName);
                 updated.setUserType(userType);
                 syncDonorProfile(updated);
+                syncHospitalStaffProfile(updated);
             }
 
             System.out.println(rows > 0 ? "✅ Utilisateur modifié avec succès !" : "⚠️ Aucun utilisateur trouvé avec cet ID !");
@@ -187,8 +189,37 @@ public class ServiceUser implements IService<Users> {
         stm.executeUpdate(req);
     }
 
+    private void syncHospitalStaffProfile(Users u) throws SQLException {
+        if (u == null || u.getId() == null || u.getUserType() != UserType.HOSPITAL_STAFF) {
+            return;
+        }
+
+        if (hospitalStaffExists(u.getId())) {
+            return;
+        }
+
+        String defaultHospitalId = getDefaultHospitalId();
+        String defaultRole = "MANAGER";
+        String req = "INSERT INTO hospital_staff (user_id, role, hospital_id, first_name, last_name, created_at) VALUES ('"
+                + u.getId() + "', '"
+                + defaultRole + "', "
+            + (defaultHospitalId != null ? "'" + defaultHospitalId + "'" : "NULL") + ", "
+            + (u.getFirst_name() != null ? "'" + u.getFirst_name() + "'" : "NULL") + ", "
+            + (u.getLast_name() != null ? "'" + u.getLast_name() + "'" : "NULL") + ", NOW())";
+
+        Statement stm = cnx.createStatement();
+        stm.executeUpdate(req);
+    }
+
     private boolean donorExists(String userId) throws SQLException {
         String req = "SELECT 1 FROM donors WHERE user_id = '" + userId + "'";
+        Statement stm = cnx.createStatement();
+        ResultSet rs = stm.executeQuery(req);
+        return rs.next();
+    }
+
+    private boolean hospitalStaffExists(String userId) throws SQLException {
+        String req = "SELECT 1 FROM hospital_staff WHERE user_id = '" + userId + "'";
         Statement stm = cnx.createStatement();
         ResultSet rs = stm.executeQuery(req);
         return rs.next();
@@ -201,6 +232,26 @@ public class ServiceUser implements IService<Users> {
             if (rs.next()) {
                 return rs.getString("blood_type_id");
             }
+        }
+        return null;
+    }
+
+    private String getDefaultHospitalId() {
+        String hospitalId = querySingleId("SELECT hospital_id::text FROM hospital ORDER BY hospital_id LIMIT 1");
+        if (hospitalId != null) {
+            return hospitalId;
+        }
+        return querySingleId("SELECT hospital_id::text FROM hospitals ORDER BY hospital_id LIMIT 1");
+    }
+
+    private String querySingleId(String query) {
+        try (Statement stm = cnx.createStatement();
+             ResultSet rs = stm.executeQuery(query)) {
+            if (rs.next()) {
+                return rs.getString(1);
+            }
+        } catch (SQLException ignored) {
+            // Ignore and try fallback query when available.
         }
         return null;
     }

@@ -8,6 +8,8 @@ public class HospitalStaff {
     private String hospitalId;  // corresponds to hospital_id
     private String role;
     private String department;  // nullable
+    private String firstName;
+    private String lastName;
     private LocalDateTime createdAt;
 
     public HospitalStaff() {
@@ -52,6 +54,22 @@ public class HospitalStaff {
 
     public void setDepartment(String department) {
         this.department = department;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
     }
 
     public LocalDateTime getCreatedAt() {

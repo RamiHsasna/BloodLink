@@ -139,6 +139,45 @@
                 </VBox>
             </VBox>
 
+            <!-- ===== Hospital staff-specific fields (shown only when type = Hospital Staff) ===== -->
+            <VBox fx:id="hospitalStaffFieldsBox" spacing="16" managed="false" visible="false" styleClass="donor-section">
+                <Separator/>
+                <Text text="Hospital Staff Information" styleClass="dialog-title" style="-fx-font-size: 18px;"/>
+                <Text text="Complete the hospital staff details below." styleClass="dialog-subtitle"/>
+
+                <!-- Role -->
+                <VBox spacing="4">
+                    <HBox spacing="2"><Label text="Role" styleClass="form-label"/><Label text="*" styleClass="required-asterisk"/></HBox>
+                    <ComboBox fx:id="staffRoleCombo" promptText="Select role" styleClass="form-field" maxWidth="Infinity">
+                        <padding>
+                            <Insets top="10" right="15" bottom="10" left="15"/>
+                        </padding>
+                    </ComboBox>
+                    <Label fx:id="staffRoleError" styleClass="field-error-label" managed="false" visible="false"/>
+                </VBox>
+
+                <!-- Hospital -->
+                <VBox spacing="4">
+                    <HBox spacing="2"><Label text="Hospital" styleClass="form-label"/><Label text="*" styleClass="required-asterisk"/></HBox>
+                    <ComboBox fx:id="hospitalCombo" promptText="Select hospital" styleClass="form-field" maxWidth="Infinity">
+                        <padding>
+                            <Insets top="10" right="15" bottom="10" left="15"/>
+                        </padding>
+                    </ComboBox>
+                    <Label fx:id="hospitalError" styleClass="field-error-label" managed="false" visible="false"/>
+                </VBox>
+
+                <!-- Department -->
+                <VBox spacing="4">
+                    <Label text="Department" styleClass="form-label"/>
+                    <TextField fx:id="departmentField" promptText="e.g. Emergency" styleClass="form-field">
+                        <padding>
+                            <Insets top="10" right="15" bottom="10" left="15"/>
+                        </padding>
+                    </TextField>
+                </VBox>
+            </VBox>
+
         </VBox>
     </ScrollPane>
 

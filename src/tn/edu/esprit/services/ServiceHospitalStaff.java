@@ -1,6 +1,7 @@
 package tn.edu.esprit.services;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -19,14 +20,15 @@ public class ServiceHospitalStaff implements IService<HospitalStaff> {
 
     @Override
     public void ajouter(HospitalStaff hs) {
-        try {
-            String req = "INSERT INTO hospital_staff (user_id, role, hospital_id, created_at) VALUES ("
-                    + "'" + hs.getId() + "', "
-                    + "'" + hs.getRole() + "', "
-                    + "'" + hs.getHospitalId() + "', "
-                    + "NOW())";
-            Statement stm = cnx.createStatement();
-            stm.executeUpdate(req);
+        String req = "INSERT INTO hospital_staff (user_id, role, hospital_id, department, first_name, last_name, created_at) VALUES (CAST(? AS uuid), ?, CAST(? AS uuid), ?, ?, ?, NOW())";
+        try (PreparedStatement ps = cnx.prepareStatement(req)) {
+            ps.setString(1, hs.getId());
+            ps.setString(2, hs.getRole());
+            ps.setString(3, hs.getHospitalId());
+            ps.setString(4, hs.getDepartment());
+            ps.setString(5, hs.getFirstName());
+            ps.setString(6, hs.getLastName());
+            ps.executeUpdate();
 
             System.out.println("HospitalStaff ajouté avec succès !");
         } catch (SQLException ex) {
@@ -40,24 +42,29 @@ public class ServiceHospitalStaff implements IService<HospitalStaff> {
         try {
             HospitalStaff existing = getOne(hs);
             if (existing == null) {
-                System.out.println("⚠️ Aucun HospitalStaff trouvé avec cet ID !");
+                ajouter(hs);
                 return;
             }
 
-            // keep existing if new value is null
             String role = hs.getRole() != null ? hs.getRole() : existing.getRole();
             String hospitalId = hs.getHospitalId() != null ? hs.getHospitalId() : existing.getHospitalId();
+            String department = hs.getDepartment();
+            String firstName = hs.getFirstName() != null ? hs.getFirstName() : existing.getFirstName();
+            String lastName = hs.getLastName() != null ? hs.getLastName() : existing.getLastName();
 
-            String req = "UPDATE hospital_staff SET "
-                    + "role = '" + role + "', "
-                    + "hospital_id = '" + hospitalId + "' "
-                    + "WHERE user_id = '" + hs.getId() + "'";
+            String req = "UPDATE hospital_staff SET role = ?, hospital_id = CAST(? AS uuid), department = ?, first_name = ?, last_name = ? WHERE user_id = CAST(? AS uuid)";
 
-            Statement stm = cnx.createStatement();
-            int rows = stm.executeUpdate(req);
+            try (PreparedStatement ps = cnx.prepareStatement(req)) {
+                ps.setString(1, role);
+                ps.setString(2, hospitalId);
+                ps.setString(3, department);
+                ps.setString(4, firstName);
+                ps.setString(5, lastName);
+                ps.setString(6, hs.getId());
 
-            System.out.println(rows > 0 ? "HospitalStaff modifié avec succès !" : "Aucun HospitalStaff trouvé avec cet ID !");
-
+                int rows = ps.executeUpdate();
+                System.out.println(rows > 0 ? "HospitalStaff modifié avec succès !" : "Aucun HospitalStaff trouvé avec cet ID !");
+            }
         } catch (SQLException ex) {
             System.out.println("Erreur modification HospitalStaff : " + ex.getMessage());
         }
@@ -65,10 +72,9 @@ public class ServiceHospitalStaff implements IService<HospitalStaff> {
 
     @Override
     public void supprimer(String userId) {
-        try {
-            String req = "DELETE FROM hospital_staff WHERE user_id = '" + userId + "'";
-            Statement stm = cnx.createStatement();
-            int rows = stm.executeUpdate(req);
+        try (PreparedStatement ps = cnx.prepareStatement("DELETE FROM hospital_staff WHERE user_id = CAST(? AS uuid)")) {
+            ps.setString(1, userId);
+            int rows = ps.executeUpdate();
 
             System.out.println(rows > 0 ? "HospitalStaff supprimé !" : "Aucun trouvé.");
         } catch (SQLException ex) {
@@ -89,6 +95,9 @@ public class ServiceHospitalStaff implements IService<HospitalStaff> {
                 h.setId(rs.getString("user_id"));
                 h.setRole(rs.getString("role"));
                 h.setHospitalId(rs.getString("hospital_id"));
+                h.setDepartment(rs.getString("department"));
+                h.setFirstName(rs.getString("first_name"));
+                h.setLastName(rs.getString("last_name"));
                 h.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
                 staffs.add(h);
             }
@@ -102,16 +111,18 @@ public class ServiceHospitalStaff implements IService<HospitalStaff> {
     @Override
     public HospitalStaff getOne(HospitalStaff t) {
         HospitalStaff staff = null;
-        try {
-            String req = "SELECT * FROM hospital_staff WHERE user_id = '" + t.getId() + "'";
-            Statement stm = cnx.createStatement();
-            ResultSet rs = stm.executeQuery(req);
+        try (PreparedStatement ps = cnx.prepareStatement("SELECT * FROM hospital_staff WHERE user_id = CAST(? AS uuid)")) {
+            ps.setString(1, t.getId());
+            ResultSet rs = ps.executeQuery();
 
             if (rs.next()) {
                 staff = new HospitalStaff();
                 staff.setId(rs.getString("user_id"));
                 staff.setRole(rs.getString("role"));
                 staff.setHospitalId(rs.getString("hospital_id"));
+                staff.setDepartment(rs.getString("department"));
+                staff.setFirstName(rs.getString("first_name"));
+                staff.setLastName(rs.getString("last_name"));
                 staff.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
             }
 
