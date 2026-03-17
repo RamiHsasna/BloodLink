@@ -1,0 +1,385 @@
+/* ═══════════════════════════════════════════════════════════════
+   BloodLink Auth — JavaFX CSS
+   Mirrors the HTML/CSS web design faithfully
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Root ─────────────────────────────────────────────────────── */
+.root-container {
+    -fx-background-color: #f5ede8;
+}
+
+/* ── Brand panel (left) ──────────────────────────────────────── */
+.brand-panel {
+    -fx-background-color: #b85c52;
+    -fx-padding: 48 64 48 64;
+    -fx-spacing: 0;
+    -fx-min-width: 400;
+}
+
+.logo-row {
+    -fx-spacing: 12;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 0 0 0 0;
+}
+
+.logo-text {
+    -fx-font-family: "Georgia";
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+}
+
+/* Illustration card */
+.illus-card {
+    -fx-background-color: rgba(255,255,255,0.11);
+    -fx-border-color: rgba(255,255,255,0.20);
+    -fx-border-width: 1;
+    -fx-border-radius: 20;
+    -fx-background-radius: 20;
+    -fx-padding: 20;
+    -fx-alignment: CENTER;
+    -fx-margin: 36 0 32 0;
+}
+
+VBox.illus-card {
+    -fx-pref-height: 9999;
+}
+
+/* Brand copy block */
+.brand-copy {
+    -fx-spacing: 0;
+}
+
+.brand-headline {
+    -fx-font-family: "Georgia";
+    -fx-font-size: 40px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+    -fx-line-spacing: 4;
+}
+
+.brand-desc {
+    -fx-font-family: "System";
+    -fx-font-size: 14px;
+    -fx-text-fill: rgba(255,255,255,0.62);
+    -fx-line-spacing: 6;
+    -fx-padding: 14 0 32 0;
+    -fx-wrap-text: true;
+    -fx-max-width: 420;
+}
+
+.stats-row {
+    -fx-spacing: 48;
+    -fx-alignment: CENTER_LEFT;
+}
+
+.stat-item {
+    -fx-spacing: 4;
+}
+
+.stat-num {
+    -fx-font-family: "Georgia";
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+}
+
+.stat-lbl {
+    -fx-font-size: 12px;
+    -fx-text-fill: rgba(255,255,255,0.45);
+    -fx-letter-spacing: 0.3;
+}
+
+/* ── Form scroll + panel (right) ─────────────────────────────── */
+.form-scroll {
+    -fx-background-color: #f5ede8;
+    -fx-background: #f5ede8;
+    -fx-min-width: 420;
+    -fx-pref-width: 540;
+    -fx-max-width: 600;
+    -fx-border-width: 0;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.form-scroll > .viewport {
+    -fx-background-color: #f5ede8;
+}
+
+.form-panel {
+    -fx-background-color: #f5ede8;
+    -fx-alignment: CENTER;
+    -fx-padding: 60 64 60 64;
+    -fx-fill-width: true;
+}
+
+.form-box {
+    -fx-spacing: 0;
+    -fx-fill-width: true;
+}
+
+/* ── Pill tab switcher ────────────────────────────────────────── */
+.tab-switcher {
+    -fx-background-color: #e8d9d2;
+    -fx-background-radius: 13;
+    -fx-padding: 5;
+    -fx-spacing: 4;
+    -fx-margin: 0 0 36 0;
+}
+
+.tab-btn {
+    -fx-background-color: transparent;
+    -fx-background-radius: 10;
+    -fx-border-width: 0;
+    -fx-font-size: 14px;
+    -fx-text-fill: #8a6a62;
+    -fx-padding: 10 0 10 0;
+    -fx-cursor: hand;
+    -fx-font-family: "System";
+}
+
+.tab-btn:hover {
+    -fx-background-color: rgba(255,255,255,0.5);
+}
+
+.tab-active {
+    -fx-background-color: white;
+    -fx-text-fill: #3d1a15;
+    -fx-font-weight: bold;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.10), 4, 0, 0, 1);
+}
+
+/* ── Form pane ───────────────────────────────────────────────── */
+.form-pane {
+    -fx-spacing: 0;
+    -fx-fill-width: true;
+}
+
+.form-title {
+    -fx-font-family: "Georgia";
+    -fx-font-size: 32px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2a100c;
+    -fx-padding: 0 0 6 0;
+}
+
+.form-sub {
+    -fx-font-size: 14px;
+    -fx-text-fill: #8a6a62;
+    -fx-line-spacing: 4;
+    -fx-padding: 0 0 26 0;
+    -fx-wrap-text: true;
+}
+
+/* ── Field labels ────────────────────────────────────────────── */
+.field-label {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #7a5a52;
+    -fx-padding: 14 0 7 0;
+    -fx-letter-spacing: 0.8;
+}
+
+/* ── Text inputs ─────────────────────────────────────────────── */
+.field-input {
+    -fx-background-color: white;
+    -fx-border-color: #ddd0ca;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 11;
+    -fx-background-radius: 11;
+    -fx-pref-height: 50;
+    -fx-font-size: 14px;
+    -fx-text-fill: #2a100c;
+    -fx-prompt-text-fill: #b89890;
+    -fx-padding: 0 16 0 16;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.field-input:focused {
+    -fx-border-color: #b85c52;
+    -fx-background-color: white;
+}
+
+/* ── Password wrapper ────────────────────────────────────────── */
+.pw-stack {
+    -fx-margin: 0 0 0 0;
+}
+
+.pw-eye-btn {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-font-size: 14px;
+    -fx-text-fill: #b89890;
+    -fx-cursor: hand;
+    -fx-padding: 0 14 0 0;
+    -fx-translate-x: 0;
+}
+
+.pw-eye-btn:hover {
+    -fx-text-fill: #8a6a62;
+}
+
+/* ── Forgot link ─────────────────────────────────────────────── */
+.forgot-link {
+    -fx-font-size: 13px;
+    -fx-text-fill: #b85c52;
+    -fx-font-weight: bold;
+    -fx-underline: false;
+    -fx-border-width: 0;
+    -fx-padding: 8 0 18 0;
+}
+
+/* ── Primary button ──────────────────────────────────────────── */
+.btn-primary {
+    -fx-background-color: #8c3028;
+    -fx-text-fill: white;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-pref-height: 52;
+    -fx-background-radius: 13;
+    -fx-border-width: 0;
+    -fx-cursor: hand;
+    -fx-padding: 0;
+    -fx-margin: 4 0 20 0;
+}
+
+.btn-primary:hover {
+    -fx-background-color: #a33830;
+}
+
+.btn-primary:pressed {
+    -fx-background-color: #7a2820;
+    -fx-scale-x: 0.99;
+    -fx-scale-y: 0.99;
+}
+
+/* ── Divider row ─────────────────────────────────────────────── */
+.divider-row {
+    -fx-spacing: 14;
+    -fx-alignment: CENTER;
+    -fx-padding: 4 0 16 0;
+}
+
+.div-line {
+    -fx-background-color: #ddd0ca;
+    -fx-pref-height: 1;
+    -fx-max-height: 1;
+}
+
+.div-txt {
+    -fx-font-size: 12px;
+    -fx-text-fill: #b89890;
+}
+
+/* ── Google button ───────────────────────────────────────────── */
+.btn-google {
+    -fx-background-color: white;
+    -fx-border-color: #ddd0ca;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 11;
+    -fx-background-radius: 11;
+    -fx-pref-height: 50;
+    -fx-font-size: 14px;
+    -fx-text-fill: #3d1a15;
+    -fx-cursor: hand;
+    -fx-padding: 0;
+}
+
+.btn-google:hover {
+    -fx-border-color: #b85c52;
+    -fx-background-color: #fdf8f6;
+}
+
+/* ── Switch hint row ─────────────────────────────────────────── */
+.switch-row {
+    -fx-spacing: 0;
+    -fx-alignment: CENTER;
+    -fx-padding: 18 0 0 0;
+}
+
+.hint-text {
+    -fx-font-size: 13px;
+    -fx-text-fill: #8a6a62;
+}
+
+.hint-link {
+    -fx-font-size: 13px;
+    -fx-text-fill: #8c3028;
+    -fx-font-weight: bold;
+    -fx-underline: false;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+}
+
+/* ── Step dots ───────────────────────────────────────────────── */
+.step-dots {
+    -fx-padding: 0 0 22 0;
+    -fx-alignment: CENTER_LEFT;
+}
+
+.step-dot {
+    -fx-background-color: #ddd0ca;
+    -fx-background-radius: 3;
+    -fx-pref-width: 6;
+    -fx-pref-height: 6;
+    -fx-max-width: 6;
+    -fx-min-width: 6;
+}
+
+.dot-active {
+    -fx-background-color: #8c3028;
+    -fx-pref-width: 22;
+    -fx-max-width: 22;
+    -fx-min-width: 22;
+}
+
+/* ── Terms row ───────────────────────────────────────────────── */
+.terms-row {
+    -fx-spacing: 8;
+    -fx-alignment: TOP_LEFT;
+    -fx-padding: 4 0 20 0;
+}
+
+.terms-check {
+    -fx-mark-color: white;
+}
+
+.terms-check:selected {
+    -fx-background-color: #8c3028;
+    -fx-border-color: #8c3028;
+}
+
+.terms-text {
+    -fx-font-size: 13px;
+    -fx-fill: #8a6a62;
+}
+
+.terms-link {
+    -fx-font-size: 13px;
+    -fx-text-fill: #8c3028;
+    -fx-font-weight: bold;
+    -fx-underline: false;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+}
+
+/* ── Back link ───────────────────────────────────────────────── */
+.back-link {
+    -fx-font-size: 13px;
+    -fx-text-fill: #8a6a62;
+    -fx-underline: false;
+    -fx-border-width: 0;
+    -fx-padding: 8 0 0 0;
+    -fx-cursor: hand;
+}
+
+.back-link:hover {
+    -fx-text-fill: #2a100c;
+}
+
+/* ── Visibility helper ───────────────────────────────────────── */
+.hidden {
+    visibility: hidden;
+}
