@@ -31,8 +31,8 @@
 
 /* Illustration card */
 .illus-card {
-    -fx-background-color: rgba(255,255,255,0.11);
-    -fx-border-color: rgba(255,255,255,0.20);
+    -fx-background-color: rgba(255, 255, 255, 0.11);
+    -fx-border-color: rgba(255, 255, 255, 0.20);
     -fx-border-width: 1;
     -fx-border-radius: 20;
     -fx-background-radius: 20;
@@ -61,7 +61,7 @@ VBox.illus-card {
 .brand-desc {
     -fx-font-family: "System";
     -fx-font-size: 14px;
-    -fx-text-fill: rgba(255,255,255,0.62);
+    -fx-text-fill: rgba(255, 255, 255, 0.62);
     -fx-line-spacing: 6;
     -fx-padding: 14 0 32 0;
     -fx-wrap-text: true;
@@ -86,7 +86,7 @@ VBox.illus-card {
 
 .stat-lbl {
     -fx-font-size: 12px;
-    -fx-text-fill: rgba(255,255,255,0.45);
+    -fx-text-fill: rgba(255, 255, 255, 0.45);
     -fx-letter-spacing: 0.3;
 }
 
@@ -102,7 +102,7 @@ VBox.illus-card {
     -fx-faint-focus-color: transparent;
 }
 
-.form-scroll > .viewport {
+.form-scroll>.viewport {
     -fx-background-color: #f5ede8;
 }
 
@@ -139,14 +139,14 @@ VBox.illus-card {
 }
 
 .tab-btn:hover {
-    -fx-background-color: rgba(255,255,255,0.5);
+    -fx-background-color: rgba(255, 255, 255, 0.5);
 }
 
 .tab-active {
     -fx-background-color: white;
     -fx-text-fill: #3d1a15;
     -fx-font-weight: bold;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.10), 4, 0, 0, 1);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.10), 4, 0, 0, 1);
 }
 
 /* ── Form pane ───────────────────────────────────────────────── */
@@ -199,6 +199,73 @@ VBox.illus-card {
 .field-input:focused {
     -fx-border-color: #b85c52;
     -fx-background-color: white;
+}
+
+/* ── Blood type combo box ───────────────────────────────────── */
+.bloodtype-combo {
+    -fx-background-color: white;
+    -fx-border-color: #ddd0ca;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 11;
+    -fx-background-radius: 11;
+    -fx-pref-height: 50;
+    -fx-font-size: 14px;
+    -fx-prompt-text-fill: #b89890;
+    -fx-text-fill: #2a100c;
+    -fx-padding: 0 0 0 10;
+}
+
+.bloodtype-combo:hover {
+    -fx-border-color: #ccb9b2;
+}
+
+.bloodtype-combo:focused {
+    -fx-border-color: #b85c52;
+    -fx-background-color: white;
+}
+
+.bloodtype-combo>.list-cell {
+    -fx-text-fill: #2a100c;
+    -fx-background-color: transparent;
+    -fx-padding: 0 10 0 4;
+}
+
+.bloodtype-combo>.arrow-button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0 11 11 0;
+    -fx-padding: 0 12 0 10;
+}
+
+.bloodtype-combo>.arrow-button>.arrow {
+    -fx-background-color: #8a6a62;
+}
+
+.bloodtype-combo:showing>.arrow-button>.arrow {
+    -fx-background-color: #8c3028;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: white;
+    -fx-border-color: #ddd0ca;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-padding: 4;
+}
+
+.combo-box-popup .list-cell {
+    -fx-background-color: white;
+    -fx-text-fill: #2a100c;
+    -fx-padding: 8 10 8 10;
+    -fx-background-radius: 8;
+}
+
+.combo-box-popup .list-cell:hover {
+    -fx-background-color: #f8efeb;
+}
+
+.combo-box-popup .list-cell:selected {
+    -fx-background-color: #f2ddd7;
+    -fx-text-fill: #5e1f19;
 }
 
 /* ── Password wrapper ────────────────────────────────────────── */

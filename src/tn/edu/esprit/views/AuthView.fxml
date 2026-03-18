@@ -143,6 +143,9 @@
                         <Label text="PHONE NUMBER" styleClass="field-label"/>
                         <TextField fx:id="phone" promptText="+216 00 000 000" styleClass="field-input"/>
 
+                        <Label text="BLOOD TYPE" styleClass="field-label"/>
+                        <ComboBox fx:id="bloodTypeCombo" promptText="Select blood type" maxWidth="Infinity" styleClass="bloodtype-combo"/>
+
                         <Button text="Continue →" styleClass="btn-primary" maxWidth="Infinity"
                                 onAction="#goToStep1"/>
                     </VBox>
@@ -169,7 +172,9 @@
                                        styleClass="field-input,hidden" managed="false" visible="false"/>
                             <Button text="👁" styleClass="pw-eye-btn"
                                     onAction="#toggleConfirmPassword" StackPane.alignment="CENTER_RIGHT"/>
+
                         </StackPane>
+
 
                         <HBox styleClass="terms-row" alignment="TOP_LEFT" spacing="8">
                             <CheckBox fx:id="termsCheck" styleClass="terms-check"/>

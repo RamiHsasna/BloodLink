@@ -145,6 +145,14 @@
                     <Label text="Hospital Staff" styleClass="sidebar-subtitle-text"/>
                 </VBox>
             </HBox>
+
+            <HBox fx:id="navLogout" styleClass="nav-item" alignment="CENTER_LEFT" spacing="12" onMouseClicked="#onNavLogout">
+                <padding>
+                    <Insets top="10" right="28" bottom="20" left="28"/>
+                </padding>
+                <Label text="↩" styleClass="nav-icon"/>
+                <Label text="Logout" styleClass="nav-label"/>
+            </HBox>
         </VBox>
     </left>
 
