@@ -2,14 +2,23 @@ package tn.edu.esprit.controllers;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.Optional;
 import java.util.ResourceBundle;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+import tn.edu.esprit.entities.UserType;
+import tn.edu.esprit.entities.Users;
+import tn.edu.esprit.services.AppSession;
 
 public class MainDashboardController implements Initializable {
 
@@ -50,13 +59,19 @@ public class MainDashboardController implements Initializable {
     @FXML
     private HBox navAuditLogs;
 
+    @FXML
+    private HBox navLogout;
+
     private HBox activeNavItem;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        activeNavItem = navHospitals;
-        // Load the hospitals view by default
-        loadView("/tn/edu/esprit/views/HospitalList.fxml");
+        Users currentUser = AppSession.getCurrentUser();
+        applyRoleAccess(currentUser);
+
+        activeNavItem = navDonations;
+        setActiveNav(navDonations);
+        loadView("/tn/edu/esprit/views/DonationsDashboard.fxml");
     }
 
     // ==================== NAVIGATION HANDLERS ====================
@@ -122,6 +137,34 @@ public class MainDashboardController implements Initializable {
         loadView("/tn/edu/esprit/views/DashboardLogs.fxml");
     }
 
+    @FXML
+    private void onNavLogout() {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Logout");
+        confirm.setHeaderText("Sign out of BloodLink?");
+        confirm.setContentText("You will be redirected to the login page.");
+
+        Optional<ButtonType> result = confirm.showAndWait();
+        if (result.isEmpty() || result.get() != ButtonType.OK) {
+            return;
+        }
+
+        AppSession.clear();
+
+        try {
+            Parent authRoot = FXMLLoader.load(getClass().getResource("/tn/edu/esprit/views/AuthView.fxml"));
+            Stage stage = (Stage) sidebar.getScene().getWindow();
+            Scene scene = new Scene(authRoot, stage.getScene().getWidth(), stage.getScene().getHeight());
+            stage.setTitle("BloodLink - Sign In");
+            stage.setScene(scene);
+            stage.centerOnScreen();
+        } catch (IOException e) {
+            Alert error = new Alert(Alert.AlertType.ERROR, "Could not open login view: " + e.getMessage(), ButtonType.OK);
+            error.setHeaderText(null);
+            error.showAndWait();
+        }
+    }
+
     // ==================== HELPERS ====================
 
     /**
@@ -149,6 +192,50 @@ public class MainDashboardController implements Initializable {
         }
         selectedItem.getStyleClass().add("nav-item-active");
         activeNavItem = selectedItem;
+    }
+
+    private void applyRoleAccess(Users currentUser) {
+        if (currentUser != null && currentUser.getUserType() == UserType.ADMIN) {
+            setNavVisibility(navUsers, true);
+            setNavVisibility(navHospitals, true);
+            setNavVisibility(navDonations, true);
+            setNavVisibility(navDonationEvents, true);
+            setNavVisibility(navInventory, true);
+            setNavVisibility(navTransfers, true);
+            setNavVisibility(navBloodTypes, true);
+            setNavVisibility(navEligibility, true);
+            setNavVisibility(navAlerts, true);
+            setNavVisibility(navAuditLogs, true);
+            return;
+        }
+
+        // Hidden for both roles requested in auth flow.
+        setNavVisibility(navUsers, false);
+        setNavVisibility(navHospitals, false);
+        setNavVisibility(navBloodTypes, false);
+        setNavVisibility(navAuditLogs, false);
+
+        // Default: hospital staff set requested modules.
+        setNavVisibility(navDonations, true);
+        setNavVisibility(navDonationEvents, true);
+        setNavVisibility(navInventory, true);
+        setNavVisibility(navTransfers, true);
+        setNavVisibility(navEligibility, true);
+        setNavVisibility(navAlerts, true);
+
+        if (currentUser != null && currentUser.getUserType() == UserType.DONOR) {
+            // Donor access: Donations (own only in donations controller), events, eligibility, alerts.
+            setNavVisibility(navInventory, false);
+            setNavVisibility(navTransfers, false);
+        }
+    }
+
+    private void setNavVisibility(HBox navItem, boolean visible) {
+        if (navItem == null) {
+            return;
+        }
+        navItem.setVisible(visible);
+        navItem.setManaged(visible);
     }
 
     /**

@@ -15,9 +15,11 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import tn.edu.esprit.entities.Users;
+import tn.edu.esprit.services.AppSession;
 import tn.edu.esprit.services.ServiceUser;
 
 import java.net.URL;
+import java.util.Arrays;
 import java.util.ResourceBundle;
 
 public class AuthController implements Initializable {
@@ -42,11 +44,15 @@ public class AuthController implements Initializable {
     @FXML private VBox signUpPane;
     @FXML private VBox step0Pane;
     @FXML private VBox step1Pane;
+    @FXML private VBox step2Pane;
+
 
     @FXML private TextField firstName;
     @FXML private TextField lastName;
     @FXML private TextField signUpEmail;
     @FXML private TextField phone;
+
+    @FXML private ComboBox<String> bloodTypeCombo;
 
     @FXML private PasswordField newPassword;
     @FXML private TextField     newPasswordVisible;
@@ -59,6 +65,8 @@ public class AuthController implements Initializable {
     @FXML private Region dot0;
     @FXML private Region dot1;
 
+    private String selectedBloodType;
+
     // ─────────────────────────────────────────────────────────────────────
     //  Initialise
     // ─────────────────────────────────────────────────────────────────────
@@ -66,6 +74,9 @@ public class AuthController implements Initializable {
     public void initialize(URL url, ResourceBundle rb) {
         drawLogo();
         drawIllustration();
+        if (bloodTypeCombo != null) {
+            bloodTypeCombo.getItems().setAll(Arrays.asList("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"));
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -299,6 +310,13 @@ public class AuthController implements Initializable {
     //  Step navigation
     // ─────────────────────────────────────────────────────────────────────
     @FXML private void goToStep1() {
+        if (bloodTypeCombo == null || bloodTypeCombo.getValue() == null || bloodTypeCombo.getValue().isEmpty()) {
+            showAlert("Please select a blood type.");
+            return;
+        }
+
+        selectedBloodType = bloodTypeCombo.getValue();
+
         step0Pane.setVisible(false); step0Pane.setManaged(false);
         step1Pane.setVisible(true);  step1Pane.setManaged(true);
         dot0.getStyleClass().remove("dot-active");
@@ -310,6 +328,14 @@ public class AuthController implements Initializable {
         step0Pane.setVisible(true);  step0Pane.setManaged(true);
         dot1.getStyleClass().remove("dot-active");
         dot0.getStyleClass().add("dot-active");
+    }
+    @FXML void goToStep2() {
+        step0Pane.setVisible(false); step0Pane.setManaged(false);
+        step1Pane.setVisible(false); step1Pane.setManaged(false);
+        step2Pane.setVisible(true);  step2Pane.setManaged(true);
+        dot1.getStyleClass().remove("dot-active");
+        dot0.getStyleClass().add("dot-active");
+
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -359,6 +385,8 @@ public class AuthController implements Initializable {
             return;
         }
 
+        AppSession.setCurrentUser(loggedIn);
+
         try {
             Parent dashboardRoot = FXMLLoader.load(getClass().getResource("/tn/edu/esprit/views/MainDashboard.fxml"));
             Stage stage = (Stage) signInPane.getScene().getWindow();
@@ -372,6 +400,29 @@ public class AuthController implements Initializable {
     }
 
     @FXML private void handleCreateAccount() {
+        String firstNameValue = firstName.getText() != null ? firstName.getText().trim() : "";
+        String lastNameValue = lastName.getText() != null ? lastName.getText().trim() : "";
+        String emailValue = signUpEmail.getText() != null ? signUpEmail.getText().trim() : "";
+        String phoneValue = phone.getText() != null ? phone.getText().trim() : "";
+        String bloodTypeValue = bloodTypeCombo != null && bloodTypeCombo.getValue() != null
+                ? bloodTypeCombo.getValue().trim()
+                : (selectedBloodType != null ? selectedBloodType.trim() : "");
+
+        if (firstNameValue.isEmpty() || lastNameValue.isEmpty() || emailValue.isEmpty()) {
+            showAlert("Please fill in first name, last name, and email.");
+            return;
+        }
+
+        if (!emailValue.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+            showAlert("Please enter a valid email address.");
+            return;
+        }
+
+        if (bloodTypeValue.isEmpty()) {
+            showAlert("Please select a blood type.");
+            return;
+        }
+
         if (!termsCheck.isSelected()) {
             showAlert("Please accept the Terms of Service and Privacy Policy.");
             return;
@@ -386,8 +437,46 @@ public class AuthController implements Initializable {
             showAlert("Password must be at least 8 characters.");
             return;
         }
-        // TODO: call AuthService.register(firstName, lastName, email, phone, pw)
-        System.out.println("Create account: " + signUpEmail.getText().trim());
+
+        if (serviceUser.isEmailTaken(emailValue)) {
+            showAlert("An account with this email already exists.");
+            return;
+        }
+
+        boolean created = serviceUser.registerDonorAccount(
+                firstNameValue,
+                lastNameValue,
+                emailValue,
+                phoneValue,
+                pw,
+                bloodTypeValue
+        );
+
+        if (!created) {
+            showAlert("Unable to create account right now. Please try again.");
+            return;
+        }
+
+        Alert success = new Alert(Alert.AlertType.INFORMATION, "Account created successfully as donor.", ButtonType.OK);
+        success.setHeaderText(null);
+        success.showAndWait();
+
+        firstName.clear();
+        lastName.clear();
+        signUpEmail.clear();
+        phone.clear();
+        if (bloodTypeCombo != null) {
+            bloodTypeCombo.getSelectionModel().clearSelection();
+        }
+        selectedBloodType = null;
+        newPassword.clear();
+        newPasswordVisible.clear();
+        confirmPassword.clear();
+        confirmPasswordVisible.clear();
+        termsCheck.setSelected(false);
+
+        signInEmail.setText(emailValue);
+        showSignIn();
     }
 
     @FXML private void handleGoogle() {
@@ -411,4 +500,6 @@ public class AuthController implements Initializable {
         alert.setHeaderText(null);
         alert.showAndWait();
     }
+
+
 }

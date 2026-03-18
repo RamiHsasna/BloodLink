@@ -5,9 +5,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import tn.edu.esprit.entities.UserType;
 import tn.edu.esprit.entities.Users;
@@ -207,7 +209,90 @@ public class ServiceUser implements IService<Users> {
         return null;
     }
 
+    public boolean registerDonorAccount(String firstName, String lastName, String email, String phone, String password, String bloodTypeId) {
+        if (email == null || password == null) {
+            return false;
+        }
+
+        String normalizedEmail = email.trim();
+        if (normalizedEmail.isEmpty() || password.isEmpty()) {
+            return false;
+        }
+
+        if (isEmailTaken(normalizedEmail)) {
+            return false;
+        }
+
+        Users user = new Users();
+        user.setId(UUID.randomUUID().toString());
+        user.setEmail(normalizedEmail);
+        user.setPasswordHash(password);
+        user.setFirst_name(firstName != null ? firstName.trim() : null);
+        user.setLast_name(lastName != null ? lastName.trim() : null);
+        user.setPhone(phone != null ? phone.trim() : null);
+        user.setUserType(UserType.DONOR);
+        user.setCreatedAt(LocalDateTime.now());
+
+        boolean originalAutoCommit = true;
+        try {
+            originalAutoCommit = cnx.getAutoCommit();
+            cnx.setAutoCommit(false);
+
+            String insertUserSql = "INSERT INTO users (user_id, email, password_hash, first_name, last_name, phone, user_type, created_at) VALUES (CAST(? AS uuid), ?, ?, ?, ?, ?, ?, ?)";
+            try (PreparedStatement ps = cnx.prepareStatement(insertUserSql)) {
+                ps.setString(1, user.getId());
+                ps.setString(2, user.getEmail());
+                ps.setString(3, user.getPasswordHash());
+                ps.setString(4, user.getFirst_name());
+                ps.setString(5, user.getLast_name());
+                ps.setString(6, user.getPhone());
+                ps.setString(7, user.getUserType().name());
+                ps.setObject(8, user.getCreatedAt());
+                ps.executeUpdate();
+            }
+
+            syncDonorProfile(user, bloodTypeId);
+            cnx.commit();
+            return true;
+        } catch (SQLException ex) {
+            try {
+                cnx.rollback();
+            } catch (SQLException rollbackEx) {
+                System.out.println("Erreur rollback register donor : " + rollbackEx.getMessage());
+            }
+            System.out.println("Erreur register donor : " + ex.getMessage());
+            return false;
+        } finally {
+            try {
+                cnx.setAutoCommit(originalAutoCommit);
+            } catch (SQLException ex) {
+                System.out.println("Erreur restauration auto-commit : " + ex.getMessage());
+            }
+        }
+    }
+
+    public boolean isEmailTaken(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return false;
+        }
+
+        String req = "SELECT 1 FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1";
+        try (PreparedStatement ps = cnx.prepareStatement(req)) {
+            ps.setString(1, email.trim());
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException ex) {
+            System.out.println("Erreur verification email : " + ex.getMessage());
+            return false;
+        }
+    }
+
     private void syncDonorProfile(Users u) throws SQLException {
+        syncDonorProfile(u, null);
+    }
+
+    private void syncDonorProfile(Users u, String preferredBloodTypeId) throws SQLException {
         if (u == null || u.getId() == null || u.getUserType() != UserType.DONOR) {
             return;
         }
@@ -216,16 +301,25 @@ public class ServiceUser implements IService<Users> {
             return;
         }
 
-        String bloodTypeId = getDefaultBloodTypeId();
-        String req = "INSERT INTO donors (user_id, first_name, last_name, blood_type_id, is_currently_eligible, total_donations, created_at) VALUES ('"
-                + u.getId() + "', '"
-                + u.getFirst_name() + "', '"
-                + u.getLast_name() + "', "
-                + (bloodTypeId != null ? "'" + bloodTypeId + "'" : "NULL") + ", "
-                + "true, 0, NOW())";
+        String bloodTypeId = preferredBloodTypeId;
+        if (bloodTypeId == null || bloodTypeId.trim().isEmpty() || !bloodTypeExists(bloodTypeId.trim())) {
+            bloodTypeId = getDefaultBloodTypeId();
+        } else {
+            bloodTypeId = bloodTypeId.trim();
+        }
 
-        Statement stm = cnx.createStatement();
-        stm.executeUpdate(req);
+        String req = "INSERT INTO donors (user_id, first_name, last_name, blood_type_id, is_currently_eligible, total_donations, created_at) VALUES (CAST(? AS uuid), ?, ?, ?, true, 0, NOW())";
+        try (PreparedStatement ps = cnx.prepareStatement(req)) {
+            ps.setString(1, u.getId());
+            ps.setString(2, u.getFirst_name());
+            ps.setString(3, u.getLast_name());
+            if (bloodTypeId != null) {
+                ps.setString(4, bloodTypeId);
+            } else {
+                ps.setNull(4, Types.VARCHAR);
+            }
+            ps.executeUpdate();
+        }
     }
 
     private void syncHospitalStaffProfile(Users u) throws SQLException {
@@ -251,10 +345,13 @@ public class ServiceUser implements IService<Users> {
     }
 
     private boolean donorExists(String userId) throws SQLException {
-        String req = "SELECT 1 FROM donors WHERE user_id = '" + userId + "'";
-        Statement stm = cnx.createStatement();
-        ResultSet rs = stm.executeQuery(req);
-        return rs.next();
+        String req = "SELECT 1 FROM donors WHERE user_id = CAST(? AS uuid)";
+        try (PreparedStatement ps = cnx.prepareStatement(req)) {
+            ps.setString(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
     }
 
     private boolean hospitalStaffExists(String userId) throws SQLException {
@@ -273,6 +370,16 @@ public class ServiceUser implements IService<Users> {
             }
         }
         return null;
+    }
+
+    private boolean bloodTypeExists(String bloodTypeId) throws SQLException {
+        String req = "SELECT 1 FROM blood_type WHERE blood_type_id = ? LIMIT 1";
+        try (PreparedStatement ps = cnx.prepareStatement(req)) {
+            ps.setString(1, bloodTypeId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
     }
 
     private String getDefaultHospitalId() {

@@ -12,6 +12,9 @@ import javafx.scene.text.Text;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import tn.edu.esprit.entities.Donations;
+import tn.edu.esprit.entities.UserType;
+import tn.edu.esprit.entities.Users;
+import tn.edu.esprit.services.AppSession;
 import tn.edu.esprit.services.ServiceDonation;
 
 import java.time.format.DateTimeFormatter;
@@ -66,6 +69,14 @@ public class DonationsDashboardController {
             if (allDonations == null) {
                 allDonations = new java.util.ArrayList<>();
             }
+
+            Users currentUser = AppSession.getCurrentUser();
+            if (currentUser != null && currentUser.getUserType() == UserType.DONOR && currentUser.getId() != null) {
+                allDonations = allDonations.stream()
+                        .filter(d -> d.getDonorId() != null && d.getDonorId().equals(currentUser.getId()))
+                        .collect(Collectors.toList());
+            }
+
             displayDonations(allDonations);
             updateStats();
         } catch (Exception e) {
