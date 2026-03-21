@@ -201,6 +201,10 @@ VBox.illus-card {
     -fx-background-color: white;
 }
 
+.field-input.field-error {
+    -fx-border-color: #c62828;
+}
+
 /* ── Blood type combo box ───────────────────────────────────── */
 .bloodtype-combo {
     -fx-background-color: white;
@@ -222,6 +226,16 @@ VBox.illus-card {
 .bloodtype-combo:focused {
     -fx-border-color: #b85c52;
     -fx-background-color: white;
+}
+
+.bloodtype-combo.field-error {
+    -fx-border-color: #c62828;
+}
+
+.field-error-text {
+    -fx-font-size: 12px;
+    -fx-text-fill: #c62828;
+    -fx-padding: 4 0 0 2;
 }
 
 .bloodtype-combo>.list-cell {

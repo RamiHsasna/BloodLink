@@ -76,6 +76,7 @@
 
                     <Label text="EMAIL ADDRESS" styleClass="field-label"/>
                     <TextField fx:id="signInEmail" promptText="you@example.com" styleClass="field-input"/>
+                    <Label fx:id="signInEmailError" styleClass="field-error-text" managed="false" visible="false"/>
 
                     <Label text="PASSWORD" styleClass="field-label"/>
                     <StackPane styleClass="pw-stack">
@@ -85,6 +86,7 @@
                         <Button fx:id="toggleSignInPw" text="👁" styleClass="pw-eye-btn"
                                 onAction="#toggleSignInPassword" StackPane.alignment="CENTER_RIGHT"/>
                     </StackPane>
+                    <Label fx:id="signInPasswordError" styleClass="field-error-text" managed="false" visible="false"/>
 
                     <HBox alignment="CENTER_RIGHT">
                         <Hyperlink text="Forgot password?" styleClass="forgot-link" onAction="#forgotPassword"/>
@@ -127,21 +129,25 @@
                             <VBox HBox.hgrow="ALWAYS">
                                 <Label text="FIRST NAME" styleClass="field-label"/>
                                 <TextField fx:id="firstName" promptText="Example" styleClass="field-input"/>
+                                <Label fx:id="firstNameError" styleClass="field-error-text" managed="false" visible="false"/>
                             </VBox>
                             <VBox HBox.hgrow="ALWAYS">
                                 <Label text="LAST NAME" styleClass="field-label"/>
                                 <TextField fx:id="lastName" promptText="Example" styleClass="field-input"/>
+                                <Label fx:id="lastNameError" styleClass="field-error-text" managed="false" visible="false"/>
                             </VBox>
                         </HBox>
 
                         <Label text="EMAIL ADDRESS" styleClass="field-label"/>
                         <TextField fx:id="signUpEmail" promptText="you@example.com" styleClass="field-input"/>
+                        <Label fx:id="signUpEmailError" styleClass="field-error-text" managed="false" visible="false"/>
 
                         <Label text="PHONE NUMBER" styleClass="field-label"/>
                         <TextField fx:id="phone" promptText="+216 00 000 000" styleClass="field-input"/>
 
                         <Label text="BLOOD TYPE" styleClass="field-label"/>
                         <ComboBox fx:id="bloodTypeCombo" promptText="Select blood type" maxWidth="Infinity" styleClass="bloodtype-combo"/>
+                        <Label fx:id="bloodTypeError" styleClass="field-error-text" managed="false" visible="false"/>
 
                         <Button text="Continue →" styleClass="btn-primary" maxWidth="Infinity"
                                 onAction="#goToStep1"/>
@@ -161,6 +167,7 @@
                             <Button text="👁" styleClass="pw-eye-btn"
                                     onAction="#toggleNewPassword" StackPane.alignment="CENTER_RIGHT"/>
                         </StackPane>
+                        <Label fx:id="newPasswordError" styleClass="field-error-text" managed="false" visible="false"/>
 
                         <Label text="CONFIRM PASSWORD" styleClass="field-label"/>
                         <StackPane styleClass="pw-stack">
@@ -171,6 +178,7 @@
                                     onAction="#toggleConfirmPassword" StackPane.alignment="CENTER_RIGHT"/>
 
                         </StackPane>
+                        <Label fx:id="confirmPasswordError" styleClass="field-error-text" managed="false" visible="false"/>
 
 
                         <HBox styleClass="terms-row" alignment="TOP_LEFT" spacing="8">
@@ -182,6 +190,7 @@
                                 <Hyperlink text="Privacy Policy" styleClass="terms-link" onAction="#openPrivacy"/>
                             </TextFlow>
                         </HBox>
+                        <Label fx:id="termsError" styleClass="field-error-text" managed="false" visible="false"/>
 
                         <Button text="✓  Create my account" styleClass="btn-primary" maxWidth="Infinity"
                                 onAction="#handleCreateAccount"/>

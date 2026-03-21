@@ -36,6 +36,8 @@ public class AuthController implements Initializable {
     @FXML private TextField     signInEmail;
     @FXML private PasswordField signInPassword;
     @FXML private TextField     signInPasswordVisible;
+    @FXML private Label signInEmailError;
+    @FXML private Label signInPasswordError;
 
     @FXML private VBox signUpPane;
     @FXML private VBox step0Pane;
@@ -47,15 +49,22 @@ public class AuthController implements Initializable {
     @FXML private TextField lastName;
     @FXML private TextField signUpEmail;
     @FXML private TextField phone;
+    @FXML private Label firstNameError;
+    @FXML private Label lastNameError;
+    @FXML private Label signUpEmailError;
 
     @FXML private ComboBox<String> bloodTypeCombo;
+    @FXML private Label bloodTypeError;
 
     @FXML private PasswordField newPassword;
     @FXML private TextField     newPasswordVisible;
     @FXML private PasswordField confirmPassword;
     @FXML private TextField     confirmPasswordVisible;
+    @FXML private Label newPasswordError;
+    @FXML private Label confirmPasswordError;
 
     @FXML private CheckBox termsCheck;
+    @FXML private Label termsError;
 
     @FXML private Region dot0;
     @FXML private Region dot1;
@@ -70,6 +79,7 @@ public class AuthController implements Initializable {
         if (bloodTypeCombo != null) {
             bloodTypeCombo.getItems().setAll(Arrays.asList("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"));
         }
+        clearAllErrors();
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -274,6 +284,7 @@ public class AuthController implements Initializable {
    // ─────────────────────────────────────────────────────────────────────
 
     @FXML private void showSignIn() {
+        clearSignInErrors();
         setPane(signInPane, true);
         setPane(signUpPane, false);
         tabSignIn.getStyleClass().add("tab-active");
@@ -281,6 +292,7 @@ public class AuthController implements Initializable {
     }
 
     @FXML private void showSignUp() {
+        clearSignUpErrors();
         setPane(signInPane, false);
         setPane(signUpPane, true);
         tabSignUp.getStyleClass().add("tab-active");
@@ -298,25 +310,7 @@ public class AuthController implements Initializable {
 
 
     @FXML private void goToStep1() {
-        
-        if (firstName.getText() == null || firstName.getText().trim().isEmpty()){
-            showAlert("Please fill in first name");
-            return;
-        }
-        if (lastName.getText() == null || lastName.getText().trim().isEmpty()){
-            showAlert("Please fill in last name");
-            return;
-        }
-        if (signUpEmail.getText() == null || signUpEmail.getText().trim().isEmpty()){
-            showAlert("Please fill in email");
-            return;
-        }
-        if (bloodTypeCombo == null || bloodTypeCombo.getValue() == null || bloodTypeCombo.getValue().isEmpty()) {
-            showAlert("Please select a blood type.");
-            return;
-        }
-        if (!termsCheck.isSelected()) {
-            showAlert("Please accept the Terms of Service and Privacy Policy.");
+        if (!validateSignUpStep0()) {
             return;
         }
 
@@ -371,19 +365,20 @@ public class AuthController implements Initializable {
     //////////////////////////////////////////////////////////////////////////
 
     @FXML private void handleSignIn() {
+        clearSignInErrors();
         String email    = signInEmail.getText().trim();
         String password = signInPassword.isVisible()   // get password from the visible field
                           ? signInPassword.getText() // or from the visible text field if password is currently hidden
                           : signInPasswordVisible.getText();  
 
-        if (email.isEmpty() || password.isEmpty()) {
-            showAlert("Please fill in all fields.");
+        if (!validateSignInFields(email, password)) {
             return;
         }
 
         Users loggedIn = serviceUser.authenticate(email, password);
         if (loggedIn == null) {
-            showAlert("Invalid email or password.");
+            Control passwordControl = signInPassword.isVisible() ? signInPassword : signInPasswordVisible;
+            showFieldError(passwordControl, signInPasswordError, "Invalid email or password.");
             return;
         }
 
@@ -404,6 +399,7 @@ public class AuthController implements Initializable {
     ///////////////////////////////////////////////////////////////////////
 
     @FXML private void handleCreateAccount() {
+        clearSignUpErrors();
         String firstNameValue = firstName.getText() != null ? firstName.getText().trim() : "";
         String lastNameValue = lastName.getText() != null ? lastName.getText().trim() : "";
         String emailValue = signUpEmail.getText() != null ? signUpEmail.getText().trim() : "";
@@ -412,38 +408,55 @@ public class AuthController implements Initializable {
                 ? bloodTypeCombo.getValue().trim()
                 : (selectedBloodType != null ? selectedBloodType.trim() : "");
 
-        if (firstNameValue.isEmpty() || lastNameValue.isEmpty() || emailValue.isEmpty()) {
-            showAlert("Please fill in first name, last name, and email.");
+        boolean valid = true;
+
+        if (firstNameValue.isEmpty()) {
+            showFieldError(firstName, firstNameError, "First name is required.");
+            valid = false;
+        }
+        if (lastNameValue.isEmpty()) {
+            showFieldError(lastName, lastNameError, "Last name is required.");
+            valid = false;
+        }
+        if (emailValue.isEmpty()) {
+            showFieldError(signUpEmail, signUpEmailError, "Email is required.");
+            valid = false;
+        }
+        if (!valid) {
             return;
         }
 
         if (!emailValue.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
-            showAlert("Please enter a valid email address.");
+            showFieldError(signUpEmail, signUpEmailError, "Please enter a valid email address.");
             return;
         }
 
         if (bloodTypeValue.isEmpty()) {
-            showAlert("Please select a blood type.");
+            showFieldError(bloodTypeCombo, bloodTypeError, "Please select a blood type.");
             return;
         }
 
         if (!termsCheck.isSelected()) {
-            showAlert("Please accept the Terms of Service and Privacy Policy.");
+            showFieldError(termsCheck, termsError, "Please accept the Terms of Service and Privacy Policy.");
             return;
         }
         String pw  = newPassword.isVisible() ? newPassword.getText() : newPasswordVisible.getText();
         String cpw = confirmPassword.isVisible() ? confirmPassword.getText() : confirmPasswordVisible.getText();
         if (!pw.equals(cpw)) {
-            showAlert("Passwords do not match.");
+            showFieldError(confirmPassword.isVisible() ? confirmPassword : confirmPasswordVisible,
+                    confirmPasswordError,
+                    "Passwords do not match.");
             return;
         }
         if (pw.length() < 8) {
-            showAlert("Password must be at least 8 characters.");
+            showFieldError(newPassword.isVisible() ? newPassword : newPasswordVisible,
+                    newPasswordError,
+                    "Password must be at least 8 characters.");
             return;
         }
 
         if (serviceUser.isEmailTaken(emailValue)) {
-            showAlert("An account with this email already exists.");
+            showFieldError(signUpEmail, signUpEmailError, "An account with this email already exists.");
             return;
         }
 
@@ -478,6 +491,7 @@ public class AuthController implements Initializable {
         confirmPassword.clear();
         confirmPasswordVisible.clear();
         termsCheck.setSelected(false);
+        clearSignUpErrors();
 
         signInEmail.setText(emailValue);
         showSignIn();
@@ -497,6 +511,102 @@ public class AuthController implements Initializable {
 
     @FXML private void openTerms()   { System.out.println("Open terms"); }
     @FXML private void openPrivacy() { System.out.println("Open privacy"); }
+
+    private boolean validateSignInFields(String email, String password) {
+        boolean valid = true;
+
+        if (email == null || email.trim().isEmpty()) {
+            showFieldError(signInEmail, signInEmailError, "Email is required.");
+            valid = false;
+        }
+
+        if (password == null || password.trim().isEmpty()) {
+            Control passwordControl = signInPassword.isVisible() ? signInPassword : signInPasswordVisible;
+            showFieldError(passwordControl, signInPasswordError, "Password is required.");
+            valid = false;
+        }
+
+        return valid;
+    }
+
+    private boolean validateSignUpStep0() {
+        clearSignUpErrors();
+        boolean valid = true;
+
+        String firstNameValue = firstName.getText() == null ? "" : firstName.getText().trim();
+        String lastNameValue = lastName.getText() == null ? "" : lastName.getText().trim();
+        String emailValue = signUpEmail.getText() == null ? "" : signUpEmail.getText().trim();
+        String bloodTypeValue = bloodTypeCombo == null || bloodTypeCombo.getValue() == null
+                ? ""
+                : bloodTypeCombo.getValue().trim();
+
+        if (firstNameValue.isEmpty()) {
+            showFieldError(firstName, firstNameError, "First name is required.");
+            valid = false;
+        }
+        if (lastNameValue.isEmpty()) {
+            showFieldError(lastName, lastNameError, "Last name is required.");
+            valid = false;
+        }
+        if (emailValue.isEmpty()) {
+            showFieldError(signUpEmail, signUpEmailError, "Email is required.");
+            valid = false;
+        } else if (!emailValue.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+            showFieldError(signUpEmail, signUpEmailError, "Please enter a valid email address.");
+            valid = false;
+        }
+        if (bloodTypeValue.isEmpty()) {
+            showFieldError(bloodTypeCombo, bloodTypeError, "Please select a blood type.");
+            valid = false;
+        }
+
+        return valid;
+    }
+
+    private void clearAllErrors() {
+        clearSignInErrors();
+        clearSignUpErrors();
+    }
+
+    private void clearSignInErrors() {
+        clearFieldError(signInEmail, signInEmailError);
+        clearFieldError(signInPassword, signInPasswordError);
+        clearFieldError(signInPasswordVisible, signInPasswordError);
+    }
+
+    private void clearSignUpErrors() {
+        clearFieldError(firstName, firstNameError);
+        clearFieldError(lastName, lastNameError);
+        clearFieldError(signUpEmail, signUpEmailError);
+        clearFieldError(bloodTypeCombo, bloodTypeError);
+        clearFieldError(newPassword, newPasswordError);
+        clearFieldError(newPasswordVisible, newPasswordError);
+        clearFieldError(confirmPassword, confirmPasswordError);
+        clearFieldError(confirmPasswordVisible, confirmPasswordError);
+        clearFieldError(termsCheck, termsError);
+    }
+
+    private void showFieldError(Control field, Label errorLabel, String message) {
+        if (field != null && !field.getStyleClass().contains("field-error")) {
+            field.getStyleClass().add("field-error");
+        }
+        if (errorLabel != null) {
+            errorLabel.setText(message);
+            errorLabel.setVisible(true);
+            errorLabel.setManaged(true);
+        }
+    }
+
+    private void clearFieldError(Control field, Label errorLabel) {
+        if (field != null) {
+            field.getStyleClass().remove("field-error");
+        }
+        if (errorLabel != null) {
+            errorLabel.setText("");
+            errorLabel.setVisible(false);
+            errorLabel.setManaged(false);
+        }
+    }
 
     
     private void showAlert(String msg) {
