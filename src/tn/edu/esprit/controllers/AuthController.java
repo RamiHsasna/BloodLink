@@ -26,21 +26,17 @@ public class AuthController implements Initializable {
 
     private final ServiceUser serviceUser = new ServiceUser();
 
-    // ── Canvases ──────────────────────────────────────────────────────────
     @FXML private Canvas logoCanvas;
     @FXML private Canvas illustrationCanvas;
 
-    // ── Tab buttons ───────────────────────────────────────────────────────
     @FXML private Button tabSignIn;
     @FXML private Button tabSignUp;
 
-    // ── Sign-in fields ────────────────────────────────────────────────────
     @FXML private VBox  signInPane;
     @FXML private TextField     signInEmail;
     @FXML private PasswordField signInPassword;
     @FXML private TextField     signInPasswordVisible;
 
-    // ── Sign-up pane ──────────────────────────────────────────────────────
     @FXML private VBox signUpPane;
     @FXML private VBox step0Pane;
     @FXML private VBox step1Pane;
@@ -61,15 +57,12 @@ public class AuthController implements Initializable {
 
     @FXML private CheckBox termsCheck;
 
-    // ── Step dots ─────────────────────────────────────────────────────────
     @FXML private Region dot0;
     @FXML private Region dot1;
 
     private String selectedBloodType;
 
-    // ─────────────────────────────────────────────────────────────────────
-    //  Initialise
-    // ─────────────────────────────────────────────────────────────────────
+    
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         drawLogo();
@@ -79,8 +72,6 @@ public class AuthController implements Initializable {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    //  Logo canvas
     // ─────────────────────────────────────────────────────────────────────
     private void drawLogo() {
         GraphicsContext gc = logoCanvas.getGraphicsContext2D();
@@ -280,9 +271,8 @@ public class AuthController implements Initializable {
         gc.stroke();
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    //  Tab switching
-    // ─────────────────────────────────────────────────────────────────────
+   // ─────────────────────────────────────────────────────────────────────
+
     @FXML private void showSignIn() {
         setPane(signInPane, true);
         setPane(signUpPane, false);
@@ -297,21 +287,36 @@ public class AuthController implements Initializable {
         tabSignIn.getStyleClass().remove("tab-active");
     }
 
-    private void setPane(VBox pane, boolean show) {
-        pane.setVisible(show);
-        pane.setManaged(show);
-        if (show) {
+    private void setPane(VBox pane, boolean show) { //function to show or hide pane
+        pane.setVisible(show); //visually show/hide
+        pane.setManaged(show); //include/exclude from layout
+        if (show) { //animation
             FadeTransition ft = new FadeTransition(Duration.millis(200), pane);
             ft.setFromValue(0); ft.setToValue(1); ft.play();
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    //  Step navigation
-    // ─────────────────────────────────────────────────────────────────────
+
     @FXML private void goToStep1() {
+        
+        if (firstName.getText() == null || firstName.getText().trim().isEmpty()){
+            showAlert("Please fill in first name");
+            return;
+        }
+        if (lastName.getText() == null || lastName.getText().trim().isEmpty()){
+            showAlert("Please fill in last name");
+            return;
+        }
+        if (signUpEmail.getText() == null || signUpEmail.getText().trim().isEmpty()){
+            showAlert("Please fill in email");
+            return;
+        }
         if (bloodTypeCombo == null || bloodTypeCombo.getValue() == null || bloodTypeCombo.getValue().isEmpty()) {
             showAlert("Please select a blood type.");
+            return;
+        }
+        if (!termsCheck.isSelected()) {
+            showAlert("Please accept the Terms of Service and Privacy Policy.");
             return;
         }
 
@@ -338,9 +343,7 @@ public class AuthController implements Initializable {
 
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    //  Password visibility toggles
-    // ─────────────────────────────────────────────────────────────────────
+
     @FXML private void toggleSignInPassword() {
         togglePwVisibility(signInPassword, signInPasswordVisible);
     }
@@ -365,14 +368,13 @@ public class AuthController implements Initializable {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    //  Actions (wire to your service layer)
-    // ─────────────────────────────────────────────────────────────────────
+    //////////////////////////////////////////////////////////////////////////
+
     @FXML private void handleSignIn() {
         String email    = signInEmail.getText().trim();
-        String password = signInPassword.isVisible()
-                          ? signInPassword.getText()
-                          : signInPasswordVisible.getText();
+        String password = signInPassword.isVisible()   // get password from the visible field
+                          ? signInPassword.getText() // or from the visible text field if password is currently hidden
+                          : signInPasswordVisible.getText();  
 
         if (email.isEmpty() || password.isEmpty()) {
             showAlert("Please fill in all fields.");
@@ -391,13 +393,15 @@ public class AuthController implements Initializable {
             Parent dashboardRoot = FXMLLoader.load(getClass().getResource("/tn/edu/esprit/views/MainDashboard.fxml"));
             Stage stage = (Stage) signInPane.getScene().getWindow();
             Scene scene = new Scene(dashboardRoot, stage.getScene().getWidth(), stage.getScene().getHeight());
-            stage.setTitle("BloodLink - Dashboard");
+            stage.setTitle("Dashboard");
             stage.setScene(scene);
             stage.centerOnScreen();
         } catch (Exception e) {
             showAlert("Login succeeded but dashboard could not be opened: " + e.getMessage());
         }
     }
+
+    ///////////////////////////////////////////////////////////////////////
 
     @FXML private void handleCreateAccount() {
         String firstNameValue = firstName.getText() != null ? firstName.getText().trim() : "";
@@ -457,7 +461,7 @@ public class AuthController implements Initializable {
             return;
         }
 
-        Alert success = new Alert(Alert.AlertType.INFORMATION, "Account created successfully as donor.", ButtonType.OK);
+        Alert success = new Alert(Alert.AlertType.INFORMATION, "Account created successfully.", ButtonType.OK);
         success.setHeaderText(null);
         success.showAndWait();
 
@@ -479,6 +483,7 @@ public class AuthController implements Initializable {
         showSignIn();
     }
 
+/////////////////////////////////////////////////////////
     @FXML private void handleGoogle() {
         // TODO: integrate Google OAuth
         System.out.println("Google OAuth triggered");
@@ -488,13 +493,12 @@ public class AuthController implements Initializable {
         // TODO: open forgot-password dialog
         System.out.println("Forgot password");
     }
+///////////////////////////////////////////////////////
 
     @FXML private void openTerms()   { System.out.println("Open terms"); }
     @FXML private void openPrivacy() { System.out.println("Open privacy"); }
 
-    // ─────────────────────────────────────────────────────────────────────
-    //  Helpers
-    // ─────────────────────────────────────────────────────────────────────
+    
     private void showAlert(String msg) {
         Alert alert = new Alert(Alert.AlertType.WARNING, msg, ButtonType.OK);
         alert.setHeaderText(null);

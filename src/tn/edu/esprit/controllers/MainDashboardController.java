@@ -12,6 +12,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -29,6 +30,9 @@ public class MainDashboardController implements Initializable {
     private VBox sidebar;
 
     // Navigation items
+    @FXML
+    private HBox navHome;
+
     @FXML
     private HBox navUsers;
 
@@ -62,12 +66,35 @@ public class MainDashboardController implements Initializable {
     @FXML
     private HBox navLogout;
 
+    @FXML
+    private Label brandSubtitleLabel;
+
+    @FXML
+    private Label sidebarSectionLabel;
+
+    @FXML
+    private Label profileNameLabel;
+
+    @FXML
+    private Label profileRoleLabel;
+
+    @FXML
+    private Label profileInitialLabel;
+
     private HBox activeNavItem;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         Users currentUser = AppSession.getCurrentUser();
+        configureSidebarHeader(currentUser);
         applyRoleAccess(currentUser);
+
+        if (currentUser != null && currentUser.getUserType() == UserType.DONOR) {
+            activeNavItem = navHome;
+            setActiveNav(navHome);
+            loadView("/tn/edu/esprit/views/DonorHomeDashboard.fxml");
+            return;
+        }
 
         activeNavItem = navDonations;
         setActiveNav(navDonations);
@@ -75,6 +102,12 @@ public class MainDashboardController implements Initializable {
     }
 
     // ==================== NAVIGATION HANDLERS ====================
+
+    @FXML
+    private void onNavHome() {
+        setActiveNav(navHome);
+        loadView("/tn/edu/esprit/views/DonorHomeDashboard.fxml");
+    }
 
     @FXML
     private void onNavUsers() {
@@ -195,6 +228,9 @@ public class MainDashboardController implements Initializable {
     }
 
     private void applyRoleAccess(Users currentUser) {
+        boolean isDonor = currentUser != null && currentUser.getUserType() == UserType.DONOR;
+        setNavVisibility(navHome, isDonor);
+
         if (currentUser != null && currentUser.getUserType() == UserType.ADMIN) {
             setNavVisibility(navUsers, true);
             setNavVisibility(navHospitals, true);
@@ -227,6 +263,63 @@ public class MainDashboardController implements Initializable {
             // Donor access: Donations (own only in donations controller), events, eligibility, alerts.
             setNavVisibility(navInventory, false);
             setNavVisibility(navTransfers, false);
+        }
+    }
+
+    private void configureSidebarHeader(Users currentUser) {
+        if (currentUser == null) {
+            if (brandSubtitleLabel != null) {
+                brandSubtitleLabel.setText("Dashboard");
+            }
+            if (sidebarSectionLabel != null) {
+                sidebarSectionLabel.setText("NAVIGATION");
+            }
+            if (profileNameLabel != null) {
+                profileNameLabel.setText("User");
+            }
+            if (profileRoleLabel != null) {
+                profileRoleLabel.setText("Member");
+            }
+            if (profileInitialLabel != null) {
+                profileInitialLabel.setText("U");
+            }
+            return;
+        }
+
+        String displayName = ((currentUser.getFirst_name() != null ? currentUser.getFirst_name().trim() : "")
+                + " "
+                + (currentUser.getLast_name() != null ? currentUser.getLast_name().trim() : "")).trim();
+        if (displayName.isEmpty()) {
+            displayName = currentUser.getEmail() != null ? currentUser.getEmail() : "User";
+        }
+
+        String roleLabel = "Member";
+        String dashboardSubtitle = "Dashboard";
+        if (currentUser.getUserType() == UserType.ADMIN) {
+            roleLabel = "Administrator";
+            dashboardSubtitle = "Admin Dashboard";
+        } else if (currentUser.getUserType() == UserType.HOSPITAL_STAFF) {
+            roleLabel = "Hospital Staff";
+            dashboardSubtitle = "Staff Dashboard";
+        } else if (currentUser.getUserType() == UserType.DONOR) {
+            roleLabel = "Donor";
+            dashboardSubtitle = "Donor Dashboard";
+        }
+
+        if (brandSubtitleLabel != null) {
+            brandSubtitleLabel.setText(dashboardSubtitle);
+        }
+        if (sidebarSectionLabel != null) {
+            sidebarSectionLabel.setText("NAVIGATION");
+        }
+        if (profileNameLabel != null) {
+            profileNameLabel.setText(displayName);
+        }
+        if (profileRoleLabel != null) {
+            profileRoleLabel.setText(roleLabel);
+        }
+        if (profileInitialLabel != null) {
+            profileInitialLabel.setText(displayName.substring(0, 1).toUpperCase());
         }
     }
 

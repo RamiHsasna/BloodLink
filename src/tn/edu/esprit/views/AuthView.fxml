@@ -12,9 +12,7 @@
     stylesheets="@../styles/auth.css"
       prefWidth="1280" prefHeight="780">
 
-    <!-- ═══════════════════════════════════════════ -->
-    <!--  LEFT BRAND PANEL                           -->
-    <!-- ═══════════════════════════════════════════ -->
+    <!-- Left side  -->
     <VBox styleClass="brand-panel" HBox.hgrow="ALWAYS">
 
         <!-- Logo -->
@@ -23,26 +21,26 @@
             <Label text="BloodLink" styleClass="logo-text"/>
         </HBox>
 
-        <!-- Illustration Card -->
+        
         <VBox styleClass="illus-card" VBox.vgrow="ALWAYS" alignment="CENTER">
-            <Canvas fx:id="illustrationCanvas" width="460" height="260"/>
+            <Canvas fx:id="illustrationCanvas" width="460" height="260"/> 
         </VBox>
 
-        <!-- Brand copy -->
+        
         <VBox styleClass="brand-copy" spacing="0">
-            <Label text="Connecting donors" styleClass="brand-headline"/>
-            <Label text="with those in need." styleClass="brand-headline"/>
-            <Label text="A smarter platform for blood donation coordination, inventory management, and emergency response across hospitals."
+            <Label text="Every drop is a lifeline" styleClass="brand-headline"/>
+            <Label text="Be someone's miracle today" styleClass="brand-headline"/>
+            <Label text="Join thousands of donors helping hospitals stay ready ."
                    styleClass="brand-desc" wrapText="true"/>
 
-            <!-- Stats -->
+
             <HBox styleClass="stats-row">
                 <VBox styleClass="stat-item">
                     <Label text="12k+" styleClass="stat-num"/>
                     <Label text="Active donors" styleClass="stat-lbl"/>
                 </VBox>
                 <VBox styleClass="stat-item">
-                    <Label text="340" styleClass="stat-num"/>
+                    <Label text="200+" styleClass="stat-num"/>
                     <Label text="Partner hospitals" styleClass="stat-lbl"/>
                 </VBox>
                 <VBox styleClass="stat-item">
@@ -53,9 +51,8 @@
         </VBox>
     </VBox>
 
-    <!-- ═══════════════════════════════════════════ -->
-    <!--  RIGHT FORM PANEL                           -->
-    <!-- ═══════════════════════════════════════════ -->
+    <!-- Right side -->
+
 <!--    <ScrollPane styleClass="form-scroll" fitToWidth="true" fitToHeight="true"-->
 <!--                hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">-->
 
@@ -63,7 +60,7 @@
 
             <VBox styleClass="form-box" maxWidth="420">
 
-                <!-- Pill tab switcher -->
+                
                 <HBox styleClass="tab-switcher">
                     <Button fx:id="tabSignIn" text="Sign in" styleClass="tab-btn,tab-active"
                             onAction="#showSignIn" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
@@ -71,10 +68,10 @@
                             onAction="#showSignUp" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
                 </HBox>
 
-                <!-- ── SIGN IN PANE ── -->
+                <!-- SIGN IN  -->
                 <VBox fx:id="signInPane" styleClass="form-pane">
                     <Label text="Welcome back" styleClass="form-title"/>
-                    <Label text="Sign in to your BloodLink account to continue."
+                    <Label text="Sign in to your account to continue."
                            styleClass="form-sub" wrapText="true"/>
 
                     <Label text="EMAIL ADDRESS" styleClass="field-label"/>
@@ -111,7 +108,7 @@
                     </HBox>
                 </VBox>
 
-                <!-- ── SIGN UP PANE ── -->
+                <!-- SIGN UP -->
                 <VBox fx:id="signUpPane" styleClass="form-pane,hidden" visible="false" managed="false">
 
                     <!-- Step dots -->

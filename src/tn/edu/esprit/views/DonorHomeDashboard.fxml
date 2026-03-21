@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml/1"
+      spacing="18"
+      styleClass="content-root"
+      stylesheets="@../styles/dashboard.css">
+
+    <padding>
+        <Insets top="28" right="28" bottom="28" left="28"/>
+    </padding>
+
+    <VBox spacing="6" styleClass="page-header">
+        <Label text="Donor Dashboard" styleClass="page-title"/>
+        <Label text="Welcome! This main page can host donor-focused blog posts, tips, and campaign updates."
+               styleClass="page-description" wrapText="true"/>
+    </VBox>
+
+    <HBox spacing="16">
+        <VBox spacing="10" styleClass="hospital-card" HBox.hgrow="ALWAYS">
+            <padding>
+                <Insets top="18" right="18" bottom="18" left="18"/>
+            </padding>
+            <Label text="Latest Blog" styleClass="empty-state-title"/>
+            <Label text="No blog posts yet."
+                   styleClass="empty-state-description"/>
+        </VBox>
+
+        <VBox spacing="10" styleClass="hospital-card" HBox.hgrow="ALWAYS">
+            <padding>
+                <Insets top="18" right="18" bottom="18" left="18"/>
+            </padding>
+            <Label text="Health Tips" styleClass="empty-state-title"/>
+            <Label text="No tips published yet."
+                   styleClass="empty-state-description"/>
+        </VBox>
+    </HBox>
+
+    <VBox spacing="10" styleClass="hospital-card" VBox.vgrow="ALWAYS">
+        <padding>
+            <Insets top="18" right="18" bottom="18" left="18"/>
+        </padding>
+        <Label text="Community Stories" styleClass="empty-state-title"/>
+        <Label text="This area is reserved for donor stories and awareness articles."
+               styleClass="empty-state-description" wrapText="true"/>
+        <Region VBox.vgrow="ALWAYS"/>
+    </VBox>
+
+</VBox>
