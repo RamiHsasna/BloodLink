@@ -18,6 +18,7 @@ import tn.edu.esprit.services.AppSession;
 import tn.edu.esprit.services.DonorEligibilityService;
 
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -36,12 +37,14 @@ public class DonorEligibilityDashboardController {
     private List<DonorEligibility> allRecords;
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private boolean readOnlyDonor;
+    private String currentUserId;
 
     @FXML
     public void initialize() {
         eligibilityService = new DonorEligibilityService();
         Users currentUser = AppSession.getCurrentUser();
         readOnlyDonor = currentUser != null && currentUser.getUserType() == UserType.DONOR;
+        currentUserId = currentUser != null ? currentUser.getId() : null;
 
         if (addEligibilityBtn != null) {
             addEligibilityBtn.setVisible(!readOnlyDonor);
@@ -56,7 +59,17 @@ public class DonorEligibilityDashboardController {
     }
 
     private void loadRecords() {
-        allRecords = eligibilityService.getAll(null);
+        if (readOnlyDonor) {
+            allRecords = new ArrayList<>();
+            if (currentUserId != null && !currentUserId.trim().isEmpty()) {
+                DonorEligibility ownRecord = eligibilityService.getOne(currentUserId);
+                if (ownRecord != null) {
+                    allRecords.add(ownRecord);
+                }
+            }
+        } else {
+            allRecords = eligibilityService.getAll(null);
+        }
         displayRecords(allRecords);
         updateStats();
     }
