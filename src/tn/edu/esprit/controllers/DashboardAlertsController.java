@@ -19,8 +19,11 @@ import tn.edu.esprit.entities.Alert;
 import tn.edu.esprit.entities.AlertSeverity;
 import tn.edu.esprit.entities.DonorAlert;
 import tn.edu.esprit.entities.DonorResponse;
+import tn.edu.esprit.entities.UserType;
+import tn.edu.esprit.entities.Users;
 import tn.edu.esprit.services.AlertService;
 import tn.edu.esprit.services.AlertServiceImpl;
+import tn.edu.esprit.services.AppSession;
 import tn.edu.esprit.services.DonorAlertService;
 import tn.edu.esprit.services.DonorAlertServiceImpl;
 
@@ -54,11 +57,20 @@ public class DashboardAlertsController implements Initializable {
 
     private ObservableList<Alert> allAlerts;
     private ObservableList<DonorAlert> allDonorAlerts;
+    private boolean readOnlyDonor;
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         alertService = new AlertServiceImpl();
         donorAlertService = new DonorAlertServiceImpl();
+
+        Users currentUser = AppSession.getCurrentUser();
+        readOnlyDonor = currentUser != null && currentUser.getUserType() == UserType.DONOR;
+        if (btnBroadcast != null) {
+            btnBroadcast.setVisible(!readOnlyDonor);
+            btnBroadcast.setManaged(!readOnlyDonor);
+        }
+
         setupFilterSelector();
         setupSearchListener();
         loadData();
@@ -213,37 +225,40 @@ public class DashboardAlertsController implements Initializable {
         VBox body = new VBox(6, hospitalRow, bloodTypeRow, quantityRow, radiusRow, messageRow, responsesRow);
         body.getStyleClass().add("log-card-body");
 
-        // Divider + actions
-        Region divider = new Region();
-        divider.getStyleClass().add("log-card-divider");
-        divider.setPrefHeight(1);
+        card.getChildren().addAll(header, body);
 
-        Button btnEdit = new Button("✏ Modifier");
-        btnEdit.getStyleClass().add("btn-log-edit");
-        btnEdit.setOnAction(e -> handleEditAlert(alert));
+        if (!readOnlyDonor) {
+            Region divider = new Region();
+            divider.getStyleClass().add("log-card-divider");
+            divider.setPrefHeight(1);
 
-        Button btnResolve;
-        if (alert.isResolved()) {
-            btnResolve = new Button("Resolue");
-            btnResolve.getStyleClass().add("btn-log-resolve-done");
-            btnResolve.setDisable(true);
-        } else {
-            btnResolve = new Button("✓ Resoudre");
-            btnResolve.getStyleClass().add("btn-log-resolve");
-            btnResolve.setOnAction(e -> handleResolveAlert(alert));
+            Button btnEdit = new Button("✏ Modifier");
+            btnEdit.getStyleClass().add("btn-log-edit");
+            btnEdit.setOnAction(e -> handleEditAlert(alert));
+
+            Button btnResolve;
+            if (alert.isResolved()) {
+                btnResolve = new Button("Resolue");
+                btnResolve.getStyleClass().add("btn-log-resolve-done");
+                btnResolve.setDisable(true);
+            } else {
+                btnResolve = new Button("✓ Resoudre");
+                btnResolve.getStyleClass().add("btn-log-resolve");
+                btnResolve.setOnAction(e -> handleResolveAlert(alert));
+            }
+
+            Button btnDelete = new Button("🗑 Supprimer");
+            btnDelete.getStyleClass().add("btn-log-delete");
+            btnDelete.setOnAction(e -> handleDeleteAlert(alert));
+
+            Region footerSpacer = new Region();
+            HBox.setHgrow(footerSpacer, Priority.ALWAYS);
+            HBox footer = new HBox(8, footerSpacer, btnEdit, btnResolve, btnDelete);
+            footer.setAlignment(Pos.CENTER_RIGHT);
+            footer.getStyleClass().add("log-card-footer");
+
+            card.getChildren().addAll(divider, footer);
         }
-
-        Button btnDelete = new Button("🗑 Supprimer");
-        btnDelete.getStyleClass().add("btn-log-delete");
-        btnDelete.setOnAction(e -> handleDeleteAlert(alert));
-
-        Region footerSpacer = new Region();
-        HBox.setHgrow(footerSpacer, Priority.ALWAYS);
-        HBox footer = new HBox(8, footerSpacer, btnEdit, btnResolve, btnDelete);
-        footer.setAlignment(Pos.CENTER_RIGHT);
-        footer.getStyleClass().add("log-card-footer");
-
-        card.getChildren().addAll(header, body, divider, footer);
         return card;
     }
 
@@ -251,6 +266,9 @@ public class DashboardAlertsController implements Initializable {
 
     @FXML
     private void handleBroadcast() {
+        if (readOnlyDonor) {
+            return;
+        }
         try {
             FXMLLoader loader = new FXMLLoader(
                     getClass().getResource("/tn/edu/esprit/views/BroadcastAlertDialog.fxml"));
@@ -267,6 +285,9 @@ public class DashboardAlertsController implements Initializable {
     }
 
     private void handleEditAlert(Alert alert) {
+        if (readOnlyDonor) {
+            return;
+        }
         try {
             FXMLLoader loader = new FXMLLoader(
                     getClass().getResource("/tn/edu/esprit/views/BroadcastAlertDialog.fxml"));
@@ -285,6 +306,9 @@ public class DashboardAlertsController implements Initializable {
     }
 
     private void handleResolveAlert(Alert alert) {
+        if (readOnlyDonor) {
+            return;
+        }
         javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(
                 javafx.scene.control.Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Resoudre l'alerte");
@@ -301,6 +325,9 @@ public class DashboardAlertsController implements Initializable {
     }
 
     private void handleDeleteAlert(Alert alert) {
+        if (readOnlyDonor) {
+            return;
+        }
         javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(
                 javafx.scene.control.Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Supprimer");

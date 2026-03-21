@@ -12,6 +12,9 @@ import javafx.scene.text.Text;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import tn.edu.esprit.entities.DonorEligibility;
+import tn.edu.esprit.entities.UserType;
+import tn.edu.esprit.entities.Users;
+import tn.edu.esprit.services.AppSession;
 import tn.edu.esprit.services.DonorEligibilityService;
 
 import java.time.format.DateTimeFormatter;
@@ -32,10 +35,18 @@ public class DonorEligibilityDashboardController {
     private DonorEligibilityService eligibilityService;
     private List<DonorEligibility> allRecords;
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private boolean readOnlyDonor;
 
     @FXML
     public void initialize() {
         eligibilityService = new DonorEligibilityService();
+        Users currentUser = AppSession.getCurrentUser();
+        readOnlyDonor = currentUser != null && currentUser.getUserType() == UserType.DONOR;
+
+        if (addEligibilityBtn != null) {
+            addEligibilityBtn.setVisible(!readOnlyDonor);
+            addEligibilityBtn.setManaged(!readOnlyDonor);
+        }
 
         // Initialize filter combo box
         eligibilityFilter.getItems().addAll("All Eligibility", "Eligible", "Not Eligible");
@@ -132,20 +143,23 @@ public class DonorEligibilityDashboardController {
         detailsGrid.add(locationBox, 0, 1, 2, 1);
 
         // Action Buttons
-        HBox actionButtons = new HBox(10);
-        actionButtons.setAlignment(Pos.CENTER_RIGHT);
+        card.getChildren().addAll(header, new Separator(), detailsGrid);
 
-        Button modifyBtn = new Button("Modify");
-        modifyBtn.getStyleClass().add("btn-modify");
-        modifyBtn.setOnAction(e -> handleModifyEligibility(record));
+        if (!readOnlyDonor) {
+            HBox actionButtons = new HBox(10);
+            actionButtons.setAlignment(Pos.CENTER_RIGHT);
 
-        Button deleteBtn = new Button("Delete");
-        deleteBtn.getStyleClass().add("btn-delete");
-        deleteBtn.setOnAction(e -> handleDeleteEligibility(record));
+            Button modifyBtn = new Button("Modify");
+            modifyBtn.getStyleClass().add("btn-modify");
+            modifyBtn.setOnAction(e -> handleModifyEligibility(record));
 
-        actionButtons.getChildren().addAll(modifyBtn, deleteBtn);
+            Button deleteBtn = new Button("Delete");
+            deleteBtn.getStyleClass().add("btn-delete");
+            deleteBtn.setOnAction(e -> handleDeleteEligibility(record));
 
-        card.getChildren().addAll(header, new Separator(), detailsGrid, actionButtons);
+            actionButtons.getChildren().addAll(modifyBtn, deleteBtn);
+            card.getChildren().add(actionButtons);
+        }
 
         return card;
     }
@@ -207,6 +221,9 @@ public class DonorEligibilityDashboardController {
 
     @FXML
     private void handleAddEligibility() {
+        if (readOnlyDonor) {
+            return;
+        }
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/tn/edu/esprit/views/DonorEligibilityDialog.fxml"));
             Parent root = loader.load();
@@ -235,6 +252,9 @@ public class DonorEligibilityDashboardController {
     }
 
     private void handleModifyEligibility(DonorEligibility record) {
+        if (readOnlyDonor) {
+            return;
+        }
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/tn/edu/esprit/views/DonorEligibilityDialog.fxml"));
             Parent root = loader.load();
@@ -264,6 +284,9 @@ public class DonorEligibilityDashboardController {
     }
 
     private void handleDeleteEligibility(DonorEligibility record) {
+        if (readOnlyDonor) {
+            return;
+        }
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Delete Eligibility Record");
         alert.setHeaderText("Delete eligibility record for donor " + record.getId() + "?");
