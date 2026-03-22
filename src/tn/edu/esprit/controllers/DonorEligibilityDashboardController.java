@@ -1,3 +1,4 @@
+
 package tn.edu.esprit.controllers;
 
 import javafx.fxml.FXML;
@@ -11,12 +12,16 @@ import javafx.scene.layout.*;
 import javafx.scene.text.Text;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import tn.edu.esprit.entities.Donor;
 import tn.edu.esprit.entities.DonorEligibility;
 import tn.edu.esprit.entities.UserType;
 import tn.edu.esprit.entities.Users;
 import tn.edu.esprit.services.AppSession;
 import tn.edu.esprit.services.DonorEligibilityService;
+import tn.edu.esprit.services.ServiceDonor;
 
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,28 +32,63 @@ public class DonorEligibilityDashboardController {
 
     @FXML private TextField searchField;
     @FXML private ComboBox<String> eligibilityFilter;
+    @FXML private HBox searchFilterBar;
+    @FXML private HBox statsBar;
+    @FXML private VBox donorResponsesCard;
+    @FXML private Button donorFillFormBtn;
+    @FXML private Text donorHeaderSubtitle;
+    @FXML private Text donorLastCheckDaysValue;
+    @FXML private Text donorLastCheckDateValue;
+    @FXML private Text donorDaysSinceDonationValue;
+    @FXML private Text donorDonationGapHintValue;
+    @FXML private Text donorTotalDonationsValue;
+    @FXML private Text donorLastStatusDateText;
+    @FXML private Label donorCurrentStatusBadge;
+    @FXML private Label donorStatusNote;
     @FXML private VBox eligibilityContainer;
+    @FXML private ScrollPane recordsScrollPane;
     @FXML private Text totalRecordsLabel;
     @FXML private Text eligibleCountLabel;
     @FXML private Text notEligibleCountLabel;
     @FXML private Button addEligibilityBtn;
 
     private DonorEligibilityService eligibilityService;
+    private ServiceDonor donorService;
     private List<DonorEligibility> allRecords;
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private DateTimeFormatter prettyDateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
     private boolean readOnlyDonor;
     private String currentUserId;
 
     @FXML
     public void initialize() {
         eligibilityService = new DonorEligibilityService();
+        donorService = new ServiceDonor();
         Users currentUser = AppSession.getCurrentUser();
         readOnlyDonor = currentUser != null && currentUser.getUserType() == UserType.DONOR;
         currentUserId = currentUser != null ? currentUser.getId() : null;
 
+//hide admin features if donor
         if (addEligibilityBtn != null) {
             addEligibilityBtn.setVisible(!readOnlyDonor);
             addEligibilityBtn.setManaged(!readOnlyDonor);
+        }
+
+        if (searchFilterBar != null) {
+            searchFilterBar.setVisible(!readOnlyDonor);
+            searchFilterBar.setManaged(!readOnlyDonor);
+        }
+        if (donorResponsesCard != null) {
+            donorResponsesCard.setVisible(readOnlyDonor);
+            donorResponsesCard.setManaged(readOnlyDonor);
+        }
+        if (statsBar != null) {
+            statsBar.setVisible(!readOnlyDonor);
+            statsBar.setManaged(!readOnlyDonor);
+        }
+        if (recordsScrollPane != null) {
+            recordsScrollPane.setVisible(!readOnlyDonor);
+            recordsScrollPane.setManaged(!readOnlyDonor);
         }
 
         // Initialize filter combo box
@@ -58,6 +98,7 @@ public class DonorEligibilityDashboardController {
         loadRecords();
     }
 
+//show only the donor's own record, and all for the admin 
     private void loadRecords() {
         if (readOnlyDonor) {
             allRecords = new ArrayList<>();
@@ -72,6 +113,182 @@ public class DonorEligibilityDashboardController {
         }
         displayRecords(allRecords);
         updateStats();
+        updateDonorResponsesPanel();
+    }
+
+    private void updateDonorResponsesPanel() {
+        if (!readOnlyDonor || donorCurrentStatusBadge == null) {
+            return;
+        }
+
+        Donor donor = getCurrentDonor();
+        populateDonationStatCards(donor);
+
+//elligibility status 
+        if (allRecords == null || allRecords.isEmpty()) {
+            applyStatusBadge("Not checked", "donor-elig-badge-neutral");
+            donorLastStatusDateText.setText("Last checked on N/A");
+            donorLastCheckDaysValue.setText("N/A");
+            donorLastCheckDateValue.setText("ago • date unavailable");
+            donorStatusNote.setText("Run a pre-screening check to get your latest status. Age and weight are captured during the form.");
+            return;
+        }
+
+        DonorEligibility ownRecord = allRecords.get(0);
+        updateLastCheckCard(ownRecord);
+
+        boolean isEligible = ownRecord.getIsCurrentlyEligible() != null && ownRecord.getIsCurrentlyEligible();
+        String statusText = isEligible ? "Likely eligible" : "Not eligible";
+        applyStatusBadge(statusText, isEligible ? "donor-elig-badge-good" : "donor-elig-badge-bad");
+
+        if (ownRecord.getLastCalculatedAt() != null) {
+            donorLastStatusDateText.setText("Last checked on " + ownRecord.getLastCalculatedAt().format(prettyDateFormatter));
+        } else {
+            donorLastStatusDateText.setText("Last checked on N/A");
+        }
+
+        String details = ownRecord.getEligibilityDetails();
+        String age = extractFieldValue(details, "Age:");
+        String weight = extractFieldValue(details, "Weight:");
+
+        String bloodType = ownRecord.getBloodTypeCache() != null && !ownRecord.getBloodTypeCache().trim().isEmpty()
+                ? ownRecord.getBloodTypeCache()
+                : "N/A";
+
+        String note;
+        if (isEligible) {
+            note = "This is a preliminary result. A doctor will make the final decision on donation day. "
+                    + "Blood type " + bloodType + " is on file";
+        } else {
+            String daysUntilEligible = ownRecord.getDaysUntilEligible() != null
+                    ? String.valueOf(ownRecord.getDaysUntilEligible())
+                    : "N/A";
+            note = "This is a preliminary result. You are currently marked not eligible. "
+                    + "Estimated wait: " + daysUntilEligible + " day(s).";
+        }
+
+        if (!"N/A".equals(age) || !"N/A".equals(weight)) {
+            note += " Profile snapshot: Age " + age + ", Weight " + weight + ".";
+        }
+        donorStatusNote.setText(note);
+    }
+
+
+    @FXML
+    //opens the eligibility check form dialog for the donor to fill out or review, only for donors!!!
+    private void handleDonorFillForm() {
+        if (!readOnlyDonor) {
+            return;
+        }
+
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/tn/edu/esprit/views/DonorEligibilityCheckDialog.fxml"));
+            Parent root = loader.load();
+
+            DonorEligibilityCheckDialogController controller = loader.getController();
+
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle("Donor Eligibility Check");
+            dialogStage.initModality(Modality.APPLICATION_MODAL);
+            dialogStage.initOwner(donorResponsesCard.getScene().getWindow());
+            dialogStage.setScene(new Scene(root));
+            dialogStage.getScene().getStylesheets().add(
+                    getClass().getResource("/tn/edu/esprit/styles/dashboard.css").toExternalForm());
+
+            controller.setDialogStage(dialogStage);
+            controller.setOnSaved(this::loadRecords);
+
+            dialogStage.showAndWait();
+            loadRecords();
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("Error", "Could not open eligibility form: " + e.getMessage());
+        }
+    }
+
+    private Donor getCurrentDonor() {
+        if (currentUserId == null || currentUserId.trim().isEmpty()) {
+            return null;
+        }
+
+        Donor lookup = new Donor();
+        lookup.setUserId(currentUserId);
+        return donorService.getOne(lookup);
+    }
+
+    private void populateDonationStatCards(Donor donor) {
+        if (donor == null) {
+            donorDaysSinceDonationValue.setText("N/A");
+            donorDonationGapHintValue.setText("min. 56 required");
+            donorTotalDonationsValue.setText("0");
+            donorHeaderSubtitle.setText("Review your status and run a pre-screening check before joining a campaign.");
+            return;
+        }
+
+        donorTotalDonationsValue.setText(String.valueOf(Math.max(donor.getTotalDonations(), 0)));
+
+        if (donor.getLastDonationDate() == null) {
+            donorDaysSinceDonationValue.setText("N/A");
+            donorDonationGapHintValue.setText("no prior donation date");
+        } else {
+            long elapsed = ChronoUnit.DAYS.between(donor.getLastDonationDate(), LocalDate.now());
+            donorDaysSinceDonationValue.setText(String.valueOf(Math.max(elapsed, 0)));
+            donorDonationGapHintValue.setText("min. 56 required");
+        }
+
+        donorHeaderSubtitle.setText("Review your status and run a pre-screening check before joining a campaign.");
+    }
+
+    private void updateLastCheckCard(DonorEligibility ownRecord) {
+        if (ownRecord == null || ownRecord.getLastCalculatedAt() == null) {
+            donorLastCheckDaysValue.setText("N/A");
+            donorLastCheckDateValue.setText("ago • date unavailable");
+            return;
+        }
+
+        long daysAgo = ChronoUnit.DAYS.between(ownRecord.getLastCalculatedAt(), LocalDate.now());
+        donorLastCheckDaysValue.setText(daysAgo + " days");
+        donorLastCheckDateValue.setText("ago • " + ownRecord.getLastCalculatedAt().format(prettyDateFormatter));
+    }
+
+    private void applyStatusBadge(String text, String moodClass) {
+        if (donorCurrentStatusBadge == null) {
+            return;
+        }
+
+        donorCurrentStatusBadge.setText(text);
+        donorCurrentStatusBadge.getStyleClass().removeAll(
+                "donor-elig-badge-good",
+                "donor-elig-badge-bad",
+                "donor-elig-badge-neutral"
+        );
+        donorCurrentStatusBadge.getStyleClass().add(moodClass);
+    }
+
+    private String extractFieldValue(String details, String prefix) {
+        if (details == null || prefix == null) {
+            return "N/A";
+        }
+
+        String[] lines = details.split("\\r?\\n");
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (!trimmed.startsWith(prefix)) {
+                continue;
+            }
+
+            String value = trimmed.substring(prefix.length()).trim();
+            int markerIndex = value.indexOf("(");
+            if (markerIndex > 0) {
+                value = value.substring(0, markerIndex).trim();
+            }
+            if (prefix.equals("Weight:") && !value.equalsIgnoreCase("N/A") && !value.toLowerCase().contains("kg")) {
+                value = value + " kg";
+            }
+            return value.isEmpty() ? "N/A" : value;
+        }
+
+        return "N/A";
     }
 
     private void displayRecords(List<DonorEligibility> records) {
@@ -157,6 +374,17 @@ public class DonorEligibilityDashboardController {
 
         // Action Buttons
         card.getChildren().addAll(header, new Separator(), detailsGrid);
+
+        String detailsText = (record.getEligibilityDetails() != null && !record.getEligibilityDetails().trim().isEmpty())
+            ? record.getEligibilityDetails().trim()
+            : "Detailed questionnaire responses are not available for this record yet.";
+
+        Label detailsLabel = new Label("Eligibility Details\n" + detailsText);
+        detailsLabel.setWrapText(true);
+        detailsLabel.setMaxWidth(Double.MAX_VALUE);
+        detailsLabel.setStyle("-fx-font-size: 12.5px; -fx-text-fill: #334155; -fx-background-color: #f8fafc; "
+            + "-fx-padding: 10 12 10 12; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #e2e8f0;");
+        card.getChildren().add(detailsLabel);
 
         if (!readOnlyDonor) {
             HBox actionButtons = new HBox(10);
