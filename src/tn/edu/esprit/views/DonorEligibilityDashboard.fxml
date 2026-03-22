@@ -25,8 +25,8 @@
         </Button>
     </HBox>
 
-    <!-- Search and Filter Bar -->
-    <HBox spacing="15" alignment="CENTER_LEFT">
+    <!-- Search and Filter Bar (Admin/Staff) -->
+    <HBox fx:id="searchFilterBar" spacing="15" alignment="CENTER_LEFT">
         <TextField fx:id="searchField" promptText="Search by donor ID or blood type..."
                   styleClass="search-field" HBox.hgrow="ALWAYS" onKeyReleased="#handleSearch">
             <padding>
@@ -42,8 +42,66 @@
         </ComboBox>
     </HBox>
 
+    <!-- Donor Experience Panel (Donor only) -->
+    <VBox fx:id="donorResponsesCard" spacing="18" styleClass="donor-elig-shell" visible="false" managed="false">
+        <padding>
+            <Insets top="18" right="18" bottom="18" left="18"/>
+        </padding>
+
+        <VBox spacing="6">
+            <Text text="Donor Eligibility" styleClass="donor-elig-title"/>
+            <Text fx:id="donorHeaderSubtitle" text="Review your status and run a pre-screening check before joining a campaign."
+                  styleClass="donor-elig-subtitle"/>
+        </VBox>
+
+        <GridPane hgap="14" vgap="0">
+            <columnConstraints>
+                <ColumnConstraints percentWidth="33.33" hgrow="ALWAYS"/>
+                <ColumnConstraints percentWidth="33.33" hgrow="ALWAYS"/>
+                <ColumnConstraints percentWidth="33.34" hgrow="ALWAYS"/>
+            </columnConstraints>
+
+            <VBox spacing="5" styleClass="donor-elig-stat-card" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                <Text text="Last check" styleClass="donor-elig-stat-label"/>
+                <Text fx:id="donorLastCheckDaysValue" text="N/A" styleClass="donor-elig-stat-value"/>
+                <Text fx:id="donorLastCheckDateValue" text="date unavailable" styleClass="donor-elig-stat-hint"/>
+            </VBox>
+
+            <VBox spacing="5" styleClass="donor-elig-stat-card" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                <Text text="Days since last donation" styleClass="donor-elig-stat-label"/>
+                <Text fx:id="donorDaysSinceDonationValue" text="N/A" styleClass="donor-elig-stat-value"/>
+                <Text fx:id="donorDonationGapHintValue" text="min. 56 required" styleClass="donor-elig-stat-hint"/>
+            </VBox>
+
+            <VBox spacing="5" styleClass="donor-elig-stat-card" GridPane.columnIndex="2" GridPane.rowIndex="0">
+                <Text text="Total donations" styleClass="donor-elig-stat-label"/>
+                <Text fx:id="donorTotalDonationsValue" text="0" styleClass="donor-elig-stat-value"/>
+                <Text text="since joining" styleClass="donor-elig-stat-hint"/>
+            </VBox>
+        </GridPane>
+
+        <VBox spacing="14" styleClass="donor-elig-status-card">
+            <HBox alignment="CENTER_LEFT" spacing="14">
+                <Label text="✓" styleClass="donor-elig-status-icon"/>
+
+                <VBox spacing="2" HBox.hgrow="ALWAYS">
+                    <Text text="Current eligibility status" styleClass="donor-elig-status-title"/>
+                    <Text fx:id="donorLastStatusDateText" text="Last checked on N/A" styleClass="donor-elig-status-date"/>
+                </VBox>
+
+                <Label fx:id="donorCurrentStatusBadge" text="Not checked" styleClass="donor-elig-badge donor-elig-badge-neutral"/>
+                <Button fx:id="donorFillFormBtn" text="Run new check" styleClass="donor-elig-run-btn" onAction="#handleDonorFillForm"/>
+            </HBox>
+
+            <Separator styleClass="donor-elig-divider"/>
+
+                 <Label fx:id="donorStatusNote" text="This is a preliminary result. A doctor makes the final decision on donation day."
+                     styleClass="donor-elig-note" wrapText="true" maxWidth="1.7976931348623157E308"/>
+        </VBox>
+    </VBox>
+
     <!-- Stats Section -->
-    <HBox spacing="20">
+    <HBox fx:id="statsBar" spacing="20">
         <HBox spacing="10" alignment="CENTER_LEFT">
             <Text text="Total:" styleClass="stat-label"/>
             <Text fx:id="totalRecordsLabel" text="0" styleClass="stat-value"/>
@@ -61,7 +119,7 @@
     </HBox>
 
     <!-- Eligibility Records List -->
-    <ScrollPane fitToWidth="true" styleClass="content-scroll" VBox.vgrow="ALWAYS">
+    <ScrollPane fx:id="recordsScrollPane" fitToWidth="true" styleClass="content-scroll" VBox.vgrow="ALWAYS">
         <VBox fx:id="eligibilityContainer" spacing="15" styleClass="users-container">
             <padding>
                 <Insets top="5" right="5" bottom="5" left="5"/>
