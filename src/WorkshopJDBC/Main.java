@@ -11,11 +11,11 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
         Parent root = FXMLLoader.load(
-            getClass().getResource("/tn/edu/esprit/views/MainDashboard.fxml")
+            getClass().getResource("/tn/edu/esprit/views/AuthView.fxml")
         );
         Scene scene = new Scene(root, 1200, 750);
-        primaryStage.setTitle("BloodLink - Admin Dashboard");
-        primaryStage.setMinWidth(1000);
+        primaryStage.setTitle("BloodLink");
+        primaryStage.setMinWidth(600);
         primaryStage.setMinHeight(600);
         primaryStage.setScene(scene);
         primaryStage.show();

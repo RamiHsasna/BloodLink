@@ -14,6 +14,7 @@ public class DonorEligibility {
     private BigDecimal latitudeCache;
     private BigDecimal longitudeCache;
     private String bloodTypeCache;
+    private String eligibilityDetails;
 
     public DonorEligibility() {
     }
@@ -93,5 +94,13 @@ public class DonorEligibility {
 
     public void setBloodTypeCache(String bloodTypeCache) {
         this.bloodTypeCache = bloodTypeCache;
+    }
+
+    public String getEligibilityDetails() {
+        return eligibilityDetails;
+    }
+
+    public void setEligibilityDetails(String eligibilityDetails) {
+        this.eligibilityDetails = eligibilityDetails;
     }
 }

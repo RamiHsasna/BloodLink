@@ -26,7 +26,7 @@
                 </StackPane>
                 <VBox spacing="0">
                     <Label text="BloodLink" styleClass="brand-title"/>
-                    <Label text="Admin Dashboard" styleClass="brand-subtitle"/>
+                    <Label fx:id="brandSubtitleLabel" text="Dashboard" styleClass="brand-subtitle"/>
                 </VBox>
             </HBox>
 
@@ -34,7 +34,7 @@
             <Separator styleClass="sidebar-divider"/>
 
             <!-- Navigation Section Label -->
-            <Label text="MANAGEMENT" styleClass="sidebar-section-label">
+            <Label fx:id="sidebarSectionLabel" text="NAVIGATION" styleClass="sidebar-section-label">
                 <padding>
                     <Insets top="20" right="24" bottom="8" left="24"/>
                 </padding>
@@ -46,6 +46,14 @@
                     <Insets top="0" right="12" bottom="0" left="12"/>
                 </padding>
 
+                <HBox fx:id="navHome" styleClass="nav-item" alignment="CENTER_LEFT" spacing="12" onMouseClicked="#onNavHome">
+                    <padding>
+                        <Insets top="10" right="16" bottom="10" left="16"/>
+                    </padding>
+                    <Label text="🏠" styleClass="nav-icon"/>
+                    <Label text="Main Dashboard" styleClass="nav-label"/>
+                </HBox>
+
                 <HBox fx:id="navUsers" styleClass="nav-item" alignment="CENTER_LEFT" spacing="12" onMouseClicked="#onNavUsers">
                     <padding>
                         <Insets top="10" right="16" bottom="10" left="16"/>
@@ -54,7 +62,7 @@
                     <Label text="Users" styleClass="nav-label"/>
                 </HBox>
 
-                <HBox fx:id="navHospitals" styleClass="nav-item, nav-item-active" alignment="CENTER_LEFT" spacing="12" onMouseClicked="#onNavHospitals">
+                <HBox fx:id="navHospitals" styleClass="nav-item" alignment="CENTER_LEFT" spacing="12" onMouseClicked="#onNavHospitals">
                     <padding>
                         <Insets top="10" right="16" bottom="10" left="16"/>
                     </padding>
@@ -138,12 +146,20 @@
                 </padding>
                 <StackPane prefWidth="32" prefHeight="32">
                     <Circle radius="16" styleClass="avatar-circle"/>
-                    <Label text="A" styleClass="avatar-letter"/>
+                    <Label fx:id="profileInitialLabel" text="U" styleClass="avatar-letter"/>
                 </StackPane>
                 <VBox spacing="0">
-                    <Label text="Admin User" styleClass="nav-label"/>
-                    <Label text="Hospital Staff" styleClass="sidebar-subtitle-text"/>
+                    <Label fx:id="profileNameLabel" text="User" styleClass="nav-label"/>
+                    <Label fx:id="profileRoleLabel" text="Member" styleClass="sidebar-subtitle-text"/>
                 </VBox>
+            </HBox>
+
+            <HBox fx:id="navLogout" styleClass="nav-item" alignment="CENTER_LEFT" spacing="12" onMouseClicked="#onNavLogout">
+                <padding>
+                    <Insets top="10" right="28" bottom="20" left="28"/>
+                </padding>
+                <Label text="↩" styleClass="nav-icon"/>
+                <Label text="Logout" styleClass="nav-label"/>
             </HBox>
         </VBox>
     </left>
