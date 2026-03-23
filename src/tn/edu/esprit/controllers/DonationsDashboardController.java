@@ -12,6 +12,9 @@ import javafx.scene.text.Text;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import tn.edu.esprit.entities.Donations;
+import tn.edu.esprit.entities.UserType;
+import tn.edu.esprit.entities.Users;
+import tn.edu.esprit.services.AppSession;
 import tn.edu.esprit.services.ServiceDonation;
 
 import java.time.format.DateTimeFormatter;
@@ -32,12 +35,20 @@ public class DonationsDashboardController {
     private ServiceDonation serviceDonation;
     private List<Donations> allDonations;
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private boolean readOnlyDonor;
 
     @FXML
     public void initialize() {
         try {
             System.out.println("Initializing DonationsDashboardController...");
             serviceDonation = new ServiceDonation();
+            Users currentUser = AppSession.getCurrentUser();
+            readOnlyDonor = currentUser != null && currentUser.getUserType() == UserType.DONOR;
+
+            if (addDonationBtn != null) {
+                addDonationBtn.setVisible(!readOnlyDonor);
+                addDonationBtn.setManaged(!readOnlyDonor);
+            }
 
             // Initialize filter combo box
             if (statusFilter != null) {
@@ -66,6 +77,14 @@ public class DonationsDashboardController {
             if (allDonations == null) {
                 allDonations = new java.util.ArrayList<>();
             }
+
+            Users currentUser = AppSession.getCurrentUser();
+            if (currentUser != null && currentUser.getUserType() == UserType.DONOR && currentUser.getId() != null) {
+                allDonations = allDonations.stream()
+                        .filter(d -> d.getDonorId() != null && d.getDonorId().equals(currentUser.getId()))
+                        .collect(Collectors.toList());
+            }
+
             displayDonations(allDonations);
             updateStats();
         } catch (Exception e) {
@@ -154,20 +173,23 @@ public class DonationsDashboardController {
         }
 
         // Action Buttons
-        HBox actionButtons = new HBox(10);
-        actionButtons.setAlignment(Pos.CENTER_RIGHT);
+        card.getChildren().addAll(header, new Separator(), detailsGrid);
 
-        Button modifyBtn = new Button("Modify");
-        modifyBtn.getStyleClass().add("btn-modify");
-        modifyBtn.setOnAction(e -> handleModifyDonation(donation));
+        if (!readOnlyDonor) {
+            HBox actionButtons = new HBox(10);
+            actionButtons.setAlignment(Pos.CENTER_RIGHT);
 
-        Button deleteBtn = new Button("Delete");
-        deleteBtn.getStyleClass().add("btn-delete");
-        deleteBtn.setOnAction(e -> handleDeleteDonation(donation));
+            Button modifyBtn = new Button("Modify");
+            modifyBtn.getStyleClass().add("btn-modify");
+            modifyBtn.setOnAction(e -> handleModifyDonation(donation));
 
-        actionButtons.getChildren().addAll(modifyBtn, deleteBtn);
+            Button deleteBtn = new Button("Delete");
+            deleteBtn.getStyleClass().add("btn-delete");
+            deleteBtn.setOnAction(e -> handleDeleteDonation(donation));
 
-        card.getChildren().addAll(header, new Separator(), detailsGrid, actionButtons);
+            actionButtons.getChildren().addAll(modifyBtn, deleteBtn);
+            card.getChildren().add(actionButtons);
+        }
 
         return card;
     }
@@ -230,6 +252,9 @@ public class DonationsDashboardController {
 
     @FXML
     private void handleAddDonation() {
+        if (readOnlyDonor) {
+            return;
+        }
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/tn/edu/esprit/views/DonationsDialog.fxml"));
             Parent root = loader.load();
@@ -257,6 +282,9 @@ public class DonationsDashboardController {
     }
 
     private void handleModifyDonation(Donations donation) {
+        if (readOnlyDonor) {
+            return;
+        }
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/tn/edu/esprit/views/DonationsDialog.fxml"));
             Parent root = loader.load();
@@ -285,6 +313,9 @@ public class DonationsDashboardController {
     }
 
     private void handleDeleteDonation(Donations donation) {
+        if (readOnlyDonor) {
+            return;
+        }
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Delete Donation");
         alert.setHeaderText("Delete Donation " + donation.getDonationId() + "?");

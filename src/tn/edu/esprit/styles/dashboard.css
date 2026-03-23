@@ -838,6 +838,110 @@
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.03), 4, 0, 0, 1);
 }
 
+/* ---------- DONOR ELIGIBILITY BANNER ---------- */
+.eligibility-banner {
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-padding: 4;
+}
+
+.eligibility-banner-good {
+    -fx-background-color: linear-gradient(to right, #1f5f2f, #174c26);
+    -fx-border-color: #2f7d41;
+    -fx-border-width: 1;
+}
+
+.eligibility-banner-bad {
+    -fx-background-color: linear-gradient(to right, #7a1f1f, #5e1717);
+    -fx-border-color: #a33737;
+    -fx-border-width: 1;
+}
+
+.eligibility-banner-neutral {
+    -fx-background-color: linear-gradient(to right, #1f2937, #334155);
+    -fx-border-color: #475569;
+    -fx-border-width: 1;
+}
+
+.eligibility-dot {
+    -fx-font-size: 30px;
+    -fx-text-fill: #7ddf6b;
+}
+
+.eligibility-title {
+    -fx-text-fill: #e9fce7;
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+}
+
+.eligibility-subtitle {
+    -fx-text-fill: #d6f5d2;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+.eligibility-meta {
+    -fx-text-fill: #c6eac3;
+    -fx-font-size: 12px;
+}
+
+.eligibility-cta-btn {
+    -fx-background-color: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.14));
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 22 10 22;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-border-color: rgba(255, 255, 255, 0.45);
+    -fx-border-width: 1.2;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.28), 10, 0, 0, 2);
+}
+
+.eligibility-cta-btn:hover {
+    -fx-background-color: linear-gradient(to bottom, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.2));
+    -fx-border-color: rgba(255, 255, 255, 0.72);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.34), 14, 0, 0, 3);
+}
+
+.eligibility-cta-btn:pressed {
+    -fx-background-color: linear-gradient(to bottom, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
+    -fx-border-color: rgba(255, 255, 255, 0.4);
+    -fx-translate-y: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 6, 0, 0, 1);
+}
+
+.eligibility-cta-btn:focused {
+    -fx-border-color: #ffffff;
+    -fx-border-width: 1.6;
+}
+
+#checkEligibilityBtn {
+    -fx-background-color: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.14));
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 22 10 22;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-border-color: rgba(255, 255, 255, 0.45);
+    -fx-border-width: 1.2;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.28), 10, 0, 0, 2);
+}
+
+#checkEligibilityBtn:hover {
+    -fx-background-color: linear-gradient(to bottom, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.2));
+    -fx-border-color: rgba(255, 255, 255, 0.72);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.34), 14, 0, 0, 3);
+}
+
+#checkEligibilityBtn:pressed {
+    -fx-background-color: linear-gradient(to bottom, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
+    -fx-border-color: rgba(255, 255, 255, 0.4);
+    -fx-translate-y: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 6, 0, 0, 1);
+}
+
 .inv-blood-card:hover {
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.08), 8, 0, 0, 3);
 }
@@ -1014,6 +1118,145 @@
 
 .modal-body .combo-box:hover {
     -fx-border-color: #94a3b8;
+}
+
+/* ---------- DONOR ELIGIBILITY DASHBOARD (DONOR VIEW) ---------- */
+.donor-elig-shell {
+    -fx-background-color: linear-gradient(to bottom, #131313, #0d0d0d);
+    -fx-border-color: #2a2a2a;
+    -fx-border-width: 1;
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+}
+
+.donor-elig-title {
+    -fx-fill: #f7f7f7;
+    -fx-font-size: 40px;
+    -fx-font-weight: bold;
+}
+
+.donor-elig-subtitle {
+    -fx-fill: #c2c2c2;
+    -fx-font-size: 14px;
+}
+
+.donor-elig-stat-card {
+    -fx-background-color: #242424;
+    -fx-border-color: #343434;
+    -fx-border-width: 1;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-padding: 14 16 14 16;
+}
+
+.donor-elig-stat-label {
+    -fx-fill: #b4b4b4;
+    -fx-font-size: 12px;
+}
+
+.donor-elig-stat-value {
+    -fx-fill: #f5f5f5;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+.donor-elig-stat-hint {
+    -fx-fill: #a1a1a1;
+    -fx-font-size: 12px;
+}
+
+.donor-elig-status-card {
+    -fx-background-color: #2b2b2b;
+    -fx-border-color: #444;
+    -fx-border-width: 1;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-padding: 16;
+}
+
+.donor-elig-status-icon {
+    -fx-background-color: #0d6623;
+    -fx-text-fill: #6dff8c;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-alignment: center;
+    -fx-min-width: 44;
+    -fx-min-height: 44;
+    -fx-max-width: 44;
+    -fx-max-height: 44;
+    -fx-background-radius: 22;
+}
+
+.donor-elig-status-title {
+    -fx-fill: #f1f1f1;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.donor-elig-status-date {
+    -fx-fill: #b8b8b8;
+    -fx-font-size: 13px;
+}
+
+.donor-elig-badge {
+    -fx-padding: 8 14 8 14;
+    -fx-background-radius: 18;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.donor-elig-badge-good {
+    -fx-background-color: #1f4f1d;
+    -fx-text-fill: #8dff73;
+    -fx-border-color: #55a14f;
+    -fx-border-width: 1;
+    -fx-border-radius: 18;
+}
+
+.donor-elig-badge-bad {
+    -fx-background-color: #542323;
+    -fx-text-fill: #ff9f9f;
+    -fx-border-color: #8c3b3b;
+    -fx-border-width: 1;
+    -fx-border-radius: 18;
+}
+
+.donor-elig-badge-neutral {
+    -fx-background-color: #3a3a3a;
+    -fx-text-fill: #d4d4d4;
+    -fx-border-color: #5a5a5a;
+    -fx-border-width: 1;
+    -fx-border-radius: 18;
+}
+
+.donor-elig-run-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #efefef;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 9 18 9 18;
+    -fx-border-color: #5e5e5e;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-cursor: hand;
+}
+
+.donor-elig-run-btn:hover {
+    -fx-background-color: #3a3a3a;
+    -fx-border-color: #7a7a7a;
+}
+
+.donor-elig-divider {
+    -fx-background-color: transparent;
+    -fx-border-color: #474747;
+    -fx-border-width: 1 0 0 0;
+}
+
+.donor-elig-note {
+    -fx-fill: #cfcfcf;
+    -fx-text-fill: #cfcfcf;
+    -fx-font-size: 13px;
 }
 
 .modal-body .combo-box:focused,

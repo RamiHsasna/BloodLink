@@ -12,6 +12,9 @@ import javafx.scene.text.Text;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import tn.edu.esprit.entities.DonationsEvent;
+import tn.edu.esprit.entities.UserType;
+import tn.edu.esprit.entities.Users;
+import tn.edu.esprit.services.AppSession;
 import tn.edu.esprit.services.ServiceDonationsEvent;
 
 import java.time.format.DateTimeFormatter;
@@ -32,12 +35,20 @@ public class DonationEventDashboardController {
     private ServiceDonationsEvent serviceDonationEvent;
     private List<DonationsEvent> allEvents;
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private boolean readOnlyDonor;
 
     @FXML
     public void initialize() {
         try {
             System.out.println("Initializing DonationEventDashboardController...");
             serviceDonationEvent = new ServiceDonationsEvent();
+            Users currentUser = AppSession.getCurrentUser();
+            readOnlyDonor = currentUser != null && currentUser.getUserType() == UserType.DONOR;
+
+            if (addEventBtn != null) {
+                addEventBtn.setVisible(!readOnlyDonor);
+                addEventBtn.setManaged(!readOnlyDonor);
+            }
 
             // Initialize filter combo box
             if (statusFilter != null) {
@@ -154,20 +165,23 @@ public class DonationEventDashboardController {
         }
 
         // Action Buttons
-        HBox actionButtons = new HBox(10);
-        actionButtons.setAlignment(Pos.CENTER_RIGHT);
+        card.getChildren().addAll(header, new Separator(), detailsGrid);
 
-        Button modifyBtn = new Button("Modify");
-        modifyBtn.getStyleClass().add("btn-modify");
-        modifyBtn.setOnAction(e -> handleModifyEvent(event));
+        if (!readOnlyDonor) {
+            HBox actionButtons = new HBox(10);
+            actionButtons.setAlignment(Pos.CENTER_RIGHT);
 
-        Button deleteBtn = new Button("Delete");
-        deleteBtn.getStyleClass().add("btn-delete");
-        deleteBtn.setOnAction(e -> handleDeleteEvent(event));
+            Button modifyBtn = new Button("Modify");
+            modifyBtn.getStyleClass().add("btn-modify");
+            modifyBtn.setOnAction(e -> handleModifyEvent(event));
 
-        actionButtons.getChildren().addAll(modifyBtn, deleteBtn);
+            Button deleteBtn = new Button("Delete");
+            deleteBtn.getStyleClass().add("btn-delete");
+            deleteBtn.setOnAction(e -> handleDeleteEvent(event));
 
-        card.getChildren().addAll(header, new Separator(), detailsGrid, actionButtons);
+            actionButtons.getChildren().addAll(modifyBtn, deleteBtn);
+            card.getChildren().add(actionButtons);
+        }
 
         return card;
     }
@@ -230,6 +244,9 @@ public class DonationEventDashboardController {
 
     @FXML
     private void handleAddEvent() {
+        if (readOnlyDonor) {
+            return;
+        }
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/tn/edu/esprit/views/DonationEventDialog.fxml"));
             Parent root = loader.load();
@@ -257,6 +274,9 @@ public class DonationEventDashboardController {
     }
 
     private void handleModifyEvent(DonationsEvent event) {
+        if (readOnlyDonor) {
+            return;
+        }
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/tn/edu/esprit/views/DonationEventDialog.fxml"));
             Parent root = loader.load();
@@ -285,6 +305,9 @@ public class DonationEventDashboardController {
     }
 
     private void handleDeleteEvent(DonationsEvent event) {
+        if (readOnlyDonor) {
+            return;
+        }
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Delete Event");
         alert.setHeaderText("Delete Event \"" + event.getName() + "\"?");

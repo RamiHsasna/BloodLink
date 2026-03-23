@@ -2,14 +2,24 @@ package tn.edu.esprit.controllers;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.Optional;
 import java.util.ResourceBundle;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+import tn.edu.esprit.entities.UserType;
+import tn.edu.esprit.entities.Users;
+import tn.edu.esprit.services.AppSession;
 
 public class MainDashboardController implements Initializable {
 
@@ -20,6 +30,9 @@ public class MainDashboardController implements Initializable {
     private VBox sidebar;
 
     // Navigation items
+    @FXML
+    private HBox navHome;
+
     @FXML
     private HBox navUsers;
 
@@ -50,16 +63,51 @@ public class MainDashboardController implements Initializable {
     @FXML
     private HBox navAuditLogs;
 
+    @FXML
+    private HBox navLogout;
+
+    @FXML
+    private Label brandSubtitleLabel;
+
+    @FXML
+    private Label sidebarSectionLabel;
+
+    @FXML
+    private Label profileNameLabel;
+
+    @FXML
+    private Label profileRoleLabel;
+
+    @FXML
+    private Label profileInitialLabel;
+
     private HBox activeNavItem;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        activeNavItem = navHospitals;
-        // Load the hospitals view by default
-        loadView("/tn/edu/esprit/views/HospitalList.fxml");
+        Users currentUser = AppSession.getCurrentUser();
+        configureSidebarHeader(currentUser);
+        applyRoleAccess(currentUser);
+
+        if (currentUser != null && currentUser.getUserType() == UserType.DONOR) {
+            activeNavItem = navHome;
+            setActiveNav(navHome);
+            loadView("/tn/edu/esprit/views/DonorHomeDashboard.fxml");
+            return;
+        }
+
+        activeNavItem = navDonations;
+        setActiveNav(navDonations);
+        loadView("/tn/edu/esprit/views/DonationsDashboard.fxml");
     }
 
     // ==================== NAVIGATION HANDLERS ====================
+
+    @FXML
+    private void onNavHome() {
+        setActiveNav(navHome);
+        loadView("/tn/edu/esprit/views/DonorHomeDashboard.fxml");
+    }
 
     @FXML
     private void onNavUsers() {
@@ -122,6 +170,34 @@ public class MainDashboardController implements Initializable {
         loadView("/tn/edu/esprit/views/DashboardLogs.fxml");
     }
 
+    @FXML
+    private void onNavLogout() {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Logout");
+        confirm.setHeaderText("Sign out of BloodLink?");
+        confirm.setContentText("You will be redirected to the login page.");
+
+        Optional<ButtonType> result = confirm.showAndWait();
+        if (result.isEmpty() || result.get() != ButtonType.OK) {
+            return;
+        }
+
+        AppSession.clear();
+
+        try {
+            Parent authRoot = FXMLLoader.load(getClass().getResource("/tn/edu/esprit/views/AuthView.fxml"));
+            Stage stage = (Stage) sidebar.getScene().getWindow();
+            Scene scene = new Scene(authRoot, stage.getScene().getWidth(), stage.getScene().getHeight());
+            stage.setTitle("BloodLink - Sign In");
+            stage.setScene(scene);
+            stage.centerOnScreen();
+        } catch (IOException e) {
+            Alert error = new Alert(Alert.AlertType.ERROR, "Could not open login view: " + e.getMessage(), ButtonType.OK);
+            error.setHeaderText(null);
+            error.showAndWait();
+        }
+    }
+
     // ==================== HELPERS ====================
 
     /**
@@ -149,6 +225,110 @@ public class MainDashboardController implements Initializable {
         }
         selectedItem.getStyleClass().add("nav-item-active");
         activeNavItem = selectedItem;
+    }
+
+    private void applyRoleAccess(Users currentUser) {
+        boolean isDonor = currentUser != null && currentUser.getUserType() == UserType.DONOR;
+        setNavVisibility(navHome, isDonor);
+
+        if (currentUser != null && currentUser.getUserType() == UserType.ADMIN) {
+            setNavVisibility(navUsers, true);
+            setNavVisibility(navHospitals, true);
+            setNavVisibility(navDonations, true);
+            setNavVisibility(navDonationEvents, true);
+            setNavVisibility(navInventory, true);
+            setNavVisibility(navTransfers, true);
+            setNavVisibility(navBloodTypes, true);
+            setNavVisibility(navEligibility, true);
+            setNavVisibility(navAlerts, true);
+            setNavVisibility(navAuditLogs, true);
+            return;
+        }
+
+        // Hidden for both roles requested in auth flow.
+        setNavVisibility(navUsers, false);
+        setNavVisibility(navHospitals, false);
+        setNavVisibility(navBloodTypes, false);
+        setNavVisibility(navAuditLogs, false);
+
+        // Default: hospital staff set requested modules.
+        setNavVisibility(navDonations, true);
+        setNavVisibility(navDonationEvents, true);
+        setNavVisibility(navInventory, true);
+        setNavVisibility(navTransfers, true);
+        setNavVisibility(navEligibility, true);
+        setNavVisibility(navAlerts, true);
+
+        if (currentUser != null && currentUser.getUserType() == UserType.DONOR) {
+            // Donor access: Donations (own only in donations controller), events, eligibility, alerts.
+            setNavVisibility(navInventory, false);
+            setNavVisibility(navTransfers, false);
+        }
+    }
+
+    private void configureSidebarHeader(Users currentUser) {
+        if (currentUser == null) {
+            if (brandSubtitleLabel != null) {
+                brandSubtitleLabel.setText("Dashboard");
+            }
+            if (sidebarSectionLabel != null) {
+                sidebarSectionLabel.setText("NAVIGATION");
+            }
+            if (profileNameLabel != null) {
+                profileNameLabel.setText("User");
+            }
+            if (profileRoleLabel != null) {
+                profileRoleLabel.setText("Member");
+            }
+            if (profileInitialLabel != null) {
+                profileInitialLabel.setText("U");
+            }
+            return;
+        }
+
+        String displayName = ((currentUser.getFirst_name() != null ? currentUser.getFirst_name().trim() : "")
+                + " "
+                + (currentUser.getLast_name() != null ? currentUser.getLast_name().trim() : "")).trim();
+        if (displayName.isEmpty()) {
+            displayName = currentUser.getEmail() != null ? currentUser.getEmail() : "User";
+        }
+
+        String roleLabel = "Member";
+        String dashboardSubtitle = "Dashboard";
+        if (currentUser.getUserType() == UserType.ADMIN) {
+            roleLabel = "Administrator";
+            dashboardSubtitle = "Admin Dashboard";
+        } else if (currentUser.getUserType() == UserType.HOSPITAL_STAFF) {
+            roleLabel = "Hospital Staff";
+            dashboardSubtitle = "Staff Dashboard";
+        } else if (currentUser.getUserType() == UserType.DONOR) {
+            roleLabel = "Donor";
+            dashboardSubtitle = "Donor Dashboard";
+        }
+
+        if (brandSubtitleLabel != null) {
+            brandSubtitleLabel.setText(dashboardSubtitle);
+        }
+        if (sidebarSectionLabel != null) {
+            sidebarSectionLabel.setText("NAVIGATION");
+        }
+        if (profileNameLabel != null) {
+            profileNameLabel.setText(displayName);
+        }
+        if (profileRoleLabel != null) {
+            profileRoleLabel.setText(roleLabel);
+        }
+        if (profileInitialLabel != null) {
+            profileInitialLabel.setText(displayName.substring(0, 1).toUpperCase());
+        }
+    }
+
+    private void setNavVisibility(HBox navItem, boolean visible) {
+        if (navItem == null) {
+            return;
+        }
+        navItem.setVisible(visible);
+        navItem.setManaged(visible);
     }
 
     /**

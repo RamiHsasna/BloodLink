@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Spinner?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="tn.edu.esprit.controllers.DonorEligibilityCheckDialogController"
+      spacing="16"
+      styleClass="modal-card"
+      prefWidth="620"
+      stylesheets="@../styles/dashboard.css">
+
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <VBox spacing="4">
+        <Label text="Donor Eligibility Self-Check" styleClass="modal-title"/>
+        <Label text="Answer the questionnaire. Final donation decision is always confirmed by medical staff." styleClass="modal-subtitle" wrapText="true"/>
+    </VBox>
+
+    <Separator styleClass="modal-divider"/>
+
+    <HBox spacing="12">
+        <VBox spacing="6" HBox.hgrow="ALWAYS">
+            <Label text="Age" styleClass="form-label"/>
+            <Spinner fx:id="ageSpinner" editable="true"/>
+        </VBox>
+
+        <VBox spacing="6" HBox.hgrow="ALWAYS">
+            <Label text="Weight (kg)" styleClass="form-label"/>
+            <TextField fx:id="weightField" styleClass="form-input" promptText="e.g. 62.5"/>
+        </VBox>
+    </HBox>
+
+    <HBox spacing="12">
+        <VBox spacing="6" HBox.hgrow="ALWAYS">
+            <Label text="Last donation date" styleClass="form-label"/>
+            <DatePicker fx:id="lastDonationDatePicker"/>
+        </VBox>
+
+       
+    </HBox>
+
+    <VBox spacing="10">
+        <Label text="Hard stop checks" styleClass="form-label"/>
+        <CheckBox fx:id="unwellTodayCheck" text="I am not feeling well today" styleClass="form-checkbox"/>
+        <CheckBox fx:id="pregnantRecentBirthCheck" text="Pregnant now or recently gave birth" styleClass="form-checkbox"/>
+    </VBox>
+
+    <VBox spacing="10">
+        <Label text="Doctor review checks" styleClass="form-label"/>
+        <CheckBox fx:id="onMedicationCheck" text="On medication" styleClass="form-checkbox"/>
+        <CheckBox fx:id="recentSurgeryCheck" text="Recent surgery" styleClass="form-checkbox"/>
+        <CheckBox fx:id="recentVaccineCheck" text="Recent vaccine" styleClass="form-checkbox"/>
+        <CheckBox fx:id="recentTravelCheck" text="Recent travel abroad" styleClass="form-checkbox"/>
+        <CheckBox fx:id="recentTattooCheck" text="Recent tattoo or piercing" styleClass="form-checkbox"/>
+    </VBox>
+
+    <Separator styleClass="modal-divider"/>
+
+    <VBox spacing="6">
+        <Label fx:id="resultTitleLabel" text="Not calculated yet" styleClass="empty-state-title"/>
+        <Label fx:id="resultDescriptionLabel" text="Press Calculate to evaluate your current eligibility." styleClass="empty-state-description" wrapText="true"/>
+        <TextArea fx:id="reasonsArea" editable="false" wrapText="true" prefRowCount="4"/>
+    </VBox>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Cancel" styleClass="btn-secondary" onAction="#handleCancel"/>
+        <Button text="Calculate" styleClass="btn-secondary" onAction="#handleCalculate"/>
+        <Button fx:id="saveResultBtn" text="Save Result" styleClass="btn-primary" onAction="#handleSaveResult"/>
+    </HBox>
+
+</VBox>
