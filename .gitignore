@@ -30,4 +30,7 @@ bin/
 .DS_Store
 /database_schema.sql
 /database_migration_inventory_fix.sql
+/database_schema_changes.md
 /.idea/libraries/lib.xml
+/FINAL_IMPLEMENTATION_SUMMARY.md
+/HOSPITAL_SPECIFIC_INVENTORY_VIEW.md
