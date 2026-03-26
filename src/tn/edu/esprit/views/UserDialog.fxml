@@ -112,25 +112,15 @@
                     <DatePicker fx:id="lastDonationDatePicker" promptText="Select date (optional)" styleClass="form-field" maxWidth="Infinity"/>
                 </VBox>
 
-                <!-- Location -->
-                <HBox spacing="16">
-                    <VBox spacing="4" HBox.hgrow="ALWAYS">
-                        <Label text="Latitude" styleClass="form-label"/>
-                        <TextField fx:id="latitudeField" promptText="e.g. 36.8065" styleClass="form-field">
-                            <padding>
-                                <Insets top="10" right="15" bottom="10" left="15"/>
-                            </padding>
-                        </TextField>
-                    </VBox>
-                    <VBox spacing="4" HBox.hgrow="ALWAYS">
-                        <Label text="Longitude" styleClass="form-label"/>
-                        <TextField fx:id="longitudeField" promptText="e.g. 10.1815" styleClass="form-field">
-                            <padding>
-                                <Insets top="10" right="15" bottom="10" left="15"/>
-                            </padding>
-                        </TextField>
-                    </VBox>
-                </HBox>
+                <!-- City -->
+                <VBox spacing="4">
+                    <Label text="City" styleClass="form-label"/>
+                    <TextField fx:id="donorCityField" promptText="e.g. Tunis" styleClass="form-field">
+                        <padding>
+                            <Insets top="10" right="15" bottom="10" left="15"/>
+                        </padding>
+                    </TextField>
+                </VBox>
 
                 <!-- Total Donations -->
                 <VBox spacing="4">
