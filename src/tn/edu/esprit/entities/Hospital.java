@@ -215,4 +215,3 @@ public class Hospital {
         return hospitalId != null ? hospitalId.hashCode() : 0;
     }
 }
-
