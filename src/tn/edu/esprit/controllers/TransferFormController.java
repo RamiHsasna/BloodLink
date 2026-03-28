@@ -5,9 +5,13 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -15,6 +19,8 @@ import javafx.util.StringConverter;
 import tn.edu.esprit.entities.BloodTransferRequest;
 import tn.edu.esprit.entities.Hospital;
 import tn.edu.esprit.entities.TransfertStatus;
+import tn.edu.esprit.entities.Users;
+import tn.edu.esprit.services.AppSession;
 import tn.edu.esprit.services.HospitalServiceImpl;
 import tn.edu.esprit.services.TransfertServiceImpl;
 
@@ -326,6 +332,15 @@ public class TransferFormController implements Initializable {
 
     private void createTransfer() {
         BloodTransferRequest transfer = buildTransferFromForm();
+
+        // Set requesting staff ID from current logged-in user
+        Users currentUser = AppSession.getCurrentUser();
+        if (currentUser != null) {
+            transfer.setRequestingStaffId(currentUser.getId());
+        } else {
+            throw new IllegalStateException("No user logged in");
+        }
+
         transferService.ajouter(transfer);
     }
 
@@ -379,7 +394,6 @@ public class TransferFormController implements Initializable {
         );
         transfer.setBloodTypeId(cbBloodType.getValue());
         transfer.setQuantityUnitsRequested(spQuantity.getValue());
-        transfer.setQuantityUnitsApproved(0);
         transfer.setStatus(TransfertStatus.PENDING);
         transfer.setReason(
             taReason.getText() != null ? taReason.getText().trim() : null
@@ -398,9 +412,11 @@ public class TransferFormController implements Initializable {
             transfer.setDeliveryExpectedAt(Timestamp.valueOf(expectedDateTime));
         }
 
-        // Staff IDs — placeholder; in a real app these would come from the logged-in user session
-        transfer.setRequestingStaffId(null);
-        transfer.setApprovingStaffId(null);
+        // Staff IDs — requesting_staff_id is set in createTransfer() from current user
+        // approving_staff_id is set when the approving hospital staff approves the transfer
+        // quantity_units_approved stays null until the transfer is approved
+        transfer.setRequestingStaffId(null); // Will be overridden in createTransfer()
+        transfer.setApprovingStaffId(null); // Will be set during approval
 
         return transfer;
     }
