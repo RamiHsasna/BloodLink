@@ -22,7 +22,7 @@ public class BloodTransferRequest {
     private String notes;
 
     public BloodTransferRequest() {
-        this.quantityUnitsApproved = 0;
+        this.quantityUnitsApproved = null;
         this.status = TransfertStatus.valueOf(TransfertStatus.PENDING.name());
     }
 
