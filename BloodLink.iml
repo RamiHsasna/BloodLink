@@ -148,5 +148,8 @@
     <orderEntry type="library" exported="" name="postgresql-42.7.10" level="project" />
     <orderEntry type="library" name="lib" level="project" />
     <orderEntry type="library" name="java" level="project" />
+    <orderEntry type="library" name="google.zxing.core" level="project" />
+    <orderEntry type="library" name="google.zxing.javase" level="project" />
+    <orderEntry type="library" name="itextpdf-5.5.13.3" level="project" />
   </component>
 </module>

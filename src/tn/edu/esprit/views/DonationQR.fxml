@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="tn.edu.esprit.controllers.DonationQRController"
+      spacing="20" prefWidth="350" prefHeight="500" alignment="CENTER"
+      style="-fx-background-color: white; -fx-padding: 30;">
+
+    <Label text="🔳 Donation QR Code"
+           style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #1a2535;"/>
+
+    <ImageView fx:id="qrImageView" fitWidth="250" fitHeight="250"
+               preserveRatio="true"/>
+
+    <VBox spacing="8" alignment="CENTER_LEFT"
+          style="-fx-background-color: #f0f4f8; -fx-background-radius: 8;
+                 -fx-padding: 16;">
+        <Text fx:id="donationIdText" styleClass="detail-text"/>
+        <Text fx:id="donorIdText"    styleClass="detail-text"/>
+        <Text fx:id="bloodTypeText"  styleClass="detail-text"/>
+        <Text fx:id="statusText"     styleClass="detail-text"/>
+    </VBox>
+
+    <HBox spacing="12" alignment="CENTER">
+        <Button text="💾 Save QR" onAction="#handleSave"
+                style="-fx-background-color: #2e7d32; -fx-text-fill: white;
+                       -fx-font-weight: bold; -fx-background-radius: 8;
+                       -fx-padding: 8 20 8 20; -fx-cursor: hand;"/>
+        <Button text="Close" onAction="#handleClose"
+                style="-fx-background-color: #e53935; -fx-text-fill: white;
+                       -fx-font-weight: bold; -fx-background-radius: 8;
+                       -fx-padding: 8 20 8 20; -fx-cursor: hand;"/>
+    </HBox>
+
+</VBox>
