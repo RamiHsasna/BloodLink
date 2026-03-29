@@ -6,7 +6,9 @@ import tn.edu.esprit.entities.DonationLogAction;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public class DonationLogServiceImpl implements DonationLogService {
     private Connection cnx;
@@ -70,6 +72,41 @@ public class DonationLogServiceImpl implements DonationLogService {
         } catch (SQLException e) {
             throw new IllegalStateException("Verification donation impossible: " + e.getMessage(), e);
         }
+    }
+
+    public String getCurrentDonationStatus(String donationId) {
+        String req = "SELECT status FROM donations WHERE donation_id = ?::uuid";
+        try (PreparedStatement pst = cnx.prepareStatement(req)) {
+            pst.setString(1, donationId);
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("status");
+                }
+                return null;
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Lecture du statut du don impossible: " + e.getMessage(), e);
+        }
+    }
+
+    public List<String> getKnownDonationStatuses() {
+        Set<String> statuses = new LinkedHashSet<>();
+        String req = "SELECT status AS value FROM donations WHERE status IS NOT NULL " +
+                "UNION SELECT previous_status AS value FROM donation_log WHERE previous_status IS NOT NULL " +
+                "UNION SELECT new_status AS value FROM donation_log WHERE new_status IS NOT NULL " +
+                "ORDER BY value";
+        try (PreparedStatement pst = cnx.prepareStatement(req);
+             ResultSet rs = pst.executeQuery()) {
+            while (rs.next()) {
+                String status = rs.getString("value");
+                if (status != null && !status.isBlank()) {
+                    statuses.add(status.trim());
+                }
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Chargement des statuts de don impossible: " + e.getMessage(), e);
+        }
+        return new ArrayList<>(statuses);
     }
 
     @Override
@@ -139,14 +176,43 @@ public class DonationLogServiceImpl implements DonationLogService {
     }
 
     private DonationLog extractLog(ResultSet rs) throws SQLException {
+        String actionValue = rs.getString("action");
         return new DonationLog(
                 rs.getString("log_id"),
                 rs.getString("donation_id"),
-                DonationLogAction.valueOf(rs.getString("action")),
+                normalizeDonationAction(actionValue),
                 rs.getString("previous_status"),
                 rs.getString("new_status"),
                 rs.getString("logged_by"),
                 rs.getString("notes"),
                 rs.getTimestamp("created_at"));
+    }
+
+    private DonationLogAction normalizeDonationAction(String actionValue) {
+        if (actionValue == null || actionValue.isBlank()) {
+            return DonationLogAction.CREATED;
+        }
+
+        String normalized = actionValue.trim().toUpperCase();
+        switch (normalized) {
+            case "SCREENING_VALIDATED":
+                normalized = "SCREENING_PASSED";
+                break;
+            case "SCREENING_REJECTED":
+                normalized = "SCREENING_FAILED";
+                break;
+            case "COLLECTION_COMPLETED":
+            case "MANUAL_OVERRIDE":
+                normalized = "COLLECTED";
+                break;
+            default:
+                break;
+        }
+
+        try {
+            return DonationLogAction.valueOf(normalized);
+        } catch (IllegalArgumentException exception) {
+            return DonationLogAction.CREATED;
+        }
     }
 }

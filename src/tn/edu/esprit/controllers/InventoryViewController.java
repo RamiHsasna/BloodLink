@@ -17,6 +17,7 @@ import javafx.scene.layout.*;
 import tn.edu.esprit.entities.BloodInventory;
 import tn.edu.esprit.entities.InventoryStatus;
 import tn.edu.esprit.services.InventoryServiceImpl;
+import tn.edu.esprit.services.SessionScopeService;
 
 public class InventoryViewController implements Initializable {
 
@@ -43,6 +44,8 @@ public class InventoryViewController implements Initializable {
 
     private final InventoryServiceImpl inventoryService =
         new InventoryServiceImpl();
+    private final SessionScopeService sessionScopeService =
+        new SessionScopeService();
     private List<BloodInventory> allInventories;
 
     // The 8 standard blood types in display order
@@ -80,7 +83,9 @@ public class InventoryViewController implements Initializable {
     // ==================== DATA LOADING ====================
 
     public void refreshData() {
-        allInventories = inventoryService.getAllInventories();
+        allInventories = sessionScopeService.filterVisibleInventories(
+            inventoryService.getAllInventories()
+        );
         buildBloodTypeGrid(allInventories);
         updateHeaderStats(allInventories);
     }

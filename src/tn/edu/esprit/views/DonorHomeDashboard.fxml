@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
@@ -20,7 +21,7 @@
 
     <VBox spacing="6" styleClass="page-header">
         <Label text="Donor Dashboard" styleClass="page-title"/>
-        <Label text="Track your donation readiness and stay up-to-date with donor resources."
+        <Label text="Track your eligibility, donation history, and the hospital transfers linked to your blood type donations."
                styleClass="page-description" wrapText="true"/>
     </VBox>
 
@@ -40,34 +41,58 @@
         <Button fx:id="checkEligibilityBtn" text="Check now" styleClass="eligibility-cta-btn" onAction="#handleOpenEligibilityCheck"/>
     </HBox>
 
-    <HBox spacing="16">
-        <VBox spacing="10" styleClass="hospital-card" HBox.hgrow="ALWAYS">
+    <HBox spacing="16" VBox.vgrow="ALWAYS">
+        <VBox spacing="14" styleClass="hospital-card history-section-card" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
             <padding>
                 <Insets top="18" right="18" bottom="18" left="18"/>
             </padding>
-            <Label text="Latest Blog" styleClass="empty-state-title"/>
-            <Label text="No blog posts yet."
-                   styleClass="empty-state-description"/>
+            <HBox alignment="CENTER_LEFT" spacing="12">
+                <VBox spacing="4" HBox.hgrow="ALWAYS">
+                    <Label text="My Donation History" styleClass="history-section-title"/>
+                    <Label fx:id="donationHistorySummaryLabel" text="Your recent blood donations appear here." styleClass="history-section-subtitle" wrapText="true"/>
+                </VBox>
+                <Label fx:id="donationHistoryCountLabel" text="0" styleClass="history-section-count"/>
+            </HBox>
+
+            <ScrollPane fitToWidth="true" styleClass="cards-scroll-pane history-scroll-pane" VBox.vgrow="ALWAYS">
+                <VBox fx:id="donationHistoryContainer" spacing="12" styleClass="cards-container">
+                    <padding>
+                        <Insets top="4" right="4" bottom="12" left="4"/>
+                    </padding>
+                </VBox>
+            </ScrollPane>
         </VBox>
 
-        <VBox spacing="10" styleClass="hospital-card" HBox.hgrow="ALWAYS">
+        <VBox spacing="14" styleClass="hospital-card history-section-card" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
             <padding>
                 <Insets top="18" right="18" bottom="18" left="18"/>
             </padding>
-            <Label text="Health Tips" styleClass="empty-state-title"/>
-            <Label text="No tips published yet."
-                   styleClass="empty-state-description"/>
+            <HBox alignment="CENTER_LEFT" spacing="12">
+                <VBox spacing="4" HBox.hgrow="ALWAYS">
+                    <Label text="My Blood Transfer History" styleClass="history-section-title"/>
+                    <Label fx:id="transferHistorySummaryLabel" text="Estimated from matching donation hospital, blood type, and transfer dates." styleClass="history-section-subtitle" wrapText="true"/>
+                </VBox>
+                <Label fx:id="transferHistoryCountLabel" text="0" styleClass="history-section-count"/>
+            </HBox>
+
+            <Label text="Traceability is estimated from the current database because transfers are not linked to donors directly in the schema." styleClass="history-note-text" wrapText="true"/>
+
+            <ScrollPane fitToWidth="true" styleClass="cards-scroll-pane history-scroll-pane" VBox.vgrow="ALWAYS">
+                <VBox fx:id="transferHistoryContainer" spacing="12" styleClass="cards-container">
+                    <padding>
+                        <Insets top="4" right="4" bottom="12" left="4"/>
+                    </padding>
+                </VBox>
+            </ScrollPane>
         </VBox>
     </HBox>
 
-    <VBox spacing="10" styleClass="hospital-card" VBox.vgrow="ALWAYS">
+    <VBox spacing="10" styleClass="hospital-card history-note-card">
         <padding>
-            <Insets top="18" right="18" bottom="18" left="18"/>
+            <Insets top="16" right="18" bottom="16" left="18"/>
         </padding>
-        <Label text="Community Stories" styleClass="empty-state-title"/>
-        <Label text="This area is reserved for donor stories and awareness articles."
-               styleClass="empty-state-description" wrapText="true"/>
-        <Region VBox.vgrow="ALWAYS"/>
+        <Label text="How to read transfer history" styleClass="history-note-title"/>
+        <Label text="Transfers are shown when a hospital sent units of the same blood type after your donation date. This gives donors meaningful visibility with the current schema, while staying honest about what can and cannot be traced exactly." styleClass="history-note-text" wrapText="true"/>
     </VBox>
 
 </VBox>

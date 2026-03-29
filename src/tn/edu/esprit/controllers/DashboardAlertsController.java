@@ -26,6 +26,7 @@ import tn.edu.esprit.services.AlertServiceImpl;
 import tn.edu.esprit.services.AppSession;
 import tn.edu.esprit.services.DonorAlertService;
 import tn.edu.esprit.services.DonorAlertServiceImpl;
+import tn.edu.esprit.services.SessionScopeService;
 
 import java.net.URL;
 import java.sql.Timestamp;
@@ -58,11 +59,13 @@ public class DashboardAlertsController implements Initializable {
     private ObservableList<Alert> allAlerts;
     private ObservableList<DonorAlert> allDonorAlerts;
     private boolean readOnlyDonor;
+    private SessionScopeService sessionScopeService;
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         alertService = new AlertServiceImpl();
         donorAlertService = new DonorAlertServiceImpl();
+        sessionScopeService = new SessionScopeService();
 
         Users currentUser = AppSession.getCurrentUser();
         readOnlyDonor = currentUser != null && currentUser.getUserType() == UserType.DONOR;
@@ -119,7 +122,7 @@ public class DashboardAlertsController implements Initializable {
     // ==================== DATA ====================
 
     private void loadData() {
-        allAlerts = FXCollections.observableArrayList(alertService.getAll());
+        allAlerts = FXCollections.observableArrayList(sessionScopeService.filterVisibleAlerts(alertService.getAll()));
         allDonorAlerts = FXCollections.observableArrayList(donorAlertService.getAll());
     }
 
@@ -227,7 +230,7 @@ public class DashboardAlertsController implements Initializable {
 
         card.getChildren().addAll(header, body);
 
-        if (!readOnlyDonor) {
+        if (!readOnlyDonor && sessionScopeService.canManageAlert(alert)) {
             Region divider = new Region();
             divider.getStyleClass().add("log-card-divider");
             divider.setPrefHeight(1);
@@ -285,7 +288,7 @@ public class DashboardAlertsController implements Initializable {
     }
 
     private void handleEditAlert(Alert alert) {
-        if (readOnlyDonor) {
+        if (readOnlyDonor || !sessionScopeService.canManageAlert(alert)) {
             return;
         }
         try {
@@ -306,7 +309,7 @@ public class DashboardAlertsController implements Initializable {
     }
 
     private void handleResolveAlert(Alert alert) {
-        if (readOnlyDonor) {
+        if (readOnlyDonor || !sessionScopeService.canManageAlert(alert)) {
             return;
         }
         javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(
@@ -325,7 +328,7 @@ public class DashboardAlertsController implements Initializable {
     }
 
     private void handleDeleteAlert(Alert alert) {
-        if (readOnlyDonor) {
+        if (readOnlyDonor || !sessionScopeService.canManageAlert(alert)) {
             return;
         }
         javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(

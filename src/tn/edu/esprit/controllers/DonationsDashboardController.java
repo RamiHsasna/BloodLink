@@ -15,6 +15,7 @@ import tn.edu.esprit.entities.Donations;
 import tn.edu.esprit.entities.UserType;
 import tn.edu.esprit.entities.Users;
 import tn.edu.esprit.services.AppSession;
+import tn.edu.esprit.services.SessionScopeService;
 import tn.edu.esprit.services.ServiceDonation;
 
 import java.time.format.DateTimeFormatter;
@@ -36,12 +37,14 @@ public class DonationsDashboardController {
     private List<Donations> allDonations;
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private boolean readOnlyDonor;
+    private SessionScopeService sessionScopeService;
 
     @FXML
     public void initialize() {
         try {
             System.out.println("Initializing DonationsDashboardController...");
             serviceDonation = new ServiceDonation();
+            sessionScopeService = new SessionScopeService();
             Users currentUser = AppSession.getCurrentUser();
             readOnlyDonor = currentUser != null && currentUser.getUserType() == UserType.DONOR;
 
@@ -77,13 +80,7 @@ public class DonationsDashboardController {
             if (allDonations == null) {
                 allDonations = new java.util.ArrayList<>();
             }
-
-            Users currentUser = AppSession.getCurrentUser();
-            if (currentUser != null && currentUser.getUserType() == UserType.DONOR && currentUser.getId() != null) {
-                allDonations = allDonations.stream()
-                        .filter(d -> d.getDonorId() != null && d.getDonorId().equals(currentUser.getId()))
-                        .collect(Collectors.toList());
-            }
+            allDonations = sessionScopeService.filterVisibleDonations(allDonations);
 
             displayDonations(allDonations);
             updateStats();
@@ -282,7 +279,7 @@ public class DonationsDashboardController {
     }
 
     private void handleModifyDonation(Donations donation) {
-        if (readOnlyDonor) {
+        if (readOnlyDonor || !sessionScopeService.canManageDonation(donation)) {
             return;
         }
         try {
@@ -313,7 +310,7 @@ public class DonationsDashboardController {
     }
 
     private void handleDeleteDonation(Donations donation) {
-        if (readOnlyDonor) {
+        if (readOnlyDonor || !sessionScopeService.canManageDonation(donation)) {
             return;
         }
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);

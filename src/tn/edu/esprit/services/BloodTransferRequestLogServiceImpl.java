@@ -6,7 +6,9 @@ import tn.edu.esprit.entities.TransferLogAction;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public class BloodTransferRequestLogServiceImpl implements BloodTransferRequestLogService {
     private Connection cnx;
@@ -70,6 +72,41 @@ public class BloodTransferRequestLogServiceImpl implements BloodTransferRequestL
         } catch (SQLException e) {
             throw new IllegalStateException("Verification transfert impossible: " + e.getMessage(), e);
         }
+    }
+
+    public String getCurrentTransferStatus(int transferId) {
+        String req = "SELECT status FROM blood_transfer_request WHERE transfer_id = ?";
+        try (PreparedStatement pst = cnx.prepareStatement(req)) {
+            pst.setInt(1, transferId);
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("status");
+                }
+                return null;
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Lecture du statut du transfert impossible: " + e.getMessage(), e);
+        }
+    }
+
+    public List<String> getKnownTransferStatuses() {
+        Set<String> statuses = new LinkedHashSet<>();
+        String req = "SELECT status AS value FROM blood_transfer_request WHERE status IS NOT NULL " +
+                "UNION SELECT previous_status AS value FROM blood_transfer_request_log WHERE previous_status IS NOT NULL " +
+                "UNION SELECT new_status AS value FROM blood_transfer_request_log WHERE new_status IS NOT NULL " +
+                "ORDER BY value";
+        try (PreparedStatement pst = cnx.prepareStatement(req);
+             ResultSet rs = pst.executeQuery()) {
+            while (rs.next()) {
+                String status = rs.getString("value");
+                if (status != null && !status.isBlank()) {
+                    statuses.add(status.trim());
+                }
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Chargement des statuts de transfert impossible: " + e.getMessage(), e);
+        }
+        return new ArrayList<>(statuses);
     }
 
     @Override
@@ -139,14 +176,43 @@ public class BloodTransferRequestLogServiceImpl implements BloodTransferRequestL
     }
 
     private BloodTransferRequestLog extractLog(ResultSet rs) throws SQLException {
+        String actionValue = rs.getString("action");
         return new BloodTransferRequestLog(
                 rs.getString("log_id"),
                 rs.getInt("transfer_id"),
-                TransferLogAction.valueOf(rs.getString("action")),
+                normalizeTransferAction(actionValue),
                 rs.getString("previous_status"),
                 rs.getString("new_status"),
                 rs.getString("changed_by"),
                 rs.getString("notes"),
                 rs.getTimestamp("created_at"));
+    }
+
+    private TransferLogAction normalizeTransferAction(String actionValue) {
+        if (actionValue == null || actionValue.isBlank()) {
+            return TransferLogAction.REQUESTED;
+        }
+
+        String normalized = actionValue.trim().toUpperCase();
+        switch (normalized) {
+            case "REQUEST_CREATED":
+            case "PENDING_REVIEW":
+                normalized = "REQUESTED";
+                break;
+            case "REQUEST_APPROVED":
+                normalized = "APPROVED";
+                break;
+            case "DELIVERY_CONFIRMED":
+                normalized = "CONFIRMED";
+                break;
+            default:
+                break;
+        }
+
+        try {
+            return TransferLogAction.valueOf(normalized);
+        } catch (IllegalArgumentException exception) {
+            return TransferLogAction.REQUESTED;
+        }
     }
 }

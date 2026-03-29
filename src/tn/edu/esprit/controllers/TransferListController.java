@@ -18,6 +18,7 @@ import tn.edu.esprit.entities.BloodTransferRequest;
 import tn.edu.esprit.entities.Hospital;
 import tn.edu.esprit.entities.TransfertStatus;
 import tn.edu.esprit.services.HospitalServiceImpl;
+import tn.edu.esprit.services.SessionScopeService;
 import tn.edu.esprit.services.TransfertServiceImpl;
 
 public class TransferListController implements Initializable {
@@ -65,6 +66,7 @@ public class TransferListController implements Initializable {
 
     private List<BloodTransferRequest> allTransfers;
     private Map<UUID, Hospital> hospitalCache = new HashMap<>();
+    private final SessionScopeService sessionScopeService = new SessionScopeService();
 
     private static final String[] BLOOD_TYPES = {
         "A+",
@@ -109,6 +111,7 @@ public class TransferListController implements Initializable {
     @SuppressWarnings("unchecked")
     public void refreshData() {
         allTransfers = transferService.getAllTransferts();
+        allTransfers = sessionScopeService.filterVisibleTransfers(allTransfers);
         // Sort by most recent first
         allTransfers.sort((a, b) -> {
             Timestamp ta = a.getRequestedAt();
@@ -494,38 +497,41 @@ public class TransferListController implements Initializable {
         actionsRow.setPadding(new Insets(10, 20, 14, 20));
 
         // Only show edit/delete for PENDING or APPROVED transfers
-        if (
-            transfer.getStatus() == TransfertStatus.PENDING ||
-            transfer.getStatus() == TransfertStatus.APPROVED
-        ) {
+        if ((transfer.getStatus() == TransfertStatus.PENDING || transfer.getStatus() == TransfertStatus.APPROVED)
+            && sessionScopeService.canEditTransfer(transfer)) {
             Button btnEdit = new Button("\u270F  Edit");
             btnEdit.getStyleClass().add("btn-card-edit");
             btnEdit.setOnAction(e -> onEditTransfer(transfer));
 
-            Button btnDelete = new Button("\uD83D\uDDD1  Delete");
-            btnDelete.getStyleClass().add("btn-card-delete");
-            btnDelete.setOnAction(e -> onDeleteTransfer(transfer));
-
-            actionsRow.getChildren().addAll(btnEdit, btnDelete);
+            actionsRow.getChildren().add(btnEdit);
+            if (sessionScopeService.canDeleteTransfer(transfer)) {
+                Button btnDelete = new Button("\uD83D\uDDD1  Delete");
+                btnDelete.getStyleClass().add("btn-card-delete");
+                btnDelete.setOnAction(e -> onDeleteTransfer(transfer));
+                actionsRow.getChildren().add(btnDelete);
+            }
         }
 
         // Status action buttons based on current state
-        if (transfer.getStatus() == TransfertStatus.PENDING) {
+        if (transfer.getStatus() == TransfertStatus.PENDING && sessionScopeService.canApproveTransfer(transfer)) {
             Button btnApprove = new Button("\u2705 Approve");
             btnApprove.setStyle(
                 "-fx-background-color: #dcfce7; -fx-text-fill: #15803d; -fx-font-size: 12px; " +
                     "-fx-font-weight: bold; -fx-padding: 6 14; -fx-background-radius: 8; -fx-cursor: hand;"
             );
             btnApprove.setOnAction(e -> onApproveTransfer(transfer));
+            actionsRow.getChildren().add(btnApprove);
+        }
 
+        if (transfer.getStatus() == TransfertStatus.PENDING && sessionScopeService.canCancelTransfer(transfer)) {
             Button btnCancel = new Button("\u274C Cancel");
             btnCancel.setStyle(
                 "-fx-background-color: #fee2e2; -fx-text-fill: #dc2626; -fx-font-size: 12px; " +
                     "-fx-font-weight: bold; -fx-padding: 6 14; -fx-background-radius: 8; -fx-cursor: hand;"
             );
             btnCancel.setOnAction(e -> onCancelTransfer(transfer));
-            actionsRow.getChildren().addAll(btnApprove, btnCancel);
-        } else if (transfer.getStatus() == TransfertStatus.APPROVED) {
+            actionsRow.getChildren().add(btnCancel);
+        } else if (transfer.getStatus() == TransfertStatus.APPROVED && sessionScopeService.canMarkTransferInTransit(transfer)) {
             Button btnShip = new Button("\uD83D\uDE9A In Transit");
             btnShip.setStyle(
                 "-fx-background-color: #dbeafe; -fx-text-fill: #1d4ed8; -fx-font-size: 12px; " +
@@ -533,7 +539,7 @@ public class TransferListController implements Initializable {
             );
             btnShip.setOnAction(e -> onMarkInTransit(transfer));
             actionsRow.getChildren().add(btnShip);
-        } else if (transfer.getStatus() == TransfertStatus.IN_TRANSIT) {
+        } else if (transfer.getStatus() == TransfertStatus.IN_TRANSIT && sessionScopeService.canMarkTransferDelivered(transfer)) {
             Button btnDeliver = new Button("\uD83D\uDCE6 Mark Delivered");
             btnDeliver.setStyle(
                 "-fx-background-color: #dcfce7; -fx-text-fill: #15803d; -fx-font-size: 12px; " +
@@ -658,14 +664,26 @@ public class TransferListController implements Initializable {
 
     @FXML
     private void onNewTransfer() {
+        if (!sessionScopeService.canCreateTransfer()) {
+            showError("Votre rôle ne permet pas de créer une demande de transfert.");
+            return;
+        }
         openTransferForm(null);
     }
 
     private void onEditTransfer(BloodTransferRequest transfer) {
+        if (!sessionScopeService.canEditTransfer(transfer)) {
+            showError("Vous ne pouvez modifier que les demandes émises par votre hôpital.");
+            return;
+        }
         openTransferForm(transfer);
     }
 
     private void onDeleteTransfer(BloodTransferRequest transfer) {
+        if (!sessionScopeService.canDeleteTransfer(transfer)) {
+            showError("Vous ne pouvez supprimer que les demandes émises par votre hôpital.");
+            return;
+        }
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Delete Transfer");
         confirm.setHeaderText("Confirm Deletion");
@@ -687,8 +705,13 @@ public class TransferListController implements Initializable {
     }
 
     private void onApproveTransfer(BloodTransferRequest transfer) {
+        if (!sessionScopeService.canApproveTransfer(transfer)) {
+            showError("Seul l'hôpital fournisseur peut approuver cette demande.");
+            return;
+        }
         transfer.setStatus(TransfertStatus.APPROVED);
         transfer.setApprovedAt(new Timestamp(System.currentTimeMillis()));
+        transfer.setApprovingStaffId(sessionScopeService.getCurrentUserId());
         if (
             transfer.getQuantityUnitsApproved() == null ||
             transfer.getQuantityUnitsApproved() == 0
@@ -706,6 +729,10 @@ public class TransferListController implements Initializable {
     }
 
     private void onCancelTransfer(BloodTransferRequest transfer) {
+        if (!sessionScopeService.canCancelTransfer(transfer)) {
+            showError("Votre hôpital ne peut pas annuler cette demande.");
+            return;
+        }
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Cancel Transfer");
         confirm.setHeaderText("Confirm Cancellation");
@@ -726,7 +753,12 @@ public class TransferListController implements Initializable {
     }
 
     private void onMarkInTransit(BloodTransferRequest transfer) {
+        if (!sessionScopeService.canMarkTransferInTransit(transfer)) {
+            showError("Seul l'hôpital fournisseur peut expédier ce transfert.");
+            return;
+        }
         transfer.setStatus(TransfertStatus.IN_TRANSIT);
+        transfer.setApprovingStaffId(sessionScopeService.getCurrentUserId());
         try {
             transferService.modifier(transfer);
             refreshData();
@@ -736,6 +768,10 @@ public class TransferListController implements Initializable {
     }
 
     private void onMarkDelivered(BloodTransferRequest transfer) {
+        if (!sessionScopeService.canMarkTransferDelivered(transfer)) {
+            showError("Seul l'hôpital demandeur peut confirmer la livraison.");
+            return;
+        }
         transfer.setStatus(TransfertStatus.DELIVERED);
         transfer.setActualDeliveryAt(new Timestamp(System.currentTimeMillis()));
         try {

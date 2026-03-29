@@ -16,6 +16,7 @@ import tn.edu.esprit.entities.BloodTransferRequest;
 import tn.edu.esprit.entities.Hospital;
 import tn.edu.esprit.entities.TransfertStatus;
 import tn.edu.esprit.services.HospitalServiceImpl;
+import tn.edu.esprit.services.SessionScopeService;
 import tn.edu.esprit.services.TransfertServiceImpl;
 
 public class TransferFormController implements Initializable {
@@ -94,6 +95,7 @@ public class TransferFormController implements Initializable {
     private boolean isEditMode = false;
 
     private List<Hospital> allHospitals = new ArrayList<>();
+    private final SessionScopeService sessionScopeService = new SessionScopeService();
 
     private static final String[] BLOOD_TYPES = {
         "A+",
@@ -149,10 +151,11 @@ public class TransferFormController implements Initializable {
         cbRequestingHospital.setConverter(hospitalConverter);
         cbApprovingHospital.setConverter(hospitalConverter);
 
-        // Only show active hospitals
+        // Only show active hospitals, but always keep the current staff hospital selectable.
         List<Hospital> activeHospitals = new ArrayList<>();
+        UUID currentHospitalUuid = sessionScopeService.getCurrentHospitalUuid();
         for (Hospital h : allHospitals) {
-            if (h.isActive()) {
+            if (h.isActive() || (currentHospitalUuid != null && currentHospitalUuid.equals(h.getHospitalId()))) {
                 activeHospitals.add(h);
             }
         }
@@ -186,6 +189,24 @@ public class TransferFormController implements Initializable {
                 cbApprovingHospital.setValue(currentApproving);
             }
         });
+
+        if (sessionScopeService.isHospitalStaff() && currentHospitalUuid != null) {
+            Hospital ownHospital = activeHospitals.stream()
+                .filter(h -> currentHospitalUuid.equals(h.getHospitalId()))
+                .findFirst()
+                .orElse(null);
+            if (ownHospital != null) {
+                cbRequestingHospital.setValue(ownHospital);
+                cbRequestingHospital.setDisable(true);
+
+                cbApprovingHospital.getItems().clear();
+                for (Hospital hospital : activeHospitals) {
+                    if (!currentHospitalUuid.equals(hospital.getHospitalId())) {
+                        cbApprovingHospital.getItems().add(hospital);
+                    }
+                }
+            }
+        }
     }
 
     private void setupBloodTypeComboBox() {
@@ -348,6 +369,9 @@ public class TransferFormController implements Initializable {
                 ? taNotes.getText().trim()
                 : null
         );
+        if (sessionScopeService.isHospitalStaff()) {
+            editingTransfer.setRequestingStaffId(sessionScopeService.getCurrentUserId());
+        }
 
         if (dpExpectedDelivery.getValue() != null) {
             LocalDateTime expectedDateTime = LocalDateTime.of(
@@ -398,8 +422,7 @@ public class TransferFormController implements Initializable {
             transfer.setDeliveryExpectedAt(Timestamp.valueOf(expectedDateTime));
         }
 
-        // Staff IDs — placeholder; in a real app these would come from the logged-in user session
-        transfer.setRequestingStaffId(null);
+        transfer.setRequestingStaffId(sessionScopeService.getCurrentUserId());
         transfer.setApprovingStaffId(null);
 
         return transfer;

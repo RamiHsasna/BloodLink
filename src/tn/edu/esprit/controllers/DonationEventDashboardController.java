@@ -15,6 +15,7 @@ import tn.edu.esprit.entities.DonationsEvent;
 import tn.edu.esprit.entities.UserType;
 import tn.edu.esprit.entities.Users;
 import tn.edu.esprit.services.AppSession;
+import tn.edu.esprit.services.SessionScopeService;
 import tn.edu.esprit.services.ServiceDonationsEvent;
 
 import java.time.format.DateTimeFormatter;
@@ -36,12 +37,14 @@ public class DonationEventDashboardController {
     private List<DonationsEvent> allEvents;
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private boolean readOnlyDonor;
+    private SessionScopeService sessionScopeService;
 
     @FXML
     public void initialize() {
         try {
             System.out.println("Initializing DonationEventDashboardController...");
             serviceDonationEvent = new ServiceDonationsEvent();
+            sessionScopeService = new SessionScopeService();
             Users currentUser = AppSession.getCurrentUser();
             readOnlyDonor = currentUser != null && currentUser.getUserType() == UserType.DONOR;
 
@@ -78,6 +81,7 @@ public class DonationEventDashboardController {
             if (allEvents == null) {
                 allEvents = new java.util.ArrayList<>();
             }
+            allEvents = sessionScopeService.filterVisibleDonationEvents(allEvents);
             displayEvents(allEvents);
             updateStats();
         } catch (Exception e) {
@@ -274,7 +278,7 @@ public class DonationEventDashboardController {
     }
 
     private void handleModifyEvent(DonationsEvent event) {
-        if (readOnlyDonor) {
+        if (readOnlyDonor || !sessionScopeService.canManageDonationEvent(event)) {
             return;
         }
         try {
@@ -305,7 +309,7 @@ public class DonationEventDashboardController {
     }
 
     private void handleDeleteEvent(DonationsEvent event) {
-        if (readOnlyDonor) {
+        if (readOnlyDonor || !sessionScopeService.canManageDonationEvent(event)) {
             return;
         }
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
