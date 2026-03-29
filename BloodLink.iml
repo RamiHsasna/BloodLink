@@ -151,5 +151,6 @@
     <orderEntry type="library" name="google.zxing.core" level="project" />
     <orderEntry type="library" name="google.zxing.javase" level="project" />
     <orderEntry type="library" name="itextpdf-5.5.13.3" level="project" />
+    <orderEntry type="library" name="itextpdf-5.5.13.4" level="project" />
   </component>
 </module>
