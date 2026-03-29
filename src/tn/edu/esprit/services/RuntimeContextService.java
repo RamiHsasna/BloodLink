@@ -13,6 +13,8 @@ import java.sql.SQLException;
  */
 public class RuntimeContextService {
 
+    private final SessionScopeService sessionScopeService;
+
     public static final class AlertContext {
         private final String hospitalId;
         private final String staffId;
@@ -35,9 +37,15 @@ public class RuntimeContextService {
 
     public RuntimeContextService() {
         this.cnx = DataSource.getInstance().getConnection();
+        this.sessionScopeService = new SessionScopeService();
     }
 
     public String resolveAuditUserId() {
+        String sessionUserId = sessionScopeService.getCurrentUserId();
+        if (sessionUserId != null && userExists(sessionUserId)) {
+            return sessionUserId;
+        }
+
         String envUserId = readFirstNonBlankEnv(
                 "BLOODLINK_AUDIT_USER_ID",
                 "BLOODLINK_STAFF_USER_ID",
@@ -67,6 +75,14 @@ public class RuntimeContextService {
     }
 
     public AlertContext resolveAlertContext() {
+        String sessionHospitalId = sessionScopeService.getCurrentHospitalId();
+        String sessionUserId = sessionScopeService.getCurrentUserId();
+        if (sessionHospitalId != null && sessionUserId != null
+                && hospitalExists(sessionHospitalId)
+                && userExists(sessionUserId)) {
+            return new AlertContext(sessionHospitalId, sessionUserId);
+        }
+
         String envHospitalId = readFirstNonBlankEnv("BLOODLINK_HOSPITAL_ID");
         String envStaffId = readFirstNonBlankEnv("BLOODLINK_STAFF_USER_ID", "BLOODLINK_USER_ID");
 

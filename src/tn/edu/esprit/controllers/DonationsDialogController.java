@@ -9,7 +9,9 @@ import tn.edu.esprit.entities.DonationsEvent;
 import tn.edu.esprit.entities.Hospital;
 import tn.edu.esprit.entities.UserType;
 import tn.edu.esprit.entities.Users;
+import tn.edu.esprit.services.AppSession;
 import tn.edu.esprit.services.ServiceDonation;
+import tn.edu.esprit.services.SessionScopeService;
 import tn.edu.esprit.services.ServiceUser;
 import tn.edu.esprit.services.ServiceDonationsEvent;
 import tn.edu.esprit.services.HospitalServiceImpl;
@@ -48,6 +50,7 @@ public class DonationsDialogController {
     private Mode mode;
     private Runnable onSaveCallback;
     private List<Users> donorList;
+    private SessionScopeService sessionScopeService;
 
     @FXML
     public void initialize() {
@@ -55,6 +58,7 @@ public class DonationsDialogController {
         serviceUser = new ServiceUser();
         hospitalService = new HospitalServiceImpl();
         serviceDonationsEvent = new ServiceDonationsEvent();
+        sessionScopeService = new SessionScopeService();
 
         // Initialize status combo
         statusCombo.getItems().addAll("COMPLETED", "CANCELLED");
@@ -66,6 +70,7 @@ public class DonationsDialogController {
         loadDonors();
         loadHospitals();
         loadDonationEvents();
+        applyRoleScopedDefaults();
     }
 
     private void loadDonors() {
@@ -104,6 +109,10 @@ public class DonationsDialogController {
             DonationsEvent dummy = new DonationsEvent();
             List<DonationsEvent> events = serviceDonationsEvent.getAll(dummy);
             if (events != null) {
+                if (sessionScopeService.isHospitalStaff() && sessionScopeService.hasHospitalScope()) {
+                    events.removeIf(event -> event.getHospitalId() == null
+                            || !event.getHospitalId().equalsIgnoreCase(sessionScopeService.getCurrentHospitalId()));
+                }
                 for (DonationsEvent event : events) {
                     String displayText = event.getEventId() + " - " + event.getName();
                     donationEventIdCombo.getItems().add(displayText);
@@ -172,6 +181,7 @@ public class DonationsDialogController {
                 medicalNotesField.setText(donation.getMedicalNotes());
             }
         }
+        applyRoleScopedDefaults();
     }
 
     public void setOnSave(Runnable callback) {
@@ -257,6 +267,21 @@ public class DonationsDialogController {
     @FXML
     private void handleCancel() {
         dialogStage.close();
+    }
+
+    private void applyRoleScopedDefaults() {
+        if (!sessionScopeService.isHospitalStaff() || !sessionScopeService.hasHospitalScope()) {
+            return;
+        }
+
+        String currentHospitalId = sessionScopeService.getCurrentHospitalId();
+        for (String item : hospitalIdCombo.getItems()) {
+            if (item.startsWith(currentHospitalId)) {
+                hospitalIdCombo.setValue(item);
+                break;
+            }
+        }
+        hospitalIdCombo.setDisable(true);
     }
 
     private boolean validateInput() {

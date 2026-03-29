@@ -1,0 +1,16 @@
+<component name="libraryTable">
+  <library name="JavaFX 21.0.2">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/.deps/javafx/javafx-base-21.0.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/.deps/javafx/javafx-base-21.0.2-win.jar!/" />
+      <root url="jar://$PROJECT_DIR$/.deps/javafx/javafx-controls-21.0.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/.deps/javafx/javafx-controls-21.0.2-win.jar!/" />
+      <root url="jar://$PROJECT_DIR$/.deps/javafx/javafx-fxml-21.0.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/.deps/javafx/javafx-fxml-21.0.2-win.jar!/" />
+      <root url="jar://$PROJECT_DIR$/.deps/javafx/javafx-graphics-21.0.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/.deps/javafx/javafx-graphics-21.0.2-win.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

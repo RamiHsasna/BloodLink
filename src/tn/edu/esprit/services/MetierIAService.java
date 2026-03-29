@@ -26,6 +26,8 @@ public class MetierIAService {
     private static final String DEFAULT_GROQ_MODEL = "llama-3.1-8b-instant";
     private static final String DEFAULT_OPENROUTER_MODEL = "openrouter/free";
     private static final int DEFAULT_OPENROUTER_MAX_TOKENS = 220;
+    private static final int ALERT_MAX_TOKENS = 140;
+    private static final int DEFAULT_ANALYSIS_MAX_TOKENS = 520;
     private static final int OPENROUTER_RETRY_EXTRA_TOKENS = 180;
 
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(8);
@@ -90,22 +92,29 @@ public class MetierIAService {
     }
 
     public String generateEmergencyMessage(Alert alert, int matchedDonorCount) {
+        return generateText(buildPrompt(alert, matchedDonorCount), ALERT_MAX_TOKENS, true);
+    }
+
+    public String generateAuditLogAnalysis(String prompt) {
+        return generateText(prompt, DEFAULT_ANALYSIS_MAX_TOKENS, false);
+    }
+
+    private String generateText(String prompt, int maxTokens, boolean truncateLongOutput) {
         String provider = normalizeProvider(readProvider());
-        String prompt = buildPrompt(alert, matchedDonorCount);
 
         switch (provider) {
             case PROVIDER_GEMINI:
-                return callGemini(prompt);
+                return callGemini(prompt, maxTokens);
             case PROVIDER_GROQ:
-                return callGroq(prompt);
+                return callGroq(prompt, maxTokens);
             case PROVIDER_OPENROUTER:
-                return callOpenRouter(prompt);
+                return callOpenRouter(prompt, maxTokens, truncateLongOutput);
             default:
                 throw new IllegalStateException("metier_ia: provider IA inconnu: " + provider);
         }
     }
 
-    private String callGemini(String prompt) {
+    private String callGemini(String prompt, int maxTokens) {
         String apiKey = readFirstNonBlankEnv("BLOODLINK_GEMINI_API_KEY", "GEMINI_API_KEY");
         if (apiKey == null) {
             throw new IllegalStateException(
@@ -113,7 +122,7 @@ public class MetierIAService {
         }
 
         String model = readModelFromEnv("BLOODLINK_GEMINI_MODEL", DEFAULT_GEMINI_MODEL);
-        String requestBody = buildGeminiRequestBody(prompt);
+        String requestBody = buildGeminiRequestBody(prompt, maxTokens);
 
         try {
             String encodedKey = URLEncoder.encode(apiKey, StandardCharsets.UTF_8);
@@ -155,7 +164,7 @@ public class MetierIAService {
         }
     }
 
-    private String callGroq(String prompt) {
+    private String callGroq(String prompt, int maxTokens) {
         String apiKey = readFirstNonBlankEnv("BLOODLINK_GROQ_API_KEY", "GROQ_API_KEY");
         if (apiKey == null) {
             throw new IllegalStateException(
@@ -163,7 +172,7 @@ public class MetierIAService {
         }
 
         String model = readModelFromEnv("BLOODLINK_GROQ_MODEL", DEFAULT_GROQ_MODEL);
-        String requestBody = buildOpenAiCompatibleRequestBody(model, prompt);
+        String requestBody = buildOpenAiCompatibleRequestBody(model, prompt, maxTokens);
 
         try {
             HttpRequest request = HttpRequest.newBuilder()
@@ -207,7 +216,7 @@ public class MetierIAService {
         }
     }
 
-    private String callOpenRouter(String prompt) {
+    private String callOpenRouter(String prompt, int maxTokens, boolean truncateLongOutput) {
         String apiKey = readFirstNonBlankEnv("BLOODLINK_OPENROUTER_API_KEY", "OPENROUTER_API_KEY");
         if (apiKey == null) {
             throw new IllegalStateException(
@@ -216,12 +225,13 @@ public class MetierIAService {
 
         String requestedModel = readModelFromEnv("BLOODLINK_OPENROUTER_MODEL", DEFAULT_OPENROUTER_MODEL);
         String[] modelsToTry = buildOpenRouterModelCandidates(requestedModel);
-        int maxTokens = readPositiveIntEnv("BLOODLINK_OPENROUTER_MAX_TOKENS", DEFAULT_OPENROUTER_MAX_TOKENS);
+        int requestedMaxTokens = Math.max(maxTokens,
+                readPositiveIntEnv("BLOODLINK_OPENROUTER_MAX_TOKENS", DEFAULT_OPENROUTER_MAX_TOKENS));
         String lastFailure = null;
 
         for (int i = 0; i < modelsToTry.length; i++) {
             String model = modelsToTry[i];
-            String requestBody = buildOpenRouterRequestBody(model, prompt, maxTokens);
+            String requestBody = buildOpenRouterRequestBody(model, prompt, requestedMaxTokens);
             try {
                 HttpResponse<String> response = executeOpenRouterRequest(apiKey, requestBody);
 
@@ -250,7 +260,7 @@ public class MetierIAService {
 
                 String generatedText = extractChatGeneratedText(response.body());
                 if ((generatedText == null || generatedText.isBlank()) && isLengthFinishReason(response.body())) {
-                    int retryMaxTokens = Math.min(maxTokens + OPENROUTER_RETRY_EXTRA_TOKENS, 500);
+                    int retryMaxTokens = Math.min(requestedMaxTokens + OPENROUTER_RETRY_EXTRA_TOKENS, 700);
                     String retryBody = buildOpenRouterRequestBody(model, prompt, retryMaxTokens);
                     HttpResponse<String> retryResponse = executeOpenRouterRequest(apiKey, retryBody);
                     String retryError = extractProviderErrorMessage(retryResponse.body());
@@ -278,7 +288,7 @@ public class MetierIAService {
                                     + debug);
                 }
 
-                return finalizeAlertText(generatedText);
+                return finalizeGeneratedText(generatedText, truncateLongOutput);
             } catch (RuntimeException e) {
                 throw e;
             } catch (Exception e) {
@@ -421,17 +431,17 @@ public class MetierIAService {
                 + "Retourne uniquement le texte final du message, sans guillemets ni markdown.";
     }
 
-    private String buildGeminiRequestBody(String prompt) {
+    private String buildGeminiRequestBody(String prompt, int maxTokens) {
         return "{"
                 + "\"contents\":[{\"parts\":[{\"text\":\"" + escapeJson(prompt) + "\"}]}],"
                 + "\"generationConfig\":{"
                 + "\"temperature\":0.2,"
-                + "\"maxOutputTokens\":140"
+                + "\"maxOutputTokens\":" + maxTokens
                 + "}"
                 + "}";
     }
 
-    private String buildOpenAiCompatibleRequestBody(String model, String prompt) {
+    private String buildOpenAiCompatibleRequestBody(String model, String prompt, int maxTokens) {
         String systemInstruction = "Tu es un assistant metier BloodLink. Reponds uniquement en francais.";
         return "{"
                 + "\"model\":\"" + escapeJson(model) + "\","
@@ -440,7 +450,7 @@ public class MetierIAService {
                 + "{\"role\":\"user\",\"content\":\"" + escapeJson(prompt) + "\"}"
                 + "],"
                 + "\"temperature\":0.2,"
-                + "\"max_tokens\":140"
+                + "\"max_tokens\":" + maxTokens
                 + "}";
     }
 
@@ -540,9 +550,9 @@ public class MetierIAService {
         return compact.substring(0, maxChars) + "...";
     }
 
-    private String finalizeAlertText(String text) {
+    private String finalizeGeneratedText(String text, boolean truncateLongOutput) {
         String sanitized = sanitizeText(text);
-        if (sanitized.length() <= 240) {
+        if (!truncateLongOutput || sanitized.length() <= 240) {
             return sanitized;
         }
         return sanitized.substring(0, 237).trim() + "...";

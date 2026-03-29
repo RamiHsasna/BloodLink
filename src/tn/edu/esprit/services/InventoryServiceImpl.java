@@ -17,13 +17,13 @@ public class InventoryServiceImpl implements InventoryService {
     );
     private final Connection connection;
 
-    // SQL queries
+    // SQL queries aligned with the live Supabase schema.
     private static final String INSERT_INVENTORY =
-        "INSERT INTO blood_inventory (hospital_id, blood_type_id, donor_id, quantity_units_int, quantity_units_decimal, expiration_date, status) " +
-        "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        "INSERT INTO blood_inventory (hospital_id, blood_type_id, quantity_units, status, updated_at) " +
+        "VALUES (?, ?, ?, ?, NOW())";
 
     private static final String UPDATE_INVENTORY =
-        "UPDATE blood_inventory SET hospital_id = ?, blood_type_id = ?, donor_id = ?, quantity_units_int = ?, quantity_units_decimal = ?, expiration_date = ?, status = ? WHERE inventory_id = ?";
+        "UPDATE blood_inventory SET hospital_id = ?, blood_type_id = ?, quantity_units = ?, status = ?, updated_at = NOW() WHERE inventory_id = ?";
 
     private static final String DELETE_INVENTORY =
         "DELETE FROM blood_inventory WHERE inventory_id = ?";
@@ -55,12 +55,9 @@ public class InventoryServiceImpl implements InventoryService {
         ) {
             ps.setObject(1, inventory.getHospitalId());
             ps.setString(2, inventory.getBloodTypeId());
-            ps.setString(3, inventory.getDonorId());
-            ps.setInt(4, inventory.getQuantityUnitsInt());
-            ps.setBigDecimal(5, inventory.getQuantityUnitsDecimal());
-            ps.setDate(6, inventory.getExpirationDate());
+            ps.setInt(3, safeQuantity(inventory));
             ps.setString(
-                7,
+                4,
                 inventory.getStatus() != null
                     ? inventory.getStatus().name()
                     : null
@@ -95,17 +92,14 @@ public class InventoryServiceImpl implements InventoryService {
         ) {
             ps.setObject(1, inventory.getHospitalId());
             ps.setString(2, inventory.getBloodTypeId());
-            ps.setString(3, inventory.getDonorId());
-            ps.setInt(4, inventory.getQuantityUnitsInt());
-            ps.setBigDecimal(5, inventory.getQuantityUnitsDecimal());
-            ps.setDate(6, inventory.getExpirationDate());
+            ps.setInt(3, safeQuantity(inventory));
             ps.setString(
-                7,
+                4,
                 inventory.getStatus() != null
                     ? inventory.getStatus().name()
                     : null
             );
-            ps.setInt(8, inventory.getInventoryId()); // WHERE clause
+            ps.setInt(5, inventory.getInventoryId()); // WHERE clause
 
             int rowsAffected = ps.executeUpdate();
             if (rowsAffected > 0) {
@@ -239,20 +233,51 @@ public class InventoryServiceImpl implements InventoryService {
         }
 
         inventory.setBloodTypeId(rs.getString("blood_type_id"));
-        inventory.setDonorId(rs.getString("donor_id"));
-        inventory.setQuantityUnitsInt(rs.getInt("quantity_units_int"));
-        inventory.setQuantityUnitsDecimal(
-            rs.getBigDecimal("quantity_units_decimal")
-        );
-        inventory.setExpirationDate(rs.getDate("expiration_date"));
-        inventory.setEntryDate(rs.getTimestamp("entry_date"));
+        int quantityUnits = rs.getInt("quantity_units");
+        if (rs.wasNull()) {
+            quantityUnits = 0;
+        }
+        inventory.setQuantityUnitsInt(quantityUnits);
+        inventory.setQuantityUnitsDecimal(java.math.BigDecimal.valueOf(quantityUnits));
+        inventory.setExpirationDate(null);
+        inventory.setEntryDate(rs.getTimestamp("updated_at"));
 
         String statusStr = rs.getString("status");
         if (statusStr != null) {
-            inventory.setStatus(InventoryStatus.valueOf(statusStr));
+            inventory.setStatus(parseStatus(statusStr, quantityUnits));
+        } else {
+            inventory.setStatus(deriveStatus(quantityUnits));
         }
 
         inventory.setUpdatedAt(rs.getTimestamp("updated_at"));
         return inventory;
+    }
+
+    private int safeQuantity(BloodInventory inventory) {
+        if (inventory.getQuantityUnitsInt() != null) {
+            return inventory.getQuantityUnitsInt();
+        }
+        if (inventory.getQuantityUnitsDecimal() != null) {
+            return inventory.getQuantityUnitsDecimal().intValue();
+        }
+        return 0;
+    }
+
+    private InventoryStatus parseStatus(String statusValue, int quantityUnits) {
+        try {
+            return InventoryStatus.valueOf(statusValue.trim().toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            return deriveStatus(quantityUnits);
+        }
+    }
+
+    private InventoryStatus deriveStatus(int quantityUnits) {
+        if (quantityUnits <= 5) {
+            return InventoryStatus.CRITICAL;
+        }
+        if (quantityUnits <= 15) {
+            return InventoryStatus.LOW;
+        }
+        return InventoryStatus.OPTIMAL;
     }
 }

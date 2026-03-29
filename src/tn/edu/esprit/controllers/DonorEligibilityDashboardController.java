@@ -18,14 +18,18 @@ import tn.edu.esprit.entities.UserType;
 import tn.edu.esprit.entities.Users;
 import tn.edu.esprit.services.AppSession;
 import tn.edu.esprit.services.DonorEligibilityService;
+import tn.edu.esprit.services.ServiceDonation;
 import tn.edu.esprit.services.ServiceDonor;
+import tn.edu.esprit.services.SessionScopeService;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class DonorEligibilityDashboardController {
@@ -59,14 +63,18 @@ public class DonorEligibilityDashboardController {
     private DateTimeFormatter prettyDateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
     private boolean readOnlyDonor;
     private String currentUserId;
+    private SessionScopeService sessionScopeService;
+    private Set<String> allowedDonorIds = Set.of();
 
     @FXML
     public void initialize() {
         eligibilityService = new DonorEligibilityService();
         donorService = new ServiceDonor();
+        sessionScopeService = new SessionScopeService();
         Users currentUser = AppSession.getCurrentUser();
         readOnlyDonor = currentUser != null && currentUser.getUserType() == UserType.DONOR;
         currentUserId = currentUser != null ? currentUser.getId() : null;
+        allowedDonorIds = resolveAllowedDonorIds();
 
 //hide admin features if donor
         if (addEligibilityBtn != null) {
@@ -110,6 +118,16 @@ public class DonorEligibilityDashboardController {
             }
         } else {
             allRecords = eligibilityService.getAll(null);
+            if (sessionScopeService.isHospitalStaff()) {
+                allRecords = allRecords
+                    .stream()
+                    .filter(record ->
+                        record != null &&
+                        record.getId() != null &&
+                        allowedDonorIds.contains(record.getId())
+                    )
+                    .collect(Collectors.toList());
+            }
         }
         displayRecords(allRecords);
         updateStats();
@@ -471,6 +489,7 @@ public class DonorEligibilityDashboardController {
 
             DonorEligibilityDialogController controller = loader.getController();
             controller.setMode(DonorEligibilityDialogController.Mode.ADD);
+            controller.setAllowedDonorIds(allowedDonorIds);
 
             Stage dialogStage = new Stage();
             dialogStage.setTitle("Add Donor Eligibility");
@@ -503,6 +522,7 @@ public class DonorEligibilityDashboardController {
             DonorEligibilityDialogController controller = loader.getController();
             controller.setMode(DonorEligibilityDialogController.Mode.EDIT);
             controller.setRecord(record);
+            controller.setAllowedDonorIds(allowedDonorIds);
 
             Stage dialogStage = new Stage();
             dialogStage.setTitle("Edit Donor Eligibility");
@@ -547,5 +567,32 @@ public class DonorEligibilityDashboardController {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    private Set<String> resolveAllowedDonorIds() {
+        if (readOnlyDonor) {
+            return currentUserId != null ? Set.of(currentUserId) : Set.of();
+        }
+
+        if (!sessionScopeService.isHospitalStaff()) {
+            return Set.of();
+        }
+
+        String hospitalId = sessionScopeService.getCurrentHospitalId();
+        if (hospitalId == null || hospitalId.isBlank()) {
+            return Set.of();
+        }
+
+        ServiceDonation donationService = new ServiceDonation();
+        return donationService.getAll()
+            .stream()
+            .filter(donation ->
+                donation != null &&
+                donation.getHospitalId() != null &&
+                hospitalId.equalsIgnoreCase(donation.getHospitalId()) &&
+                donation.getDonorId() != null
+            )
+            .map(donation -> donation.getDonorId())
+            .collect(Collectors.toCollection(HashSet::new));
     }
 }

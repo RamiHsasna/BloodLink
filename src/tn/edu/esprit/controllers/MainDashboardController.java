@@ -2,8 +2,11 @@ package tn.edu.esprit.controllers;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.ResourceBundle;
+import javafx.geometry.Pos;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
@@ -14,12 +17,14 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import tn.edu.esprit.entities.UserType;
 import tn.edu.esprit.entities.Users;
 import tn.edu.esprit.services.AppSession;
+import tn.edu.esprit.services.SessionScopeService;
 
 public class MainDashboardController implements Initializable {
 
@@ -82,10 +87,14 @@ public class MainDashboardController implements Initializable {
     private Label profileInitialLabel;
 
     private HBox activeNavItem;
+    private String activeViewPath;
+    private final Map<String, Node> viewCache = new HashMap<>();
+    private SessionScopeService sessionScopeService;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         Users currentUser = AppSession.getCurrentUser();
+        sessionScopeService = new SessionScopeService();
         configureSidebarHeader(currentUser);
         applyRoleAccess(currentUser);
 
@@ -148,8 +157,9 @@ public class MainDashboardController implements Initializable {
     @FXML
     private void onNavBloodTypes() {
         setActiveNav(navBloodTypes);
-        // TODO: loadView("/tn/edu/esprit/views/BloodTypeList.fxml");
-        System.out.println("Blood Types view not yet implemented.");
+        showUnavailableView(
+                "Groupes sanguins",
+                "Ce module n'est pas encore implémenté dans cette version. Les autres écrans restent accessibles sans bloquer le tableau de bord.");
     }
 
     @FXML
@@ -204,16 +214,90 @@ public class MainDashboardController implements Initializable {
      * Loads an FXML view into the main content area.
      */
     private void loadView(String fxmlPath) {
+        if (fxmlPath == null || fxmlPath.isBlank()) {
+            return;
+        }
+
+        if (!isViewAllowedForCurrentUser(fxmlPath)) {
+            showUnavailableView(
+                    "Accès refusé",
+                    "Votre rôle ne vous permet pas d'ouvrir cet écran dans cette session.");
+            return;
+        }
+
+        if (fxmlPath.equals(activeViewPath) && !contentArea.getChildren().isEmpty()) {
+            return;
+        }
+
         try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource(fxmlPath));
-            Node view = loader.load();
-            contentArea.getChildren().clear();
-            contentArea.getChildren().add(view);
-        } catch (IOException e) {
+            Node view = viewCache.get(fxmlPath);
+            if (view == null) {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
+                view = loader.load();
+                viewCache.put(fxmlPath, view);
+            }
+            contentArea.getChildren().setAll(view);
+            activeViewPath = fxmlPath;
+        } catch (Exception e) {
             System.err.println("Failed to load view: " + fxmlPath);
             e.printStackTrace();
+            showUnavailableView(
+                    "Écran indisponible",
+                    "Impossible de charger cette vue pour le moment. Vérifiez la console pour le détail technique.");
         }
+    }
+
+    private void showUnavailableView(String title, String description) {
+        Label icon = new Label("📄");
+        icon.getStyleClass().add("logs-empty-icon");
+
+        Label titleLabel = new Label(title);
+        titleLabel.getStyleClass().add("empty-state-title");
+
+        Label descriptionLabel = new Label(description);
+        descriptionLabel.getStyleClass().add("empty-state-description");
+        descriptionLabel.setWrapText(true);
+        descriptionLabel.setMaxWidth(420);
+
+        VBox placeholder = new VBox(10, icon, titleLabel, descriptionLabel);
+        placeholder.setAlignment(Pos.CENTER);
+        placeholder.setFillWidth(true);
+        placeholder.getStyleClass().add("empty-state");
+        VBox.setVgrow(placeholder, Priority.ALWAYS);
+
+        StackPane wrapper = new StackPane(placeholder);
+        wrapper.setAlignment(Pos.CENTER);
+        contentArea.getChildren().setAll(wrapper);
+        activeViewPath = "__placeholder__:" + title;
+    }
+
+    private boolean isViewAllowedForCurrentUser(String fxmlPath) {
+        if (sessionScopeService == null) {
+            sessionScopeService = new SessionScopeService();
+        }
+
+        if (sessionScopeService.isAdmin()) {
+            return true;
+        }
+
+        if (sessionScopeService.isDonor()) {
+            return fxmlPath.endsWith("DonorHomeDashboard.fxml")
+                    || fxmlPath.endsWith("DonationsDashboard.fxml")
+                    || fxmlPath.endsWith("DonationEventDashboard.fxml")
+                    || fxmlPath.endsWith("DonorEligibilityDashboard.fxml")
+                    || fxmlPath.endsWith("DashboardAlerts.fxml");
+        }
+
+        if (sessionScopeService.isHospitalStaff()) {
+            return fxmlPath.endsWith("DonationsDashboard.fxml")
+                    || fxmlPath.endsWith("DonationEventDashboard.fxml")
+                    || fxmlPath.endsWith("InventoryView.fxml")
+                    || fxmlPath.endsWith("TransferList.fxml")
+                    || fxmlPath.endsWith("DonorEligibilityDashboard.fxml")
+                    || fxmlPath.endsWith("DashboardAlerts.fxml");
+        }
+
+        return false;
     }
 
     /**

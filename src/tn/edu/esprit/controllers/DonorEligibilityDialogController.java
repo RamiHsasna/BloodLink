@@ -14,8 +14,10 @@ import tn.edu.esprit.services.ServiceDonor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class DonorEligibilityDialogController {
 
@@ -41,6 +43,7 @@ public class DonorEligibilityDialogController {
     private DonorEligibility recordToEdit;
     private Mode mode;
     private Runnable onSaveCallback;
+    private Set<String> allowedDonorIds = Set.of();
 
     @FXML
     public void initialize() {
@@ -85,6 +88,18 @@ public class DonorEligibilityDialogController {
 
     public void setOnSave(Runnable callback) {
         this.onSaveCallback = callback;
+    }
+
+    public void setAllowedDonorIds(Set<String> allowedDonorIds) {
+        if (allowedDonorIds == null || allowedDonorIds.isEmpty()) {
+            this.allowedDonorIds = Set.of();
+        } else {
+            this.allowedDonorIds = new LinkedHashSet<>(allowedDonorIds);
+        }
+
+        if (donorService != null) {
+            loadDonorChoices();
+        }
     }
 
     @FXML
@@ -278,6 +293,9 @@ public class DonorEligibilityDialogController {
 
         List<Donor> donors = donorService.getAll(null);
         for (Donor donor : donors) {
+            if (!allowedDonorIds.isEmpty() && (donor == null || donor.getUserId() == null || !allowedDonorIds.contains(donor.getUserId()))) {
+                continue;
+            }
             String firstName = donor.getFirstName() != null ? donor.getFirstName() : "";
             String lastName = donor.getLastName() != null ? donor.getLastName() : "";
             String displayName = (firstName + " " + lastName).trim();

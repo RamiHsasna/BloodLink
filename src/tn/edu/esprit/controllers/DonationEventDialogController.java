@@ -12,6 +12,7 @@ import tn.edu.esprit.entities.DonationsEvent;
 import tn.edu.esprit.entities.Hospital;
 import tn.edu.esprit.services.ServiceDonationsEvent;
 import tn.edu.esprit.services.HospitalServiceImpl;
+import tn.edu.esprit.services.SessionScopeService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,18 +42,21 @@ public class DonationEventDialogController {
     private Mode mode;
     private DonationsEvent currentEvent;
     private Runnable onSaveCallback;
+    private SessionScopeService sessionScopeService;
 
     @FXML
     public void initialize() {
         try {
             serviceDonationEvent = new ServiceDonationsEvent();
             hospitalService = new HospitalServiceImpl();
+            sessionScopeService = new SessionScopeService();
 
             // Initialize status combo box
             statusCombo.getItems().addAll("PLANNED", "ACTIVE", "COMPLETED", "CANCELLED");
 
             // Load hospitals
             loadHospitals();
+            applyRoleScopedDefaults();
 
             // Clear error label initially
             errorLabel.setText("");
@@ -65,6 +69,10 @@ public class DonationEventDialogController {
     private void loadHospitals() {
         try {
             List<Hospital> hospitals = hospitalService.getAllHospitals();
+            if (sessionScopeService != null && sessionScopeService.isHospitalStaff() && sessionScopeService.hasHospitalScope()) {
+                hospitals.removeIf(hospital -> hospital.getHospitalId() == null
+                        || !hospital.getHospitalId().toString().equalsIgnoreCase(sessionScopeService.getCurrentHospitalId()));
+            }
             for (Hospital hospital : hospitals) {
                 String displayText = hospital.getHospitalId() + " - " + hospital.getName();
                 hospitalIdCombo.getItems().add(displayText);
@@ -87,6 +95,7 @@ public class DonationEventDialogController {
     public void setEvent(DonationsEvent event) {
         this.currentEvent = event;
         populateFields(event);
+        applyRoleScopedDefaults();
     }
 
     private void populateFields(DonationsEvent event) {
@@ -222,5 +231,20 @@ public class DonationEventDialogController {
 
     private void showError(String message) {
         errorLabel.setText(message);
+    }
+
+    private void applyRoleScopedDefaults() {
+        if (sessionScopeService == null || !sessionScopeService.isHospitalStaff() || !sessionScopeService.hasHospitalScope()) {
+            return;
+        }
+
+        String currentHospitalId = sessionScopeService.getCurrentHospitalId();
+        for (String item : hospitalIdCombo.getItems()) {
+            if (item.startsWith(currentHospitalId)) {
+                hospitalIdCombo.setValue(item);
+                break;
+            }
+        }
+        hospitalIdCombo.setDisable(true);
     }
 }
