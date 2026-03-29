@@ -182,6 +182,12 @@ public class DashboardAlertsController implements Initializable {
         }
         Set<String> compatibleRecipients = BLOOD_COMPATIBILITY_MAP.get(donorType);
 
+        // mohamed = doneur  O-
+        // if donorType = "O-" ==> compatibleRecipients = {"O-", "O+", "A-", "A+", "B-", "B+", "AB-", "AB+"}
+        // ==> mohamed ynejjem ya3ti eddam mte3ou lel 3bed hekom lkol
+        // if bloodType of the Alert exist in compatibleRecipients ==> donnor ynejjem yetbarra3
+        // ==> l'aret lezemha todhhor lel donor hedha (mohamed)
+
         return compatibleRecipients != null && compatibleRecipients.contains(requiredType);
     }
 
