@@ -6,9 +6,7 @@ import tn.edu.esprit.entities.DonorAlert;
 import tn.edu.esprit.entities.Hospital;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public class EmergencyMatchingService {
 
@@ -16,6 +14,17 @@ public class EmergencyMatchingService {
     private final DonorAlertServiceImpl donorAlertService;
     private final MetierIAService metierIAService;
     private final HospitalServiceImpl hospitalService;
+
+    private static final Map<String, Set<String>> BLOOD_COMPATIBILITY_MAP = Map.of(
+            "O-", Set.of("O-", "O+", "A-", "A+", "B-", "B+", "AB-", "AB+"),
+            "O+", Set.of("O+", "A+", "B+", "AB+"),
+            "A-", Set.of("A-", "A+", "AB-", "AB+"),
+            "A+", Set.of("A+", "AB+"),
+            "B-", Set.of("B-", "B+", "AB-", "AB+"),
+            "B+", Set.of("B+", "AB+"),
+            "AB-", Set.of("AB-", "AB+"),
+            "AB+", Set.of("AB+")
+    );
 
     public static class MatchResult {
         public final String generatedMessage;
@@ -121,7 +130,7 @@ public class EmergencyMatchingService {
             if (!donor.isCurrentlyEligible()) {
                 continue;
             }
-            if (!(donorBloodType.equalsIgnoreCase(requiredBloodType) || donorBloodType.equalsIgnoreCase("O-"))) {
+            if (! isBloodTypeCompatible(donorBloodType,  alert.getBloodTypeId())) {
                 continue;
             }
             if (useRadius) {
@@ -139,6 +148,24 @@ public class EmergencyMatchingService {
         }
         return compatible;
     }
+
+    private boolean isBloodTypeCompatible(String donorBloodType, String requiredBloodType) {
+        String donorType = donorBloodType != null ? donorBloodType.trim().toUpperCase() : "";
+        String requiredType = requiredBloodType != null ? requiredBloodType.trim().toUpperCase() : "";
+        if (donorType.isEmpty() || requiredType.isEmpty()) {
+            return false;
+        }
+        Set<String> compatibleRecipients = BLOOD_COMPATIBILITY_MAP.get(donorType);
+
+        // mohamed = doneur  O-
+        // if donorType = "O-" ==> compatibleRecipients = {"O-", "O+", "A-", "A+", "B-", "B+", "AB-", "AB+"}
+        // ==> mohamed ynejjem ya3ti eddam mte3ou lel 3bed hekom lkol
+        // if bloodType of the Alert exist in compatibleRecipients ==> donnor ynejjem yetbarra3
+        // ==> l'aret lezemha todhhor lel donor hedha (mohamed)
+
+        return compatibleRecipients != null && compatibleRecipients.contains(requiredType);
+    }
+
 
     private Hospital resolveHospital(String hospitalId) {
         if (hospitalId == null || hospitalId.trim().isEmpty()) {
