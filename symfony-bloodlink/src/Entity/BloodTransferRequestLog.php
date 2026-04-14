@@ -1,0 +1,140 @@
+<?php
+
+namespace App\Entity;
+
+use Doctrine\ORM\Mapping as ORM;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+
+#[
+    ORM\Entity(
+        repositoryClass: App\Entity\Repository\BloodTransferRequestLogRepository::class,
+    ),
+]
+#[ORM\Table(name: "blood_transfer_request_log")]
+class BloodTransferRequestLog
+{
+    #[ORM\Id]
+    #[ORM\Column(type: "uuid")]
+    private string $logId;
+
+    #[ORM\Column(type: "string")]
+    private string $action;
+
+    #[ORM\Column(type: "string", nullable: true)]
+    private string|null $previousStatus = null;
+
+    #[ORM\Column(type: "string", nullable: true)]
+    private string|null $newStatus = null;
+
+    #[ORM\Column(type: "text", nullable: true)]
+    private string|null $notes = null;
+
+    #[ORM\Column(type: "datetime", nullable: true)]
+    private \DateTimeInterface|null $createdAt = null;
+
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(name: "changed_by", referencedColumnName: "user_id")]
+    private ?User $user = null;
+
+    #[ORM\ManyToOne(targetEntity: BloodTransferRequest::class)]
+    #[ORM\JoinColumn(name: "transfer_id", referencedColumnName: "transfer_id")]
+    private ?BloodTransferRequest $bloodTransferRequest = null;
+
+    public function getLogId(): string
+    {
+        return $this->logId;
+    }
+
+    public function setLogId(string $logId): static
+    {
+        $this->logId = $logId;
+
+        return $this;
+    }
+
+    public function getAction(): string
+    {
+        return $this->action;
+    }
+
+    public function setAction(string $action): static
+    {
+        $this->action = $action;
+
+        return $this;
+    }
+
+    public function getPreviousStatus(): string|null
+    {
+        return $this->previousStatus;
+    }
+
+    public function setPreviousStatus(?string $previousStatus): static
+    {
+        $this->previousStatus = $previousStatus;
+
+        return $this;
+    }
+
+    public function getNewStatus(): string|null
+    {
+        return $this->newStatus;
+    }
+
+    public function setNewStatus(?string $newStatus): static
+    {
+        $this->newStatus = $newStatus;
+
+        return $this;
+    }
+
+    public function getNotes(): string|null
+    {
+        return $this->notes;
+    }
+
+    public function setNotes(?string $notes): static
+    {
+        $this->notes = $notes;
+
+        return $this;
+    }
+
+    public function getCreatedAt(): \DateTimeInterface|null
+    {
+        return $this->createdAt;
+    }
+
+    public function setCreatedAt(?\DateTimeInterface $createdAt): static
+    {
+        $this->createdAt = $createdAt;
+
+        return $this;
+    }
+
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+
+    public function setUser(?User $user): static
+    {
+        $this->user = $user;
+
+        return $this;
+    }
+
+    public function getBloodTransferRequest(): ?BloodTransferRequest
+    {
+        return $this->bloodTransferRequest;
+    }
+
+    public function setBloodTransferRequest(
+        ?BloodTransferRequest $bloodTransferRequest,
+    ): static {
+        $this->bloodTransferRequest = $bloodTransferRequest;
+
+        return $this;
+    }
+}
