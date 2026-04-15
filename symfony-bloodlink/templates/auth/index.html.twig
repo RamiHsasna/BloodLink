@@ -1,0 +1,775 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}BloodLink Authentication{% endblock %}
+
+{% block body %}
+<style>
+    :root {
+        --bg: #f5ede8;
+        --brand: #b85c52;
+        --brand-dark: #8c3028;
+        --brand-dark-hover: #a33830;
+        --title: #2a100c;
+        --subtle: #8a6a62;
+        --line: #ddd0ca;
+        --error: #c62828;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        background: var(--bg);
+    }
+
+    .root-container {
+        min-height: 100vh;
+        display: flex;
+        background: var(--bg);
+        max-width: 1360px;
+        margin: 0 auto;
+    }
+
+    .brand-panel {
+        flex: 1 1 62%;
+        background: var(--brand);
+        padding: 32px 42px;
+        color: #fff;
+    }
+
+    .logo-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .logo-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.14);
+        position: relative;
+        display: inline-block;
+    }
+
+    .logo-icon::before,
+    .logo-icon::after {
+        content: "";
+        position: absolute;
+        background: rgba(255, 255, 255, 0.85);
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    .logo-icon::before {
+        width: 16px;
+        height: 3px;
+        border-radius: 2px;
+    }
+
+    .logo-icon::after {
+        width: 3px;
+        height: 16px;
+        border-radius: 2px;
+    }
+
+    .logo-text {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 38px;
+        line-height: 1;
+        font-weight: 700;
+    }
+
+    .illus-card {
+        margin-top: 26px;
+        width: 100%;
+        min-height: 280px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 14px;
+    }
+
+    .illus-card svg {
+        width: 84%;
+        height: auto;
+        opacity: 0.62;
+    }
+
+    .headline {
+        margin: 14px 0 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 52px;
+        line-height: 1.04;
+        font-weight: 700;
+    }
+
+    .brand-desc {
+        margin: 12px 0 0;
+        color: rgba(255, 255, 255, 0.62);
+        font-size: 24px;
+        line-height: 1.3;
+    }
+
+    .form-panel {
+        flex: 0 0 38%;
+        background: var(--bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px 26px;
+    }
+
+    .form-box {
+        width: 100%;
+        max-width: 360px;
+    }
+
+    .tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 5px;
+        background: #e8d9d2;
+        border-radius: 13px;
+        padding: 5px;
+        margin-bottom: 24px;
+    }
+
+    .tab-btn {
+        border: 0;
+        background: transparent;
+        border-radius: 10px;
+        padding: 8px 0;
+        font-size: 13px;
+        color: var(--subtle);
+        font-weight: 500;
+        cursor: pointer;
+    }
+
+    .tab-btn.active {
+        background: #fff;
+        color: #3d1a15;
+        font-weight: 700;
+        box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .pane { display: none; }
+    .pane.active { display: block; }
+
+    .form-title {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        color: var(--title);
+        font-size: 42px;
+        line-height: 1.08;
+    }
+
+    .form-sub {
+        margin: 8px 0 18px;
+        color: var(--subtle);
+        font-size: 14px;
+    }
+
+    .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    label {
+        display: block;
+        margin: 8px 0 5px;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--subtle);
+        font-weight: 700;
+    }
+
+    input, select {
+        width: 100%;
+        border: 1.5px solid var(--line);
+        border-radius: 10px;
+        padding: 0 16px;
+        height: 44px;
+        font-size: 13px;
+        outline: none;
+        background: #fff;
+        color: var(--title);
+    }
+
+    input::placeholder {
+        color: #b89890;
+    }
+
+    input:focus, select:focus {
+        border-color: var(--brand);
+    }
+
+    .error {
+        color: var(--error);
+        margin-top: 4px;
+        font-size: 12px;
+    }
+
+    .global-error {
+        background: #fff0f0;
+        border: 1px solid #efc8c8;
+        color: #961b1b;
+        padding: 9px 12px;
+        border-radius: 10px;
+        margin: 0 0 12px;
+    }
+
+    .flash {
+        padding: 9px 12px;
+        border-radius: 10px;
+        margin: 0 0 14px;
+        font-size: 13px;
+    }
+
+    .flash.success {
+        background: #edf9f0;
+        border: 1px solid #b6e2c1;
+        color: #1b6a34;
+    }
+
+    .actions { margin-top: 16px; }
+
+    .btn {
+        width: 100%;
+        border: 0;
+        border-radius: 11px;
+        background: var(--brand-dark);
+        color: #fff;
+        font-weight: 700;
+        font-size: 14px;
+        height: 46px;
+        cursor: pointer;
+    }
+
+    .btn:hover {
+        background: var(--brand-dark-hover);
+    }
+
+    .forgot-row {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 8px;
+    }
+
+    .forgot-link {
+        border: 0;
+        background: transparent;
+        color: var(--brand);
+        font-weight: 700;
+        font-size: 12px;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .divider-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 8px 0 12px;
+    }
+
+    .div-line {
+        height: 1px;
+        flex: 1;
+        background: var(--line);
+    }
+
+    .div-txt {
+        color: #b89890;
+        font-size: 11px;
+    }
+
+    .btn-google {
+        width: 100%;
+        border: 1.5px solid var(--line);
+        background: #fff;
+        color: #3d1a15;
+        border-radius: 10px;
+        height: 44px;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    .btn-google:hover {
+        border-color: var(--brand);
+    }
+
+    .switch-row {
+        margin-top: 12px;
+        text-align: center;
+        color: var(--subtle);
+        font-size: 12px;
+    }
+
+    .switch-link {
+        color: var(--brand-dark);
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .step-dots {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin-bottom: 14px;
+    }
+
+    .step-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 99px;
+        background: var(--line);
+        transition: all 0.2s ease;
+    }
+
+    .step-dot.active {
+        width: 22px;
+        background: var(--brand-dark);
+    }
+
+    .signup-step {
+        display: none;
+    }
+
+    .signup-step.active {
+        display: block;
+    }
+
+    .step-back {
+        margin-top: 10px;
+        text-align: center;
+    }
+
+    .step-back button {
+        border: 0;
+        background: transparent;
+        color: var(--subtle);
+        font-size: 12px;
+        cursor: pointer;
+    }
+
+    .terms {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        margin-top: 12px;
+        font-size: 12px;
+        color: var(--subtle);
+    }
+
+    .session-line {
+        margin: 0 0 14px;
+        font-size: 13px;
+        color: #355f39;
+        background: #edf9f0;
+        border: 1px solid #b6e2c1;
+        padding: 8px 10px;
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .logout-btn {
+        border: 0;
+        background: #2f5f35;
+        color: #fff;
+        border-radius: 7px;
+        font-size: 12px;
+        padding: 6px 10px;
+        cursor: pointer;
+    }
+
+    @media (max-width: 1200px) {
+        .logo-text {
+            font-size: 40px;
+        }
+
+        .headline {
+            font-size: 56px;
+        }
+
+        .brand-desc {
+            font-size: 26px;
+        }
+
+        .form-title {
+            font-size: 46px;
+        }
+    }
+
+    @media (max-width: 950px) {
+        .root-container {
+            flex-direction: column;
+        }
+
+        .brand-panel,
+        .form-panel {
+            flex: 1 1 auto;
+            width: 100%;
+        }
+
+        .brand-panel {
+            padding: 32px 24px;
+        }
+
+        .form-panel {
+            padding: 28px 20px 36px;
+        }
+
+        .illus-card {
+            min-height: 220px;
+        }
+
+        .headline {
+            font-size: 42px;
+        }
+
+        .brand-desc {
+            font-size: 20px;
+        }
+
+        .row { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="root-container">
+    <section class="brand-panel">
+        <div class="logo-row">
+            <span class="logo-icon"></span>
+            <h1 class="logo-text">BloodLink</h1>
+        </div>
+
+        <div class="illus-card" aria-hidden="true">
+            <svg viewBox="0 0 620 340" xmlns="http://www.w3.org/2000/svg" fill="none">
+                <rect x="198" y="86" width="224" height="168" rx="8" stroke="rgba(255,255,255,0.46)" stroke-width="2"/>
+                <rect x="230" y="112" width="40" height="30" rx="4" fill="rgba(255,210,190,0.36)"/>
+                <rect x="292" y="112" width="40" height="30" rx="4" fill="rgba(255,255,255,0.25)"/>
+                <rect x="354" y="112" width="40" height="30" rx="4" fill="rgba(255,210,190,0.36)"/>
+                <rect x="230" y="160" width="40" height="30" rx="4" fill="rgba(255,255,255,0.2)"/>
+                <rect x="292" y="160" width="40" height="30" rx="4" fill="rgba(255,210,190,0.36)"/>
+                <rect x="354" y="160" width="40" height="30" rx="4" fill="rgba(255,255,255,0.2)"/>
+                <rect x="282" y="206" width="58" height="48" rx="4" stroke="rgba(255,255,255,0.36)"/>
+                <circle cx="329" cy="232" r="2.8" fill="rgba(255,255,255,0.55)"/>
+
+                <rect x="225" y="40" width="168" height="44" rx="6" stroke="rgba(255,255,255,0.36)" stroke-width="2"/>
+                <path d="M281 62h56M309 34v56" stroke="rgba(255,255,255,0.9)" stroke-width="4" stroke-linecap="round"/>
+
+                <circle cx="131" cy="149" r="22" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
+                <circle cx="131" cy="149" r="8" fill="rgba(255,255,255,0.42)"/>
+                <path d="M104 184c0-14 12-26 27-26 15 0 27 12 27 26" stroke="rgba(255,255,255,0.35)" stroke-width="2"/>
+
+                <circle cx="489" cy="149" r="22" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
+                <circle cx="489" cy="149" r="8" fill="rgba(255,255,255,0.42)"/>
+                <path d="M462 184c0-14 12-26 27-26 15 0 27 12 27 26" stroke="rgba(255,255,255,0.35)" stroke-width="2"/>
+
+                <path d="M95 249h48l23-31 22 48 30-37 30 20" stroke="rgba(255,255,255,0.35)" stroke-width="3"/>
+                <path d="M372 249h37l17-28 23 45 29-38 16 21h34" stroke="rgba(255,255,255,0.35)" stroke-width="3"/>
+
+                <path d="M152 194c35-13 77-13 111 0" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-dasharray="8 6"/>
+                <path d="M361 194c34-13 75-13 111 0" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-dasharray="8 6"/>
+
+                <circle cx="115" cy="78" r="8" fill="rgba(255,210,210,0.45)"/>
+                <circle cx="223" cy="55" r="6" fill="rgba(255,210,210,0.45)"/>
+                <circle cx="309" cy="44" r="8" fill="rgba(255,210,210,0.45)"/>
+                <circle cx="409" cy="56" r="6" fill="rgba(255,210,210,0.45)"/>
+                <circle cx="507" cy="62" r="7" fill="rgba(255,210,210,0.45)"/>
+            </svg>
+        </div>
+
+        <h2 class="headline">Every drop is a lifeline</h2>
+        <h2 class="headline">Be someone's miracle today</h2>
+        <p class="brand-desc">Join thousands of donors helping hospitals stay ready .</p>
+    </section>
+
+    <section class="form-panel">
+        <div class="form-box">
+            {% if session_user %}
+                <div class="session-line">
+                    <span>Signed in as {{ session_user.first_name }} {{ session_user.last_name }}</span>
+                    <form method="post" action="{{ path('auth_logout') }}">
+                        <button class="logout-btn" type="submit">Sign out</button>
+                    </form>
+                </div>
+            {% endif %}
+
+        {% for message in app.flashes('success') %}
+            <div class="flash success">{{ message }}</div>
+        {% endfor %}
+
+        <div class="tabs">
+            <button type="button" id="tab-signin" class="tab-btn">Sign in</button>
+            <button type="button" id="tab-signup" class="tab-btn">Create account</button>
+        </div>
+
+        <div id="pane-signin" class="pane">
+            <h2 class="form-title">Welcome back</h2>
+            <p class="form-sub">Sign in to your account to continue.</p>
+
+            <form method="post" action="{{ path('auth_sign_in') }}">
+                <label for="sign_in_email">Email address</label>
+                <input id="sign_in_email" type="email" name="sign_in_email" value="{{ sign_in_email|default('') }}" placeholder="you@example.com">
+                {% if sign_in_errors.email is defined %}<div class="error">{{ sign_in_errors.email }}</div>{% endif %}
+
+                <label for="sign_in_password">Password</label>
+                <input id="sign_in_password" type="password" name="sign_in_password" placeholder="Enter your password">
+                {% if sign_in_errors.password is defined %}<div class="error">{{ sign_in_errors.password }}</div>{% endif %}
+
+                <div class="forgot-row">
+                    <a class="forgot-link" href="javascript:void(0)">Forgot password?</a>
+                </div>
+
+                <div class="actions">
+                    <button type="submit" class="btn">Sign in</button>
+                </div>
+
+                <div class="divider-row">
+                    <span class="div-line"></span>
+                    <span class="div-txt">or continue with</span>
+                    <span class="div-line"></span>
+                </div>
+
+                <button type="button" class="btn-google">Continue with Google</button>
+
+                <div class="switch-row">
+                    No account?
+                    <a class="switch-link" href="javascript:void(0)" id="switch-to-signup">Create one free</a>
+                </div>
+            </form>
+        </div>
+
+        <div id="pane-signup" class="pane">
+            <h2 class="form-title">Create account</h2>
+            <p class="form-sub">Join BloodLink and start making a difference.</p>
+
+            <div class="step-dots">
+                <span id="signup-dot-0" class="step-dot active"></span>
+                <span id="signup-dot-1" class="step-dot"></span>
+            </div>
+
+            <form method="post" action="{{ path('auth_sign_up') }}">
+                {% if sign_up_errors.global is defined %}
+                    <div class="global-error">{{ sign_up_errors.global }}</div>
+                {% endif %}
+
+                <div id="signup-step-0" class="signup-step active">
+                    <div class="row">
+                        <div>
+                            <label for="first_name">First name</label>
+                            <input id="first_name" type="text" name="first_name" value="{{ sign_up_old.first_name|default('') }}">
+                            <div class="error" id="err-first-name">{{ sign_up_errors.first_name|default('') }}</div>
+                        </div>
+                        <div>
+                            <label for="last_name">Last name</label>
+                            <input id="last_name" type="text" name="last_name" value="{{ sign_up_old.last_name|default('') }}">
+                            <div class="error" id="err-last-name">{{ sign_up_errors.last_name|default('') }}</div>
+                        </div>
+                    </div>
+
+                    <label for="email">Email address</label>
+                    <input id="email" type="email" name="email" value="{{ sign_up_old.email|default('') }}">
+                    <div class="error" id="err-email">{{ sign_up_errors.email|default('') }}</div>
+
+                    <div class="row">
+                        <div>
+                            <label for="phone">Phone number</label>
+                            <input id="phone" type="text" name="phone" value="{{ sign_up_old.phone|default('') }}" placeholder="+216 00 000 000">
+                        </div>
+                        <div>
+                            <label for="city">City</label>
+                            <input id="city" type="text" name="city" value="{{ sign_up_old.city|default('') }}" placeholder="Tunis">
+                            <div class="error" id="err-city">{{ sign_up_errors.city|default('') }}</div>
+                        </div>
+                    </div>
+
+                    <label for="blood_type_id">Blood type</label>
+                    <select id="blood_type_id" name="blood_type_id">
+                        <option value="">Select blood type</option>
+                        {% for bt in blood_types %}
+                            {% set btId = bt.blood_type_id %}
+                            <option value="{{ btId }}" {% if sign_up_old.blood_type_id|default('') == btId %}selected{% endif %}>{{ btId }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="error" id="err-blood-type">{{ sign_up_errors.blood_type_id|default('') }}</div>
+
+                    <div class="actions">
+                        <button type="button" class="btn" id="signup-next">Continue</button>
+                    </div>
+                </div>
+
+                <div id="signup-step-1" class="signup-step">
+                    <div class="row">
+                        <div>
+                            <label for="password">Password</label>
+                            <input id="password" type="password" name="password" placeholder="Minimum 8 characters">
+                            {% if sign_up_errors.password is defined %}<div class="error">{{ sign_up_errors.password }}</div>{% endif %}
+                        </div>
+                        <div>
+                            <label for="confirm_password">Confirm password</label>
+                            <input id="confirm_password" type="password" name="confirm_password" placeholder="Repeat password">
+                            {% if sign_up_errors.confirm_password is defined %}<div class="error">{{ sign_up_errors.confirm_password }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <label class="terms" for="terms">
+                        <input id="terms" type="checkbox" name="terms" value="1" {% if sign_up_old.terms|default(false) %}checked{% endif %}>
+                        <span>I agree to the Terms of Service and Privacy Policy.</span>
+                    </label>
+                    {% if sign_up_errors.terms is defined %}<div class="error">{{ sign_up_errors.terms }}</div>{% endif %}
+
+                    <div class="actions">
+                        <button type="submit" class="btn">Create account</button>
+                    </div>
+
+                    <div class="step-back">
+                        <button type="button" id="signup-back">&larr; Back</button>
+                    </div>
+                </div>
+
+                <div class="switch-row">
+                    Already have an account?
+                    <a class="switch-link" href="javascript:void(0)" id="switch-to-signin">Sign in</a>
+                </div>
+            </form>
+        </div>
+        </div>
+    </section>
+</div>
+
+<script>
+    (function () {
+        const initialTab = '{{ active_tab|default('signin') }}';
+        const tabSignIn = document.getElementById('tab-signin');
+        const tabSignUp = document.getElementById('tab-signup');
+        const paneSignIn = document.getElementById('pane-signin');
+        const paneSignUp = document.getElementById('pane-signup');
+        const signupStep0 = document.getElementById('signup-step-0');
+        const signupStep1 = document.getElementById('signup-step-1');
+        const signupDot0 = document.getElementById('signup-dot-0');
+        const signupDot1 = document.getElementById('signup-dot-1');
+        const signupNext = document.getElementById('signup-next');
+        const signupBack = document.getElementById('signup-back');
+
+        function setSignupStep(step) {
+            const isStep0 = step === 0;
+            signupStep0.classList.toggle('active', isStep0);
+            signupStep1.classList.toggle('active', !isStep0);
+            signupDot0.classList.toggle('active', isStep0);
+            signupDot1.classList.toggle('active', !isStep0);
+        }
+
+        function setError(id, message) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = message || '';
+        }
+
+        function validateSignupStep0() {
+            const firstName = document.getElementById('first_name').value.trim();
+            const lastName = document.getElementById('last_name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const city = document.getElementById('city').value.trim();
+            const bloodType = document.getElementById('blood_type_id').value.trim();
+
+            let valid = true;
+
+            setError('err-first-name', '');
+            setError('err-last-name', '');
+            setError('err-email', '');
+            setError('err-city', '');
+            setError('err-blood-type', '');
+
+            if (!firstName) {
+                setError('err-first-name', 'First name is required.');
+                valid = false;
+            }
+            if (!lastName) {
+                setError('err-last-name', 'Last name is required.');
+                valid = false;
+            }
+            if (!email) {
+                setError('err-email', 'Email is required.');
+                valid = false;
+            } else {
+                const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+                if (!emailRegex.test(email)) {
+                    setError('err-email', 'Please enter a valid email address.');
+                    valid = false;
+                }
+            }
+            if (!city) {
+                setError('err-city', 'City is required.');
+                valid = false;
+            }
+            if (!bloodType) {
+                setError('err-blood-type', 'Please select a blood type.');
+                valid = false;
+            }
+
+            return valid;
+        }
+
+        function activate(tab) {
+            const signin = tab === 'signin';
+            tabSignIn.classList.toggle('active', signin);
+            tabSignUp.classList.toggle('active', !signin);
+            paneSignIn.classList.toggle('active', signin);
+            paneSignUp.classList.toggle('active', !signin);
+            if (!signin) {
+                setSignupStep(0);
+            }
+        }
+
+        tabSignIn.addEventListener('click', function () { activate('signin'); });
+        tabSignUp.addEventListener('click', function () { activate('signup'); });
+
+        const switchToSignup = document.getElementById('switch-to-signup');
+        const switchToSignin = document.getElementById('switch-to-signin');
+
+        if (switchToSignup) {
+            switchToSignup.addEventListener('click', function () { activate('signup'); });
+        }
+
+        if (switchToSignin) {
+            switchToSignin.addEventListener('click', function () { activate('signin'); });
+        }
+
+        if (signupNext) {
+            signupNext.addEventListener('click', function () {
+                if (validateSignupStep0()) {
+                    setSignupStep(1);
+                }
+            });
+        }
+
+        if (signupBack) {
+            signupBack.addEventListener('click', function () {
+                setSignupStep(0);
+            });
+        }
+
+        const hasStep1ServerErrors = {{ (sign_up_errors.password is defined or sign_up_errors.confirm_password is defined or sign_up_errors.terms is defined or sign_up_errors.global is defined) ? 'true' : 'false' }};
+
+        activate(initialTab === 'signup' ? 'signup' : 'signin');
+        if (initialTab === 'signup' && hasStep1ServerErrors) {
+            setSignupStep(1);
+        }
+    })();
+</script>
+{% endblock %}

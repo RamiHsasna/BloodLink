@@ -1,0 +1,382 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Donor Dashboard{% endblock %}
+
+{% block body %}
+<style>
+    :root {
+        --bg: #f1f3f7;
+        --panel: #ffffff;
+        --ink: #0f172a;
+        --subtle: #64748b;
+        --line: #e2e8f0;
+        --brand: #8f1d1f;
+        --brand-2: #b3272a;
+        --nav: #0b1736;
+        --ok: #10b981;
+        --bad: #ef4444;
+    }
+
+    body { margin: 0; font-family: "Manrope", "Segoe UI", "Helvetica Neue", Arial, sans-serif; background: var(--bg); color: var(--ink); }
+    .shell { min-height: 100vh; display: grid; grid-template-columns: 260px 1fr; }
+
+    .sidebar {
+        background: linear-gradient(180deg, #0b1736 0%, #08112a 100%);
+        color: #e2e8f0;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #1e2d5b;
+    }
+    .brand { padding: 22px 18px; border-bottom: 1px solid #22315f; }
+    .brand-row { display: flex; align-items: center; gap: 10px; }
+    .brand-logo {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: #fff;
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        box-shadow: 0 8px 18px rgba(239, 68, 68, 0.35);
+    }
+    .brand h2 { margin: 0; font-size: 25px; font-family: "Manrope", "Segoe UI", Arial, sans-serif; color: #fff; font-weight: 800; letter-spacing: -0.02em; }
+    .brand p { margin: 3px 0 0; color: #93a6d6; font-size: 12px; font-weight: 600; }
+    .menu { padding: 16px 12px; display: grid; gap: 8px; }
+    .menu a {
+        text-decoration: none;
+        color: #c8d3f3;
+        padding: 11px 12px;
+        border-radius: 12px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+    }
+    .menu .ico {
+        width: 22px;
+        height: 22px;
+        border-radius: 7px;
+        border: 1px solid #2f4378;
+        background: #0f1f47;
+        color: #a9b9e4;
+        font-size: 12px;
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        flex-shrink: 0;
+    }
+    .menu a.active {
+        background: linear-gradient(135deg, #1c2e5c, #162650);
+        color: #fff;
+        border: 1px solid #2b3f74;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+    }
+    .menu a.active .ico {
+        border-color: #f87171;
+        background: #7f1d1d;
+        color: #ffd7d7;
+    }
+    .menu a:hover { background: #16254d; }
+    .profile {
+        margin-top: auto;
+        padding: 14px;
+        border-top: 1px solid #22315f;
+    }
+    .profile-card {
+        border: 1px solid #2a3d70;
+        background: #0d1b3e;
+        border-radius: 14px;
+        padding: 12px;
+    }
+    .profile-top { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }
+    .profile-avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #334155, #1e293b);
+        color: #fff;
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        font-size: 12px;
+    }
+    .profile .name { margin: 0; font-size: 13px; color: #fff; font-weight: 700; }
+    .profile .role { margin: 2px 0 0; color: #8fa0ce; font-size: 11px; }
+    .logout-btn {
+        width: 100%;
+        height: 34px;
+        border: 1px solid #374d83;
+        background: #101f45;
+        color: #dbe5ff;
+        border-radius: 9px;
+        font-weight: 700;
+    }
+
+    .main {
+        padding: 22px;
+        background:
+            radial-gradient(circle at 10% 15%, rgba(239, 68, 68, 0.09), transparent 35%),
+            radial-gradient(circle at 90% 8%, rgba(59, 130, 246, 0.08), transparent 32%),
+            linear-gradient(180deg, #f8fafc 0%, #f4f6fb 100%);
+    }
+    .top-strip {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+    .top-strip h1 {
+        margin: 0;
+        font-size: 34px;
+        letter-spacing: -0.02em;
+        font-weight: 800;
+        color: #0f172a;
+    }
+    .live-pill {
+        border: 1px solid #fecaca;
+        background: #fff1f2;
+        color: #9f1239;
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .hero {
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(180deg, #ffffff 0%, #fff7f8 100%);
+        border: 1px solid #f1d7db;
+        border-radius: 24px;
+        padding: 34px 30px;
+        box-shadow: 0 16px 34px rgba(148, 163, 184, 0.16);
+        margin-bottom: 16px;
+    }
+    .hero::before,
+    .hero::after {
+        content: "";
+        position: absolute;
+        border-radius: 999px;
+        background: rgba(239, 68, 68, 0.08);
+        pointer-events: none;
+    }
+    .hero::before {
+        width: 420px;
+        height: 420px;
+        right: -210px;
+        top: -240px;
+    }
+    .hero::after {
+        width: 300px;
+        height: 300px;
+        left: -160px;
+        bottom: -230px;
+    }
+    .hero-content {
+        position: relative;
+        z-index: 1;
+        max-width: 860px;
+        margin: 0 auto;
+        text-align: center;
+    }
+    .hero h2 {
+        margin: 0;
+        font-size: clamp(34px, 5vw, 62px);
+        letter-spacing: -0.03em;
+        line-height: 1.05;
+        font-weight: 900;
+        color: #0f172a;
+    }
+    .hero h2 .accent { color: #dc2626; }
+    .hero p {
+        margin: 14px auto 0;
+        max-width: 720px;
+        color: #475569;
+        font-size: 20px;
+        line-height: 1.4;
+    }
+
+    .hero-actions {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 22px;
+    }
+    .cta-primary,
+    .cta-secondary {
+        text-decoration: none;
+        border-radius: 12px;
+        padding: 11px 18px;
+        font-weight: 800;
+        font-size: 15px;
+        border: 1px solid transparent;
+        transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+    }
+    .cta-primary {
+        background: linear-gradient(135deg, #dc2626, #ef4444);
+        color: #fff;
+        box-shadow: 0 10px 24px rgba(220, 38, 38, 0.28);
+    }
+    .cta-secondary {
+        background: #ffffff;
+        color: #b91c1c;
+        border-color: #ef4444;
+    }
+    .cta-primary:hover,
+    .cta-secondary:hover {
+        transform: translateY(-1px);
+    }
+
+    .chips {
+        margin-top: 22px;
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .chip {
+        border: 1px solid #e5e7eb;
+        background: #ffffffd9;
+        border-radius: 999px;
+        padding: 6px 11px;
+        color: #475569;
+        font-size: 12px;
+        font-weight: 700;
+    }
+    .chip .v {
+        color: #0f172a;
+        font-weight: 800;
+    }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .wide { margin-bottom: 12px; }
+    .block {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px;
+        min-height: 170px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+    }
+    .block h3 { margin: 0; font-size: 30px; letter-spacing: -0.02em; font-weight: 800; color: #0f172a; }
+    .block p { margin: 7px 0 0; color: var(--subtle); font-size: 14px; }
+    .empty {
+        margin-top: 12px;
+        border: 1px dashed #d8dfe8;
+        border-radius: 11px;
+        padding: 16px;
+        color: #64748b;
+        font-size: 13px;
+        background: #fcfcfd;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+
+    @media (max-width: 980px) {
+        .shell { grid-template-columns: 1fr; }
+        .main { padding: 14px; }
+        .top-strip h1 { font-size: 28px; }
+        .hero { padding: 22px 16px; border-radius: 18px; }
+        .hero p { font-size: 16px; }
+        .grid2 { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="shell">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-row">
+                <div class="brand-logo">B</div>
+                <div>
+                    <h2>BloodLink</h2>
+                    <p>Donor Dashboard</p>
+                </div>
+            </div>
+        </div>
+        <nav class="menu">
+            <a class="active" href="{{ path('dashboard_donor_home') }}"><span class="ico">H</span>Dashboard</a>
+            <a href="{{ path('dashboard_donor_eligibility') }}"><span class="ico">E</span>Eligibility</a>
+        </nav>
+        <div class="profile">
+            <div class="profile-card">
+                <div class="profile-top">
+                    <div class="profile-avatar">{{ (session_user.first_name|default('U')|slice(0,1))|upper }}</div>
+                    <div>
+                        <p class="name">{{ session_user.first_name|default('User') }} {{ session_user.last_name|default('') }}</p>
+                        <p class="role">{{ session_user.user_type|default('DONOR') }}</p>
+                    </div>
+                </div>
+                <form method="post" action="{{ path('auth_logout') }}">
+                    <button class="logout-btn" type="submit">Logout</button>
+                </form>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="top-strip">
+            <h1>Donor Dashboard</h1>
+            <span class="live-pill">Live Global Network</span>
+        </div>
+
+        {% set isEligible = donor_summary.status_mood == 'good' %}
+        {% set bloodType = own_record and own_record.blood_type_cache ? own_record.blood_type_cache : 'N/A' %}
+        {% set wait = own_record and own_record.days_until_eligible is not null ? own_record.days_until_eligible : 'N/A' %}
+        {% set tagline = isEligible
+            ? 'You are currently likely eligible to donate. Keep your donation impact active today.'
+            : 'Your current result suggests a short wait before the next donation check.'
+        %}
+
+        <section class="hero">
+            <div class="hero-content">
+                <h2>
+                    Donate Blood.<br>
+                    <span class="accent">Save Lives.</span><br>
+                    Instantly.
+                </h2>
+                <p>{{ tagline }}</p>
+
+                <div class="hero-actions">
+                    <a class="cta-primary" href="{{ path('dashboard_donor_eligibility') }}">Check Eligibility</a>
+                    <a class="cta-secondary" href="{{ path('dashboard_donor_eligibility') }}">View My Screening</a>
+                </div>
+
+                <div class="chips">
+                    <span class="chip">Status: <span class="v">{{ donor_summary.status_text }}</span></span>
+                    <span class="chip">Blood Type: <span class="v">{{ bloodType }}</span></span>
+                    <span class="chip">Wait: <span class="v">{{ wait }} day(s)</span></span>
+                    <span class="chip">Donations: <span class="v">{{ donor_summary.total_donations }}</span></span>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid2">
+            <article class="block">
+                <h3>Latest Blog</h3>
+                <p>Fresh articles to help you stay donation-ready.</p>
+                <div class="empty">No blog posts yet.</div>
+            </article>
+
+            <article class="block">
+                <h3>Health Tips</h3>
+                <p>Daily guidance for stronger, safer donations.</p>
+                <div class="empty">No tips published yet.</div>
+            </article>
+        </section>
+
+        <section class="block wide">
+            <h3>Community Stories</h3>
+            <p>This area is reserved for donor stories and awareness articles.</p>
+            <div class="empty">Stories and impact highlights will appear here soon.</div>
+        </section>
+    </main>
+</div>
+{% endblock %}
