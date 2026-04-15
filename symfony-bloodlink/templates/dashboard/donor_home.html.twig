@@ -1,0 +1,214 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Donor Dashboard{% endblock %}
+
+{% block body %}
+<style>
+    :root {
+        --bg: #f1f3f7;
+        --panel: #ffffff;
+        --ink: #0f172a;
+        --subtle: #64748b;
+        --line: #e2e8f0;
+        --brand: #8f1d1f;
+        --brand-2: #b3272a;
+        --nav: #0b1736;
+        --ok: #10b981;
+        --bad: #ef4444;
+    }
+
+    body { margin: 0; font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; background: var(--bg); color: var(--ink); }
+    .shell { min-height: 100vh; display: grid; grid-template-columns: 260px 1fr; }
+
+    .sidebar {
+        background: linear-gradient(180deg, var(--nav), #09122d 65%);
+        color: #e2e8f0;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #19254c;
+    }
+    .brand { padding: 24px 20px; border-bottom: 1px solid #22315f; }
+    .brand h2 { margin: 0; font-size: 29px; font-family: Georgia, "Times New Roman", serif; color: #fff; }
+    .brand p { margin: 4px 0 0; color: #8fa0ce; font-size: 13px; }
+    .menu { padding: 16px 12px; display: grid; gap: 8px; }
+    .menu a { text-decoration: none; color: #c8d3f3; padding: 11px 12px; border-radius: 10px; font-weight: 600; }
+    .menu a.active { background: #1d2c56; color: #fff; border-left: 3px solid #ef4444; padding-left: 9px; }
+    .menu a:hover { background: #16254d; }
+    .profile { margin-top: auto; padding: 16px; border-top: 1px solid #22315f; }
+    .profile .name { margin: 0; font-size: 14px; color: #fff; }
+    .profile .role { margin: 4px 0 10px; color: #8fa0ce; font-size: 12px; }
+    .logout-btn { width: 100%; height: 36px; border: 1px solid #2d3e6f; background: #101d42; color: #dbe5ff; border-radius: 8px; font-weight: 600; }
+
+    .main { padding: 24px; }
+    .head { margin-bottom: 14px; }
+    .head h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 40px; }
+    .head p { margin: 6px 0 0; color: var(--subtle); }
+
+    .eligibility-banner {
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 18px;
+        margin-bottom: 16px;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+    }
+    .eligibility-banner.good {
+        background: linear-gradient(135deg, #14532d, #166534);
+    }
+    .eligibility-banner.bad {
+        background: linear-gradient(135deg, #7f1d1d, #991b1b);
+    }
+    .eligibility-banner.neutral {
+        background: linear-gradient(135deg, #334155, #475569);
+    }
+    .banner-main {
+        display: grid;
+        gap: 4px;
+    }
+    .banner-title {
+        margin: 0;
+        font-size: 44px;
+        line-height: 1;
+        font-weight: 800;
+        opacity: 0.2;
+    }
+    .banner-headline {
+        margin: 0;
+        font-size: 22px;
+        line-height: 1.25;
+        font-weight: 800;
+    }
+    .banner-meta {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 700;
+        color: #fef3c7;
+    }
+    .banner-note {
+        margin: 0;
+        font-size: 14px;
+        color: #fee2e2;
+    }
+    .primary-btn {
+        border: 0;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.16);
+        color: #fff;
+        font-weight: 700;
+        padding: 10px 16px;
+        text-decoration: none;
+        border: 1px solid rgba(255, 255, 255, 0.38);
+        white-space: nowrap;
+    }
+    .primary-btn:hover { background: rgba(255, 255, 255, 0.24); }
+
+    .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .block {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px;
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+    }
+    .block h3 { margin: 0; font-size: 20px; font-family: Georgia, "Times New Roman", serif; }
+    .block p { margin: 6px 0 0; color: var(--subtle); font-size: 13px; }
+    .empty {
+        margin-top: 14px;
+        border: 1px dashed #d5c5be;
+        border-radius: 10px;
+        padding: 16px;
+        color: #64748b;
+        font-size: 13px;
+        background: #fcfcfd;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+
+    @media (max-width: 980px) {
+        .shell { grid-template-columns: 1fr; }
+        .eligibility-banner { align-items: flex-start; flex-direction: column; }
+        .banner-title { font-size: 34px; }
+        .banner-headline { font-size: 20px; }
+        .banner-meta { font-size: 18px; }
+        .grid3 { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="shell">
+    <aside class="sidebar">
+        <div class="brand">
+            <h2>BloodLink</h2>
+            <p>Donor Space</p>
+        </div>
+        <nav class="menu">
+            <a class="active" href="{{ path('dashboard_donor_home') }}">Dashboard</a>
+            <a href="{{ path('dashboard_donor_eligibility') }}">Eligibility</a>
+        </nav>
+        <div class="profile">
+            <p class="name">{{ session_user.first_name|default('User') }} {{ session_user.last_name|default('') }}</p>
+            <p class="role">{{ session_user.user_type|default('DONOR') }}</p>
+            <form method="post" action="{{ path('auth_logout') }}">
+                <button class="logout-btn" type="submit">Logout</button>
+            </form>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="head">
+            <h1>Donor Dashboard</h1>
+            <p>Your health check snapshot, plus your feed sections.</p>
+        </div>
+
+        {% set isEligible = donor_summary.status_mood == 'good' %}
+        {% set bloodType = own_record and own_record.blood_type_cache ? own_record.blood_type_cache : 'N/A' %}
+        {% set wait = own_record and own_record.days_until_eligible is not null ? own_record.days_until_eligible : 'N/A' %}
+        {% set headline = isEligible ? 'You are likely eligible to donate' : 'Donation is not recommended right now' %}
+        {% set meta = isEligible
+            ? donor_summary.last_checked_on ~ ' - Blood type: ' ~ bloodType
+            : 'Estimated wait: ' ~ wait ~ ' day(s) - Blood type: ' ~ bloodType
+        %}
+        {% set helper = isEligible
+            ? 'You can still re-check if your condition changed today.'
+            : 'You can re-check anytime or consult the medical team for final validation.'
+        %}
+
+        <section class="eligibility-banner {{ donor_summary.status_mood }}">
+            <div class="banner-main">
+                <p class="banner-title">Eligibility</p>
+                <p class="banner-headline">{{ headline }}</p>
+                <p class="banner-meta">{{ meta }}</p>
+                <p class="banner-note">{{ helper }}</p>
+            </div>
+            <a class="primary-btn" href="{{ path('dashboard_donor_eligibility') }}">Check again</a>
+        </section>
+
+        <section class="grid3">
+            <article class="block">
+                <h3>Blogs</h3>
+                <p>Articles and donor stories.</p>
+                <div class="empty">No blog posts yet.</div>
+            </article>
+
+            <article class="block">
+                <h3>Events</h3>
+                <p>Upcoming blood campaigns and drives.</p>
+                <div class="empty">No events available yet.</div>
+            </article>
+
+            <article class="block">
+                <h3>Donation Events</h3>
+                <p>This section is intentionally left empty for now.</p>
+                <div class="empty">Managed by another student. Coming soon.</div>
+            </article>
+        </section>
+    </main>
+</div>
+{% endblock %}
