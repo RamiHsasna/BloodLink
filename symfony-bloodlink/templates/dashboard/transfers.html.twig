@@ -1,0 +1,607 @@
+{% set page_title = 'Transfers Dashboard' %}
+{% set page_description = 'Manage inter-hospital blood transfer requests.' %}
+{% extends 'dashboard/layouts/back_office.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+<style>
+    :root {
+        --bg: #f1f3f7;
+        --panel: #ffffff;
+        --ink: #0f172a;
+        --subtle: #64748b;
+        --line: #e2e8f0;
+        --nav: #0b1736;
+        --brand: #8f1d1f;
+        --brand-2: #b3272a;
+        --ok: #16a34a;
+        --warn: #f59e0b;
+        --danger: #dc2626;
+        --info: #2563eb;
+        --neutral: #475569;
+    }
+
+    body { margin: 0; font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; background: var(--bg); color: var(--ink); }
+    .shell { min-height: 100vh; display: grid; grid-template-columns: 260px 1fr; }
+
+    .sidebar {
+        background: linear-gradient(180deg, var(--nav), #09122d 65%);
+        color: #e2e8f0;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #19254c;
+    }
+    .brand { padding: 24px 20px; border-bottom: 1px solid #22315f; }
+    .brand h2 { margin: 0; font-size: 29px; font-family: Georgia, "Times New Roman", serif; color: #fff; }
+    .brand p { margin: 4px 0 0; color: #8fa0ce; font-size: 13px; }
+
+    .menu { padding: 16px 12px; display: grid; gap: 8px; }
+    .menu a { text-decoration: none; color: #c8d3f3; padding: 11px 12px; border-radius: 10px; font-weight: 600; }
+    .menu a.active { background: #1d2c56; color: #fff; border-left: 3px solid #ef4444; padding-left: 9px; }
+    .menu a:hover { background: #16254d; }
+
+    .profile { margin-top: auto; padding: 16px; border-top: 1px solid #22315f; }
+    .profile .name { margin: 0; font-size: 14px; color: #fff; }
+    .profile .role { margin: 4px 0 10px; color: #8fa0ce; font-size: 12px; }
+    .logout-btn {
+        width: 100%;
+        height: 36px;
+        border: 1px solid #2d3e6f;
+        background: #101d42;
+        color: #dbe5ff;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+
+    .main { padding: 24px; }
+
+    .head {
+        margin-bottom: 16px;
+        background: #ffffff;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+    }
+    .head h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 36px; }
+    .head p { margin: 6px 0 0; color: var(--subtle); }
+
+    .action-btn {
+        border: 0;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--brand), var(--brand-2));
+        color: #fff;
+        font-weight: 700;
+        padding: 10px 16px;
+    }
+
+    .stats {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+        background: #ffffff;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+    }
+    .stat {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #0f172a;
+    }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 999px; margin-right: 7px; vertical-align: middle; }
+    .dot.ok { background: var(--ok); }
+    .dot.warn { background: var(--warn); }
+    .dot.danger { background: var(--danger); }
+    .dot.info { background: var(--info); }
+    .dot.neutral { background: var(--neutral); }
+
+    .filters {
+        display: grid;
+        grid-template-columns: minmax(200px, 1fr) 180px 160px 120px;
+        gap: 12px;
+        margin-bottom: 16px;
+        align-items: center;
+    }
+    .filters input,
+    .filters select {
+        width: 100%;
+        height: 42px;
+        border: 1px solid #d6deea;
+        border-radius: 10px;
+        padding: 0 12px;
+        background: #fff;
+    }
+    .filters button {
+        height: 42px;
+        border: 0;
+        border-radius: 10px;
+        background: #0f172a;
+        color: #fff;
+        font-weight: 700;
+    }
+
+    .list { display: grid; gap: 12px; }
+    .card {
+        background: #ffffff;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 12px 22px rgba(15, 23, 42, 0.06);
+        display: grid;
+        gap: 12px;
+    }
+    .card-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .card-title { margin: 0; font-size: 18px; font-weight: 800; color: #0f172a; }
+    .card-sub { margin: 4px 0 0; color: #64748b; font-size: 13px; }
+
+    .badge { border-radius: 999px; padding: 5px 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
+    .badge-pending { background: #fff7ed; color: #9a3412; }
+    .badge-approved { background: #dbeafe; color: #1d4ed8; }
+    .badge-transit { background: #f1f5f9; color: #475569; }
+    .badge-delivered { background: #dcfce7; color: #166534; }
+    .badge-denied { background: #fee2e2; color: #991b1b; }
+    .badge-cancelled { background: #f1f5f9; color: #64748b; }
+    .badge-cancel-source { background: #e2e8f0; color: #475569; }
+
+    .card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .meta-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px; }
+    .meta-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; font-weight: 700; }
+    .meta-value { margin-top: 6px; font-size: 15px; font-weight: 800; color: #0f172a; }
+
+    .card-notes { color: #475569; font-size: 13px; background: #f8fafc; border: 1px dashed #e2e8f0; border-radius: 12px; padding: 10px; }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+    .btn-outline { border: 1px solid #cbd5e1; background: #fff; color: #334155; border-radius: 9px; padding: 8px 12px; font-weight: 700; }
+    .btn-success { border: 1px solid #bbf7d0; background: #dcfce7; color: #166534; border-radius: 9px; padding: 8px 12px; font-weight: 700; }
+    .btn-info { border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; border-radius: 9px; padding: 8px 12px; font-weight: 700; }
+    .btn-danger { border: 1px solid #fecaca; background: #fff1f2; color: #b91c1c; border-radius: 9px; padding: 8px 12px; font-weight: 700; }
+
+    .approve-inline { display: flex; align-items: center; gap: 8px; }
+    .approve-inline input {
+        width: 90px;
+        height: 36px;
+        border: 1px solid #d6deea;
+        border-radius: 8px;
+        padding: 0 10px;
+    }
+
+    .empty {
+        border: 1px dashed #cbd5e1;
+        border-radius: 12px;
+        padding: 28px;
+        text-align: center;
+        color: var(--subtle);
+        background: #fff;
+    }
+
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+        width: min(720px, 96vw);
+        max-height: 92vh;
+        overflow: auto;
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        box-shadow: 0 20px 40px rgba(2, 6, 23, 0.25);
+        padding: 16px;
+    }
+    .modal-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+    .modal-head h3 { margin: 0; font-size: 21px; }
+    .modal-close {
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        border-radius: 8px;
+        width: 34px;
+        height: 34px;
+        font-size: 18px;
+        line-height: 1;
+    }
+    .modal-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+    .modal-grid .full { grid-column: 1 / -1; }
+    .field { display: grid; gap: 4px; }
+    .field label { margin: 0; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--subtle); font-weight: 700; }
+    .field input,
+    .field select,
+    .field textarea {
+        height: 40px;
+        border: 1px solid #d6deea;
+        border-radius: 9px;
+        padding: 0 10px;
+        background: #fbfdff;
+    }
+    .field textarea { height: auto; min-height: 80px; padding: 8px 10px; }
+    .modal-actions {
+        margin-top: 12px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+    .btn-secondary { border: 1px solid #cbd5e1; background: #fff; color: #334155; border-radius: 9px; padding: 8px 12px; }
+    .btn-primary { border: 0; border-radius: 9px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 700; padding: 8px 12px; }
+
+    @media (max-width: 1100px) {
+        .shell { grid-template-columns: 1fr; }
+        .filters { grid-template-columns: 1fr; }
+        .card-grid { grid-template-columns: 1fr; }
+        .modal-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<main class="main">
+        <div class="head">
+            <div>
+                <h1>Transfers</h1>
+                <p>Manage inter-hospital blood transfer requests.</p>
+            </div>
+            {% if can_create %}
+                <button type="button" class="action-btn" id="openTransferModal">+ New Transfer</button>
+            {% endif %}
+        </div>
+
+        {% for message in app.flashes('success') %}
+            <div class="stat" style="background:#ecfdf5;border-color:#bbf7d0;color:#166534;">{{ message }}</div>
+        {% endfor %}
+        {% for message in app.flashes('error') %}
+            <div class="stat" style="background:#fff1f2;border-color:#fecdd3;color:#9f1239;">{{ message }}</div>
+        {% endfor %}
+
+        <section class="stats">
+            <div class="stat">Total: <strong>{{ stats.total }}</strong></div>
+            <div class="stat"><span class="dot warn"></span>Pending: <strong>{{ stats.pending }}</strong></div>
+            <div class="stat"><span class="dot info"></span>Approved: <strong>{{ stats.approved }}</strong></div>
+            <div class="stat"><span class="dot neutral"></span>In Transit: <strong>{{ stats.in_transit }}</strong></div>
+            <div class="stat"><span class="dot ok"></span>Delivered: <strong>{{ stats.delivered }}</strong></div>
+            <div class="stat"><span class="dot danger"></span>Denied: <strong>{{ stats.denied }}</strong></div>
+            <div class="stat"><span class="dot neutral"></span>Cancelled: <strong>{{ stats.cancelled }}</strong></div>
+        </section>
+
+        <form class="filters" method="get" action="{{ path('dashboard_transfers') }}">
+            <input type="text" name="q" value="{{ q }}" placeholder="Search by hospital, blood type, or ID...">
+            <select name="status">
+                <option value="ALL" {% if status == 'ALL' %}selected{% endif %}>All statuses</option>
+                <option value="PENDING" {% if status == 'PENDING' %}selected{% endif %}>Pending</option>
+                <option value="APPROVED" {% if status == 'APPROVED' %}selected{% endif %}>Approved</option>
+                <option value="IN_TRANSIT" {% if status == 'IN_TRANSIT' %}selected{% endif %}>In Transit</option>
+                <option value="DELIVERED" {% if status == 'DELIVERED' %}selected{% endif %}>Delivered</option>
+                <option value="DENIED" {% if status == 'DENIED' %}selected{% endif %}>Denied</option>
+                <option value="CANCELLED" {% if status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+            </select>
+            <select name="blood_type">
+                <option value="" {% if blood_type == '' %}selected{% endif %}>All blood types</option>
+                {% for bt in blood_types %}
+                    <option value="{{ bt }}" {% if blood_type == bt %}selected{% endif %}>{{ bt }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit">Apply</button>
+        </form>
+
+        <section class="list">
+            {% if transfers is empty %}
+                <div class="empty">No transfers found.</div>
+            {% else %}
+                {% for transfer in transfers %}
+                    {% set status = (transfer.status|default('PENDING'))|upper %}
+                    {% set badgeClass = 'badge-pending' %}
+                    {% if status == 'APPROVED' %}{% set badgeClass = 'badge-approved' %}{% endif %}
+                    {% if status == 'IN_TRANSIT' %}{% set badgeClass = 'badge-transit' %}{% endif %}
+                    {% if status == 'DELIVERED' %}{% set badgeClass = 'badge-delivered' %}{% endif %}
+                    {% if status == 'DENIED' %}{% set badgeClass = 'badge-denied' %}{% endif %}
+                    {% if status == 'CANCELLED' %}{% set badgeClass = 'badge-cancelled' %}{% endif %}
+
+
+                    {% set isAdmin = user_type == 'ADMIN' %}
+                    {% set isRequesterHospital = current_hospital and transfer.requesting_hospital_id == current_hospital.id %}
+                    {% set isApproverHospital = current_hospital and transfer.approving_hospital_id == current_hospital.id %}
+                    {% set isCreator = current_user_id == transfer.requesting_staff_id %}
+
+                    <article class="card">
+                        <div class="card-top">
+                            <div>
+                                <p class="card-title">{{ transfer.blood_type_id }} Transfer</p>
+                                <p class="card-sub">{{ transfer.requesting_hospital_name }} → {{ transfer.approving_hospital_name }}</p>
+                            </div>
+                            <span class="badge {{ badgeClass }}">{{ status }}</span>
+                            {% if status == 'CANCELLED' and transfer.cancel_label %}
+                                <span class="badge badge-cancel-source">{{ transfer.cancel_label }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="card-grid">
+                            <div class="meta-box">
+                                <div class="meta-label">Requested</div>
+                                <div class="meta-value">{{ transfer.quantity_units_requested }} units</div>
+                            </div>
+                            <div class="meta-box">
+                                <div class="meta-label">Approved</div>
+                                <div class="meta-value">
+                                    {% if transfer.quantity_units_approved is not null %}
+                                        {{ transfer.quantity_units_approved }} units
+                                    {% else %}
+                                        Pending
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="meta-box">
+                                <div class="meta-label">Requested At</div>
+                                <div class="meta-value">{{ transfer.requested_at|default('N/A') }}</div>
+                            </div>
+                            <div class="meta-box">
+                                <div class="meta-label">Approved At</div>
+                                <div class="meta-value">{{ transfer.approved_at|default('N/A') }}</div>
+                            </div>
+                            <div class="meta-box">
+                                <div class="meta-label">Expected Delivery</div>
+                                <div class="meta-value">{{ transfer.delivery_expected_at|default('N/A') }}</div>
+                            </div>
+                            <div class="meta-box">
+                                <div class="meta-label">Delivered At</div>
+                                <div class="meta-value">{{ transfer.actual_delivery_at|default('N/A') }}</div>
+                            </div>
+                        </div>
+
+                        {% if transfer.reason %}
+                            <div class="card-notes"><strong>Reason:</strong> {{ transfer.reason }}</div>
+                        {% endif %}
+                        {% if transfer.notes %}
+                            <div class="card-notes"><strong>Notes:</strong> {{ transfer.notes }}</div>
+                        {% endif %}
+
+                        <div class="actions">
+                            {% if status == 'PENDING' and (isCreator or isApproverHospital or isAdmin) %}
+                                <button type="button"
+                                        class="btn-outline open-edit-transfer"
+                                        data-transfer-id="{{ transfer.transfer_id }}"
+                                        data-requesting-hospital-id="{{ transfer.requesting_hospital_id }}"
+                                        data-approving-hospital-id="{{ transfer.approving_hospital_id }}"
+                                        data-blood-type-id="{{ transfer.blood_type_id }}"
+                                        data-units-requested="{{ transfer.quantity_units_requested }}"
+                                        data-reason="{{ transfer.reason|e('html_attr') }}"
+                                        data-notes="{{ transfer.notes|e('html_attr') }}"
+                                        data-delivery-expected-at="{{ transfer.delivery_expected_at|e('html_attr') }}">
+                                    Edit
+                                </button>
+                                <form method="post" action="{{ path('dashboard_transfers_cancel', { transferId: transfer.transfer_id }) }}" onsubmit="return confirm('Cancel this transfer request?');">
+                                    <input type="hidden" name="reason" value="{% if isAdmin %}Cancelled by admin.{% elseif isApproverHospital and not isRequesterHospital %}Cancelled by supplier.{% else %}Cancelled by requester.{% endif %}">
+                                    <button type="submit" class="btn-danger">Cancel</button>
+                                </form>
+                            {% endif %}
+
+                            {% if status == 'PENDING' and (isAdmin or (isApproverHospital and not isCreator) or (user_type == 'HOSPITAL_STAFF' and transfer.approving_hospital_id == '' and not isCreator)) %}
+                                <form method="post" action="{{ path('dashboard_transfers_approve', { transferId: transfer.transfer_id }) }}" data-approve-form="true">
+                                    <div class="approve-inline">
+                                        <input type="number" name="quantity_approved" min="1" max="{{ transfer.quantity_units_requested }}" data-max="{{ transfer.quantity_units_requested }}" class="approve-qty" placeholder="Qty" required>
+                                        <button type="submit" class="btn-success">Approve</button>
+                                    </div>
+                                </form>
+                                <form method="post" action="{{ path('dashboard_transfers_deny', { transferId: transfer.transfer_id }) }}" onsubmit="return confirm('Deny this transfer request?');">
+                                    <input type="hidden" name="reason" value="Denied by hospital.">
+                                    <button type="submit" class="btn-danger">Deny</button>
+                                </form>
+                            {% endif %}
+
+                            {% if status == 'APPROVED' and (isAdmin or isApproverHospital) %}
+                                <form method="post" action="{{ path('dashboard_transfers_in_transit', { transferId: transfer.transfer_id }) }}" onsubmit="return confirm('Mark this transfer as in transit?');">
+                                    <button type="submit" class="btn-info">Mark In Transit</button>
+                                </form>
+                            {% endif %}
+
+                            {% if status == 'IN_TRANSIT' and (isAdmin or isRequesterHospital) %}
+                                <form method="post" action="{{ path('dashboard_transfers_deliver', { transferId: transfer.transfer_id }) }}" onsubmit="return confirm('Mark this transfer as delivered?');">
+                                    <button type="submit" class="btn-success">Mark Delivered</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </article>
+                {% endfor %}
+            {% endif %}
+        </section>
+    </main>
+</div>
+
+<div id="transferModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="transferModalTitle">
+        <div class="modal-head">
+            <h3 id="transferModalTitle">New Transfer</h3>
+            <button type="button" class="modal-close" id="closeTransferModal">×</button>
+        </div>
+
+        <form id="transferModalForm" method="post" action="{{ path('dashboard_transfers_create') }}">
+            <div class="modal-grid">
+                {% if user_type == 'ADMIN' %}
+                    <div class="field">
+                        <label for="m_requesting_hospital_id">Requesting Hospital</label>
+                        <select id="m_requesting_hospital_id" name="requesting_hospital_id">
+                            {% for hospital in hospital_options %}
+                                <option value="{{ hospital.id }}">{{ hospital.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                {% else %}
+                    <div class="field">
+                        <label>Requesting Hospital</label>
+                        <input type="text" value="{{ current_hospital ? current_hospital.name : 'N/A' }}" disabled>
+                        <input type="hidden" name="requesting_hospital_id" value="{{ current_hospital ? current_hospital.id : '' }}">
+                    </div>
+                {% endif %}
+
+                <div class="field">
+                    <label for="m_approving_hospital_id">Supplying Hospital</label>
+                    <select id="m_approving_hospital_id" name="approving_hospital_id" required>
+                        <option value="">Select hospital</option>
+                        {% for hospital in hospital_options %}
+                            <option value="{{ hospital.id }}">{{ hospital.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="m_blood_type_id">Blood Type</label>
+                    <select id="m_blood_type_id" name="blood_type_id" required>
+                        <option value="">Select</option>
+                        {% for bt in blood_types %}
+                            <option value="{{ bt }}">{{ bt }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="m_units_requested">Quantity (units)</label>
+                    <input type="number" id="m_units_requested" name="units_requested" min="1" required>
+                </div>
+
+                <div class="field full">
+                    <label for="m_reason">Reason</label>
+                    <textarea id="m_reason" name="reason" required></textarea>
+                </div>
+
+                <div class="field">
+                    <label for="m_delivery_expected_at">Expected Delivery Date</label>
+                    <input type="date" id="m_delivery_expected_at" name="delivery_expected_at">
+                </div>
+
+                <div class="field">
+                    <label for="m_notes">Notes (optional)</label>
+                    <textarea id="m_notes" name="notes"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" id="cancelTransferModal">Cancel</button>
+                <button type="submit" class="btn-primary" id="submitTransferModal">Submit Request</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const overlay = document.getElementById('transferModal');
+        const openBtn = document.getElementById('openTransferModal');
+        const closeBtn = document.getElementById('closeTransferModal');
+        const cancelBtn = document.getElementById('cancelTransferModal');
+        const form = document.getElementById('transferModalForm');
+        const title = document.getElementById('transferModalTitle');
+        const submitBtn = document.getElementById('submitTransferModal');
+
+        function openModal() {
+            overlay.classList.add('open');
+            overlay.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeModal() {
+            overlay.classList.remove('open');
+            overlay.setAttribute('aria-hidden', 'true');
+        }
+
+        function resetForm() {
+            form.action = '{{ path('dashboard_transfers_create') }}';
+            title.textContent = 'New Transfer';
+            submitBtn.textContent = 'Submit Request';
+            form.reset();
+        }
+
+        function fillForEdit(btn) {
+            form.action = '{{ path('dashboard_transfers_update', { transferId: '__ID__' }) }}'.replace('__ID__', btn.dataset.transferId);
+            title.textContent = 'Edit Transfer';
+            submitBtn.textContent = 'Save Changes';
+
+            const requestingHospital = document.getElementById('m_requesting_hospital_id');
+            if (requestingHospital) {
+                requestingHospital.value = btn.dataset.requestingHospitalId || '';
+            }
+
+            document.getElementById('m_approving_hospital_id').value = btn.dataset.approvingHospitalId || '';
+            document.getElementById('m_blood_type_id').value = btn.dataset.bloodTypeId || '';
+            document.getElementById('m_units_requested').value = btn.dataset.unitsRequested || '';
+            document.getElementById('m_reason').value = btn.dataset.reason || '';
+            document.getElementById('m_notes').value = btn.dataset.notes || '';
+            document.getElementById('m_delivery_expected_at').value = btn.dataset.deliveryExpectedAt || '';
+        }
+
+        if (openBtn) {
+            openBtn.addEventListener('click', function () {
+                resetForm();
+                openModal();
+            });
+        }
+
+        document.querySelectorAll('.open-edit-transfer').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                fillForEdit(btn);
+                openModal();
+            });
+        });
+
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) {
+                closeModal();
+            }
+        });
+
+        document.querySelectorAll('form[data-approve-form="true"]').forEach(function (form) {
+            const input = form.querySelector('.approve-qty');
+            if (input) {
+                input.addEventListener('input', function () {
+                    input.setCustomValidity('');
+                });
+            }
+
+            form.addEventListener('submit', function (event) {
+                if (!input) return;
+
+                const max = parseInt(input.dataset.max || '', 10);
+                const value = parseInt(input.value || '', 10);
+                let message = '';
+
+                if (!value || value < 1) {
+                    message = 'Enter a quantity greater than 0.';
+                } else if (!Number.isNaN(max) && value > max) {
+                    message = 'Approved quantity cannot exceed requested quantity.';
+                }
+
+                input.setCustomValidity(message);
+
+                if (message) {
+                    input.reportValidity();
+                    event.preventDefault();
+                }
+            });
+        });
+    })();
+</script>
+{% endblock %}

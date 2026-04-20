@@ -8,7 +8,7 @@ use Doctrine\Common\Collections\Collection;
 
 #[
     ORM\Entity(
-        repositoryClass: App\Entity\Repository\HospitalStaffRepository::class,
+        repositoryClass: \App\Repository\HospitalStaffRepository::class,
     ),
 ]
 #[ORM\Table(name: "hospital_staff")]

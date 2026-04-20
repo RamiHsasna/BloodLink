@@ -8,7 +8,7 @@ use Doctrine\Common\Collections\Collection;
 
 #[
     ORM\Entity(
-        repositoryClass: App\Entity\Repository\DonorEligibilityRepository::class,
+        repositoryClass: \App\Repository\DonorEligibilityRepository::class,
     ),
 ]
 #[ORM\Table(name: "donor_eligibility")]

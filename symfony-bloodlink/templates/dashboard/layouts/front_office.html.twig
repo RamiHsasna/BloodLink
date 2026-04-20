@@ -1,0 +1,109 @@
+{% extends 'base.html.twig' %}
+
+{% set body_class = 'fo-page' %}
+{% set route = app.request.attributes.get('_route')|default('') %}
+{% set session_payload = session_user is defined and session_user ? session_user : (app.session is defined ? app.session.get('auth_user') : null) %}
+{% set is_alerts_route = route starts with 'dashboard_donor_alert' %}
+{% set is_audit_trail_route = route == 'dashboard_donor_audit_trail' %}
+{% set is_events_route = route starts with 'dashboard_donor_events' %}
+
+{% block title %}{{ page_title|default('BloodLink Donor Area') }}{% endblock %}
+
+{% block stylesheets %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('styles/normalized-ui.css') }}">
+    {% block extra_head_assets %}{% endblock %}
+{% endblock %}
+
+{% block body %}
+    <div class="fo-shell">
+        <div class="fo-layout">
+            <aside class="fo-sidebar">
+                <div class="fo-brand">
+                    <div class="fo-brand-row">
+                        <div class="fo-brand-mark">BL</div>
+                        <div>
+                            <p class="fo-brand-name">BloodLink</p>
+                            <p class="fo-brand-subtitle">Donor Front Office</p>
+                        </div>
+                    </div>
+                </div>
+
+                <nav class="fo-nav">
+                    <p class="fo-nav-title">Donor Area</p>
+
+                    <a href="{{ path('dashboard_donor_home') }}" class="fo-link {{ route == 'dashboard_donor_home' ? 'is-active' : '' }}">
+                        <span>Dashboard</span>
+                        {% if route == 'dashboard_donor_home' %}<span class="fo-pill">Live</span>{% endif %}
+                    </a>
+
+                    <a href="{{ path('dashboard_donor_eligibility') }}" class="fo-link {{ route == 'dashboard_donor_eligibility' ? 'is-active' : '' }}">
+                        <span>Eligibility</span>
+                        {% if route == 'dashboard_donor_eligibility' %}<span class="fo-pill">Live</span>{% endif %}
+                    </a>
+
+                    <a href="{{ path('dashboard_donor_events') }}" class="fo-link {{ is_events_route ? 'is-active' : '' }}">
+                        <span>Donation Events</span>
+                        {% if is_events_route %}<span class="fo-pill">Live</span>{% endif %}
+                    </a>
+
+                    <a href="{{ path('dashboard_donor_alerts') }}" class="fo-link {{ is_alerts_route ? 'is-active' : '' }}">
+                        <span>Alerts</span>
+                        {% if is_alerts_route %}<span class="fo-pill">Live</span>{% endif %}
+                    </a>
+
+                    <a href="{{ path('dashboard_donor_audit_trail') }}" class="fo-link {{ is_audit_trail_route ? 'is-active' : '' }}">
+                        <span>My Audit Trail</span>
+                        {% if is_audit_trail_route %}<span class="fo-pill">Live</span>{% endif %}
+                    </a>
+
+                    <a href="{{ path('dashboard_donor_articles') }}" class="fo-link {{ route == 'dashboard_donor_articles' ? 'is-active' : '' }}">
+                        <span>Articles</span>
+                        {% if route == 'dashboard_donor_articles' %}<span class="fo-pill">Live</span>{% endif %}
+                    </a>
+
+                    <a href="{{ path('dashboard_donor_tips') }}" class="fo-link {{ route == 'dashboard_donor_tips' ? 'is-active' : '' }}">
+                        <span>Health Tips</span>
+                        {% if route == 'dashboard_donor_tips' %}<span class="fo-pill">Live</span>{% endif %}
+                    </a>
+                </nav>
+
+                <div class="fo-session-card">
+                    <p class="fo-session-label">Donor profile</p>
+                    <p class="fo-session-name">{{ session_payload.first_name|default('User') }} {{ session_payload.last_name|default('') }}</p>
+                    <p class="fo-session-role">{{ session_payload.email|default('') }}</p>
+
+                    <form method="post" action="{{ path('auth_logout') }}" class="fo-session-logout">
+                        <button type="submit" class="shared-button shared-button--secondary shared-button--full">Logout</button>
+                    </form>
+                </div>
+            </aside>
+
+            <main class="fo-main-shell">
+                <div class="fo-main-card">
+                    <header class="fo-header">
+                        <div>
+                            <p class="fo-kicker">BloodLink Donor Experience</p>
+                            <h1 class="fo-title">{{ page_title|default('Donor Dashboard') }}</h1>
+                            {% if page_description is defined and page_description %}
+                                <p class="fo-description">{{ page_description }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="fo-header-actions">
+                            {% block page_actions %}{% endblock %}
+                        </div>
+                    </header>
+
+                    <section class="fo-content">
+                        {% include 'shared/_flash.html.twig' %}
+                        {% block module_content %}{% endblock %}
+                    </section>
+                </div>
+            </main>
+        </div>
+    </div>
+    {% block extra_body_assets %}{% endblock %}
+{% endblock %}

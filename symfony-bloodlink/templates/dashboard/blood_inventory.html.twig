@@ -1,0 +1,360 @@
+{% set page_title = 'Blood Inventory Dashboard' %}
+{% set page_description = 'Track blood unit availability and inventory status across the network.' %}
+{% extends 'dashboard/layouts/back_office.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+<style>
+    :root {
+        --bg: #f1f3f7;
+        --panel: #ffffff;
+        --ink: #0f172a;
+        --subtle: #64748b;
+        --line: #e2e8f0;
+        --nav: #0b1736;
+        --brand: #8f1d1f;
+        --brand-2: #b3272a;
+        --ok: #16a34a;
+        --warn: #f59e0b;
+        --danger: #dc2626;
+    }
+
+    body { margin: 0; font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; background: var(--bg); color: var(--ink); }
+    .shell { min-height: 100vh; display: grid; grid-template-columns: 260px 1fr; }
+
+    .sidebar {
+        background: linear-gradient(180deg, var(--nav), #09122d 65%);
+        color: #e2e8f0;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #19254c;
+    }
+    .brand { padding: 24px 20px; border-bottom: 1px solid #22315f; }
+    .brand h2 { margin: 0; font-size: 29px; font-family: Georgia, "Times New Roman", serif; color: #fff; }
+    .brand p { margin: 4px 0 0; color: #8fa0ce; font-size: 13px; }
+
+    .menu { padding: 16px 12px; display: grid; gap: 8px; }
+    .menu a { text-decoration: none; color: #c8d3f3; padding: 11px 12px; border-radius: 10px; font-weight: 600; }
+    .menu a.active { background: #1d2c56; color: #fff; border-left: 3px solid #ef4444; padding-left: 9px; }
+    .menu a:hover { background: #16254d; }
+
+    .profile { margin-top: auto; padding: 16px; border-top: 1px solid #22315f; }
+    .profile .name { margin: 0; font-size: 14px; color: #fff; }
+    .profile .role { margin: 4px 0 10px; color: #8fa0ce; font-size: 12px; }
+    .logout-btn {
+        width: 100%;
+        height: 36px;
+        border: 1px solid #2d3e6f;
+        background: #101d42;
+        color: #dbe5ff;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+
+    .main { padding: 24px; }
+    .head {
+        margin-bottom: 16px;
+        background: #ffffff;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    }
+    .head-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+    .head-content h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 40px; }
+    .head-content p { margin: 6px 0 0; color: var(--subtle); }
+    .head-meta { margin-top: 10px; display: flex; align-items: center; gap: 8px; }
+    .head-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--subtle); font-weight: 700; }
+    .hospital-pill {
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        color: #0f172a;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 12px;
+    }
+    .action-row { display: flex; align-items: center; gap: 10px; }
+    .head-controls { margin-top: 14px; display: flex; justify-content: center; }
+    .selector { display: flex; flex-direction: column; gap: 6px; min-width: 260px; }
+    .selector-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--subtle); font-weight: 700; text-align: center; }
+    .selector select {
+        height: 40px;
+        border: 1px solid #d6deea;
+        border-radius: 10px;
+        padding: 0 12px;
+        background: #ffffff;
+        font-weight: 600;
+        color: #0f172a;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    }
+
+    .action-btn {
+        border: 0;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--brand), var(--brand-2));
+        color: #fff;
+        font-weight: 700;
+        padding: 10px 16px;
+    }
+
+    .stats {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+        background: #ffffff;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+    }
+    .stat {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #0f172a;
+    }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 999px; margin-right: 7px; vertical-align: middle; }
+    .dot.ok { background: var(--ok); }
+    .dot.warn { background: var(--warn); }
+    .dot.danger { background: var(--danger); }
+
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .card {
+        background: #ffffff;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 12px 22px rgba(15, 23, 42, 0.06);
+        transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+    }
+    .status-optimal { border-color: #bbf7d0; background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%); }
+    .status-low { border-color: #fed7aa; background: linear-gradient(180deg, #ffffff 0%, #fff7ed 100%); }
+    .status-critical { border-color: #fecaca; background: linear-gradient(180deg, #ffffff 0%, #fff1f2 100%); }
+
+    .card-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .blood-type {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 800;
+        color: #0f172a;
+        letter-spacing: -0.02em;
+    }
+
+    .badge { border-radius: 999px; padding: 5px 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
+    .badge-optimal { background: #dcfce7; color: #166534; }
+    .badge-low { background: #fff7ed; color: #9a3412; }
+    .badge-critical { background: #fee2e2; color: #991b1b; }
+
+    .units { margin: 0; font-size: 36px; font-weight: 900; color: #0f172a; line-height: 1; }
+    .units-sub { margin: 6px 0 10px; color: #64748b; font-size: 13px; }
+    .stock-bar {
+        height: 6px;
+        border-radius: 999px;
+        background: #e2e8f0;
+        overflow: hidden;
+    }
+    .stock-optimal { background: linear-gradient(90deg, #16a34a, #22c55e); }
+    .stock-low { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .stock-critical { background: linear-gradient(90deg, #dc2626, #f87171); }
+    .expiry-row {
+        margin-top: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        color: #475569;
+    }
+    .expiry-label { color: #64748b; font-weight: 700; }
+    .expiry-value { font-weight: 700; }
+    .divider { margin: 12px 0; border: 0; border-top: 1px solid #e2e8f0; }
+
+    .meta { display: grid; gap: 6px; color: #475569; font-size: 12px; }
+    .meta-row { display: flex; justify-content: space-between; gap: 8px; }
+    .meta-key { color: #64748b; }
+
+    .quick-actions {
+        margin-top: 18px;
+        background: #ffffff;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+    }
+    .quick-title { margin: 0; font-size: 18px; font-weight: 800; color: #0f172a; }
+    .quick-subtitle { margin: 6px 0 0; color: #64748b; font-size: 13px; }
+    .quick-grid { margin-top: 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .quick-card {
+        border-radius: 14px;
+        padding: 14px;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        display: grid;
+        gap: 6px;
+    }
+    .quick-card-urgent { background: #fff1f2; border-color: #fecdd3; }
+    .quick-card-transfer { background: #fff7ed; border-color: #fed7aa; }
+    .quick-card-outline { background: #f8fafc; border-color: #e2e8f0; }
+    .quick-card-title { margin: 0; font-weight: 800; color: #0f172a; font-size: 15px; }
+    .quick-card-desc { margin: 0; color: #64748b; font-size: 12px; }
+    .quick-card-cta { font-size: 12px; font-weight: 700; color: #0f172a; }
+
+    .empty {
+        border: 1px dashed #cbd5e1;
+        border-radius: 12px;
+        padding: 28px;
+        text-align: center;
+        color: var(--subtle);
+        background: #fff;
+    }
+
+    @media (max-width: 1200px) {
+        .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 950px) {
+        .shell { grid-template-columns: 1fr; }
+        .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 680px) {
+        .head-top { flex-direction: column; align-items: flex-start; }
+        .head-controls { justify-content: flex-start; }
+        .selector { width: 100%; min-width: unset; }
+        .selector-label { text-align: left; }
+        .grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<main class="main">
+        <div class="head">
+            <div class="head-top">
+                <div class="head-content">
+                    <h1>Blood Inventory</h1>
+                    <p>Track blood unit availability by blood type and stock status.</p>
+                    {% if current_hospital %}
+                        <div class="head-meta">
+                            <span class="head-label">Hospital</span>
+                            <span class="hospital-pill">{{ current_hospital.name }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="action-row">
+                    <button type="button" class="action-btn">+ Request Transfer</button>
+                </div>
+            </div>
+            {% if user_type == 'ADMIN' %}
+                <div class="head-controls">
+                    <form method="get" action="{{ path('dashboard_blood_inventory') }}" class="selector">
+                        <label class="selector-label" for="inventoryHospital">Select hospital</label>
+                        <select id="inventoryHospital" name="hospital_id" onchange="this.form.submit()">
+                            {% for hospital in hospitals %}
+                                <option value="{{ hospital.id }}" {% if current_hospital and hospital.id == current_hospital.id %}selected{% endif %}>
+                                    {{ hospital.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+
+        <section class="stats">
+            <div class="stat">Total Units: <strong>{{ inventory_stats.total_units|default(0) }}</strong></div>
+            <div class="stat"><span class="dot danger"></span>Critical: <strong>{{ inventory_stats.critical|default(0) }}</strong></div>
+            <div class="stat"><span class="dot warn"></span>Low: <strong>{{ inventory_stats.low|default(0) }}</strong></div>
+            <div class="stat"><span class="dot ok"></span>Optimal: <strong>{{ inventory_stats.optimal|default(0) }}</strong></div>
+        </section>
+
+        {% if inventory_cards is empty %}
+            <div class="empty">No inventory data available yet.</div>
+        {% else %}
+            <section class="grid">
+                {% for card in inventory_cards %}
+                    {% set status = (card.status|default('CRITICAL'))|upper %}
+                    <article class="card status-{{ status|lower }}">
+                        <div class="card-top">
+                            <h2 class="blood-type">{{ card.blood_type|default('N/A') }}</h2>
+                            {% if status == 'OPTIMAL' %}
+                                <span class="badge badge-optimal">OPTIMAL</span>
+                            {% elseif status == 'LOW' %}
+                                <span class="badge badge-low">LOW</span>
+                            {% else %}
+                                <span class="badge badge-critical">CRITICAL</span>
+                            {% endif %}
+                        </div>
+
+                        <p class="units">{{ card.units|default(0) }}</p>
+                        <p class="units-sub">units available</p>
+                        <div class="stock-bar stock-{{ status|lower }}"></div>
+
+                        <div class="expiry-row">
+                            <span class="expiry-label">Expires</span>
+                            <span class="expiry-value">
+                                {% if card.expires_on is defined and card.expires_on %}
+                                    {{ card.expires_on }}
+                                {% elseif card.expires_in_days is defined %}
+                                    {{ card.expires_in_days }} day(s)
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <hr class="divider">
+
+                        <div class="meta">
+                            <div class="meta-row">
+                                <span class="meta-key">Last Updated</span>
+                                <span>{{ card.last_updated|default('N/A') }}</span>
+                            </div>
+                        </div>
+                    </article>
+                {% endfor %}
+            </section>
+        {% endif %}
+
+        <section class="quick-actions">
+            <h2 class="quick-title">Quick Actions</h2>
+            <p class="quick-subtitle">Launch urgent workflows with a single click.</p>
+
+            <div class="quick-grid">
+                <div class="quick-card quick-card-urgent">
+                    <p class="quick-card-title">Urgent Alert</p>
+                    <p class="quick-card-desc">Notify nearby donors about critical stock.</p>
+                    <span class="quick-card-cta">Send alert</span>
+                </div>
+                <a class="quick-card quick-card-transfer" href="{{ path('dashboard_transfers') }}">
+                    <p class="quick-card-title">Request Transfer</p>
+                    <p class="quick-card-desc">Ask another hospital for units in shortage.</p>
+                    <span class="quick-card-cta">Create request</span>
+                </a>
+                <div class="quick-card quick-card-outline">
+                    <p class="quick-card-title">Add Stock</p>
+                    <p class="quick-card-desc">Register new incoming blood units.</p>
+                    <span class="quick-card-cta">Add now</span>
+                </div>
+                <div class="quick-card quick-card-outline">
+                    <p class="quick-card-title">Generate Report</p>
+                    <p class="quick-card-desc">Export inventory analytics for admins.</p>
+                    <span class="quick-card-cta">Generate</span>
+                </div>
+            </div>
+        </section>
+    </main>
+{% endblock %}

@@ -57,6 +57,12 @@ class AuthController extends AbstractController
                     'first_name' => (string) ($user['first_name'] ?? ''),
                     'last_name' => (string) ($user['last_name'] ?? ''),
                     'user_type' => (string) ($user['user_type'] ?? ''),
+                    'hospital_id' => isset($user['hospital_id']) && $user['hospital_id'] !== null
+                        ? (string) $user['hospital_id']
+                        : null,
+                    'hospital_name' => isset($user['hospital_name']) && $user['hospital_name'] !== null
+                        ? trim((string) $user['hospital_name'])
+                        : null,
                 ]);
 
                 $this->addFlash('success', 'Signed in successfully.');
