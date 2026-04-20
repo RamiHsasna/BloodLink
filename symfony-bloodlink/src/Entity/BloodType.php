@@ -6,7 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 
-#[ORM\Entity(repositoryClass: App\Entity\Repository\BloodTypeRepository::class)]
+#[ORM\Entity(repositoryClass: \App\Repository\BloodTypeRepository::class)]
 #[ORM\Table(name: "blood_type")]
 class BloodType
 {
@@ -129,5 +129,15 @@ class BloodType
         $this->updatedAt = $updatedAt;
 
         return $this;
+    }
+
+    /**
+     * Get the name of the blood type (e.g., "O+", "A-", etc.)
+     *
+     * @return string
+     */
+    public function getName(): string
+    {
+        return $this->bloodTypeId;
     }
 }

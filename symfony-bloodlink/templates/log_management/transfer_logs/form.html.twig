@@ -1,0 +1,106 @@
+{% extends 'log_management/layouts/back_office.html.twig' %}
+
+{% set page_description = 'Track each transfer request transition with the responsible actor and the hospital context that backs the relation.' %}
+
+{% block module_content %}
+    <div class="audit-form-layout">
+        <section class="audit-form-card">
+            {{ form_start(form, {attr: {class: 'audit-form-stack'}}) }}
+                <div class="audit-form-grid">
+                    <div class="audit-form-field">
+                        {{ form_label(form.action, null, {label_attr: {class: 'audit-form-label'}}) }}
+                        {{ form_widget(form.action, {attr: {class: 'audit-form-input'}}) }}
+                        <div class="audit-form-error">{{ form_errors(form.action) }}</div>
+                    </div>
+
+                    <div class="audit-form-field{{ form.user.vars.disabled ? ' audit-form-field--locked' }}">
+                        <div class="audit-form-label-row">
+                            {{ form_label(form.user, null, {label_attr: {class: 'audit-form-label'}}) }}
+                            {% if form.user.vars.disabled %}
+                                <span class="audit-form-lock-badge">Locked</span>
+                            {% endif %}
+                        </div>
+                        {{ form_widget(form.user, {attr: {class: 'audit-form-input'}}) }}
+                        {% if form.user.vars.disabled %}
+                            <p class="audit-form-help">Locked for this entry so the transfer audit keeps the original actor.</p>
+                        {% endif %}
+                        <div class="audit-form-error">{{ form_errors(form.user) }}</div>
+                    </div>
+
+                    <div class="audit-form-field audit-form-field--locked">
+                        <div class="audit-form-label-row">
+                            {{ form_label(form.previousStatus, null, {label_attr: {class: 'audit-form-label'}}) }}
+                            <span class="audit-form-lock-badge">Snapshot</span>
+                        </div>
+                        <div class="audit-form-snapshot">
+                            {{ form_widget(form.previousStatus, {attr: {class: 'audit-form-input'}}) }}
+                            <p class="audit-form-snapshot-copy">Captured automatically from the selected transfer request and preserved as the audit snapshot.</p>
+                            <p class="audit-form-snapshot-value">{{ entry.previousStatus ?: 'Select a transfer request to capture its current status.' }}</p>
+                        </div>
+                        <div class="audit-form-error">{{ form_errors(form.previousStatus) }}</div>
+                    </div>
+
+                    <div class="audit-form-field{{ form.newStatus.vars.disabled ? ' audit-form-field--locked' }}">
+                        <div class="audit-form-label-row">
+                            {{ form_label(form.newStatus, null, {label_attr: {class: 'audit-form-label'}}) }}
+                            {% if form.newStatus.vars.disabled %}
+                                <span class="audit-form-lock-badge">Locked</span>
+                            {% endif %}
+                        </div>
+                        {{ form_widget(form.newStatus, {attr: {class: 'audit-form-input'}}) }}
+                        {% if form.newStatus.vars.disabled %}
+                            <p class="audit-form-help">Locked after creation. If the transfer changes again, add a new audit entry.</p>
+                        {% endif %}
+                        <div class="audit-form-error">{{ form_errors(form.newStatus) }}</div>
+                    </div>
+
+                    <div class="audit-form-field audit-form-field--full{{ form.bloodTransferRequest.vars.disabled ? ' audit-form-field--locked' }}">
+                        <div class="audit-form-label-row">
+                            {{ form_label(form.bloodTransferRequest, null, {label_attr: {class: 'audit-form-label'}}) }}
+                            {% if form.bloodTransferRequest.vars.disabled %}
+                                <span class="audit-form-lock-badge">Locked</span>
+                            {% endif %}
+                        </div>
+                        {{ form_widget(form.bloodTransferRequest, {attr: {class: 'audit-form-input'}}) }}
+                        {% if form.bloodTransferRequest.vars.disabled %}
+                            <p class="audit-form-help">Locked after creation so the log stays attached to the original transfer request.</p>
+                        {% endif %}
+                        <div class="audit-form-error">{{ form_errors(form.bloodTransferRequest) }}</div>
+                    </div>
+
+                    <div class="audit-form-field audit-form-field--full">
+                        {{ form_label(form.notes, null, {label_attr: {class: 'audit-form-label'}}) }}
+                        {{ form_widget(form.notes, {attr: {class: 'audit-form-input audit-form-textarea'}}) }}
+                        <div class="audit-form-error">{{ form_errors(form.notes) }}</div>
+                    </div>
+                </div>
+
+                <div class="audit-form-actions">
+                    <button type="submit" class="audit-form-submit">
+                        {{ submit_label }}
+                    </button>
+                    <a href="{{ path('dashboard_logs_transfers') }}" class="audit-form-secondary">
+                        Back to list
+                    </a>
+                </div>
+            {{ form_end(form) }}
+        </section>
+
+        <aside class="audit-form-aside">
+            <p class="audit-form-kicker">Entry guidance</p>
+            <h2 class="audit-form-aside-title">Transfer log details</h2>
+            <ul class="audit-form-aside-list">
+                <li>Choose the action and the next status from the approved transfer workflow values.</li>
+                <li>The current status is captured from the selected transfer request automatically.</li>
+                <li>Locked fields cannot be reassigned after the audit line is created.</li>
+                <li>Use notes for dispatch, approval, or handoff context only.</li>
+            </ul>
+            {% if entry.logId is defined %}
+                <div class="audit-form-reference">
+                    <strong>Log reference</strong>
+                    <span class="break-all">{{ entry.logId }}</span>
+                </div>
+            {% endif %}
+        </aside>
+    </div>
+{% endblock %}

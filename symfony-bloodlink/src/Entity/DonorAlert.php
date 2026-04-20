@@ -3,41 +3,54 @@
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
-#[
-    ORM\Entity(
-        repositoryClass: App\Entity\Repository\DonorAlertRepository::class,
-    ),
-]
+#[ORM\Entity(repositoryClass: \App\Repository\DonorAlertRepository::class)]
 #[ORM\Table(name: "donor_alerts")]
 class DonorAlert
 {
+    public const RESPONSE_INTERESTED = 'INTERESTED';
+    public const RESPONSE_NOT_INTERESTED = 'NOT_INTERESTED';
+    public const RESPONSE_ALREADY_DONATED = 'ALREADY_DONATED';
+    public const RESPONSE_NO_RESPONSE = 'NO_RESPONSE';
+
+    public const DONOR_RESPONSES = [
+        self::RESPONSE_INTERESTED,
+        self::RESPONSE_NOT_INTERESTED,
+        self::RESPONSE_ALREADY_DONATED,
+        self::RESPONSE_NO_RESPONSE,
+    ];
+
     #[ORM\Id]
     #[ORM\Column(type: "uuid")]
     private string $donorAlertId;
 
-    #[ORM\Column(type: "string")]
-    private string $alertId;
-
-    #[ORM\Column(type: "string")]
-    private string $donorId;
-
     #[ORM\Column(type: "boolean", nullable: true)]
     private bool|null $isNotified = null;
 
-    #[ORM\Column(type: "datetime", nullable: true)]
-    private \DateTimeInterface|null $notificationSentAt = null;
+    #[ORM\Column(type: "datetime_immutable", nullable: true)]
+    private ?\DateTimeImmutable $notificationSentAt = null;
 
     #[ORM\Column(type: "boolean", nullable: true)]
     private bool|null $isRead = null;
 
-    #[ORM\Column(type: "datetime", nullable: true)]
-    private \DateTimeInterface|null $readAt = null;
+    #[ORM\Column(type: "datetime_immutable", nullable: true)]
+    private ?\DateTimeImmutable $readAt = null;
 
     #[ORM\Column(type: "string", length: 50, nullable: true)]
+    #[Assert\Choice(choices: self::DONOR_RESPONSES, message: 'Choose a valid donor response.')]
     private string|null $donorResponse = null;
+
+    #[ORM\ManyToOne(targetEntity: Alert::class)]
+    #[ORM\JoinColumn(name: "alert_id", referencedColumnName: "alert_id")]
+    #[Assert\NotNull(message: 'Select the related alert.')]
+    private ?Alert $alert = null;
+
+    #[ORM\ManyToOne(targetEntity: Donor::class)]
+    #[ORM\JoinColumn(name: "donor_id", referencedColumnName: "user_id")]
+    #[Assert\NotNull(message: 'Select the donor who received the alert.')]
+    private ?Donor $donor = null;
 
     public function getDonorAlertId(): string
     {
@@ -47,30 +60,6 @@ class DonorAlert
     public function setDonorAlertId(string $donorAlertId): static
     {
         $this->donorAlertId = $donorAlertId;
-
-        return $this;
-    }
-
-    public function getAlertId(): string
-    {
-        return $this->alertId;
-    }
-
-    public function setAlertId(string $alertId): static
-    {
-        $this->alertId = $alertId;
-
-        return $this;
-    }
-
-    public function getDonorId(): string
-    {
-        return $this->donorId;
-    }
-
-    public function setDonorId(string $donorId): static
-    {
-        $this->donorId = $donorId;
 
         return $this;
     }
@@ -87,14 +76,13 @@ class DonorAlert
         return $this;
     }
 
-    public function getNotificationSentAt(): \DateTimeInterface|null
+    public function getNotificationSentAt(): ?\DateTimeImmutable
     {
         return $this->notificationSentAt;
     }
 
-    public function setNotificationSentAt(
-        ?\DateTimeInterface $notificationSentAt,
-    ): static {
+    public function setNotificationSentAt(?\DateTimeImmutable $notificationSentAt): static
+    {
         $this->notificationSentAt = $notificationSentAt;
 
         return $this;
@@ -112,12 +100,12 @@ class DonorAlert
         return $this;
     }
 
-    public function getReadAt(): \DateTimeInterface|null
+    public function getReadAt(): ?\DateTimeImmutable
     {
         return $this->readAt;
     }
 
-    public function setReadAt(?\DateTimeInterface $readAt): static
+    public function setReadAt(?\DateTimeImmutable $readAt): static
     {
         $this->readAt = $readAt;
 
@@ -134,5 +122,80 @@ class DonorAlert
         $this->donorResponse = $donorResponse;
 
         return $this;
+    }
+
+    public function getAlert(): ?Alert
+    {
+        return $this->alert;
+    }
+
+    public function setAlert(?Alert $alert): static
+    {
+        $this->alert = $alert;
+
+        return $this;
+    }
+
+    public function getDonor(): ?Donor
+    {
+        return $this->donor;
+    }
+
+    public function setDonor(?Donor $donor): static
+    {
+        $this->donor = $donor;
+
+        return $this;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function donorResponseChoices(): array
+    {
+        return [
+            'Interested' => self::RESPONSE_INTERESTED,
+            'Not Interested' => self::RESPONSE_NOT_INTERESTED,
+            'Already Donated' => self::RESPONSE_ALREADY_DONATED,
+            'No Response' => self::RESPONSE_NO_RESPONSE,
+        ];
+    }
+
+    #[Assert\Callback]
+    public function validateLifecycle(ExecutionContextInterface $context): void
+    {
+        if ($this->isNotified === true && $this->notificationSentAt === null) {
+            $context->buildViolation('Notification date is required when the alert has been sent.')
+                ->atPath('notificationSentAt')
+                ->addViolation();
+        }
+
+        if ($this->isNotified !== true && $this->notificationSentAt !== null) {
+            $context->buildViolation('Clear the notification date when the donor has not been notified yet.')
+                ->atPath('notificationSentAt')
+                ->addViolation();
+        }
+
+        if ($this->isRead === true && $this->readAt === null) {
+            $context->buildViolation('Read date is required when the donor alert is marked as read.')
+                ->atPath('readAt')
+                ->addViolation();
+        }
+
+        if ($this->isRead !== true && $this->readAt !== null) {
+            $context->buildViolation('Clear the read date when the donor alert is still unread.')
+                ->atPath('readAt')
+                ->addViolation();
+        }
+
+        if (
+            $this->donorResponse !== null
+            && $this->donorResponse !== self::RESPONSE_NO_RESPONSE
+            && $this->isRead !== true
+        ) {
+            $context->buildViolation('A donor response should only be recorded after the alert has been marked as read.')
+                ->atPath('donorResponse')
+                ->addViolation();
+        }
     }
 }
