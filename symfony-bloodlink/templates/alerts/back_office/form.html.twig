@@ -1,0 +1,86 @@
+{% extends 'alerts/layouts/back_office.html.twig' %}
+
+{% set page_description = 'Manage the donor-facing notification state and response tracking for each alert.' %}
+
+{% block module_content %}
+    <div class="audit-form-layout">
+        <section class="audit-form-card">
+            {{ form_start(form, {attr: {class: 'audit-form-stack'}}) }}
+                <div class="audit-form-grid">
+                    <div class="audit-form-field audit-form-field--full">
+                        {{ form_label(form.alert, null, {label_attr: {class: 'audit-form-label'}}) }}
+                        {{ form_widget(form.alert, {attr: {class: 'audit-form-input'}}) }}
+                        <div class="audit-form-error">{{ form_errors(form.alert) }}</div>
+                    </div>
+
+                    <div class="audit-form-field audit-form-field--full">
+                        {{ form_label(form.donor, null, {label_attr: {class: 'audit-form-label'}}) }}
+                        {{ form_widget(form.donor, {attr: {class: 'audit-form-input'}}) }}
+                        <div class="audit-form-error">{{ form_errors(form.donor) }}</div>
+                    </div>
+
+                    <div class="audit-form-field">
+                        {{ form_label(form.donorResponse, null, {label_attr: {class: 'audit-form-label'}}) }}
+                        {{ form_widget(form.donorResponse, {attr: {class: 'audit-form-input'}}) }}
+                        <p class="audit-form-help">Track the donor answer after the alert has been delivered and reviewed.</p>
+                        <div class="audit-form-error">{{ form_errors(form.donorResponse) }}</div>
+                    </div>
+
+                    <div class="audit-form-field">
+                        <span class="audit-form-label">Alert lifecycle</span>
+                        <div class="audit-form-toggle-card">
+                            <div class="audit-form-toggle-list">
+                                <label class="audit-form-toggle-item">
+                                    {{ form_widget(form.isNotified) }}
+                                    <span>Notification sent to the donor</span>
+                                </label>
+                                <label class="audit-form-toggle-item">
+                                    {{ form_widget(form.isRead) }}
+                                    <span>Donor has opened the alert</span>
+                                </label>
+                            </div>
+                        </div>
+                        <p class="audit-form-help">If a toggle is enabled, keep the matching date field below coherent with that step.</p>
+                    </div>
+
+                    <div class="audit-form-field">
+                        {{ form_label(form.notificationSentAt, null, {label_attr: {class: 'audit-form-label'}}) }}
+                        {{ form_widget(form.notificationSentAt, {attr: {class: 'audit-form-input'}}) }}
+                        <div class="audit-form-error">{{ form_errors(form.notificationSentAt) }}</div>
+                    </div>
+
+                    <div class="audit-form-field">
+                        {{ form_label(form.readAt, null, {label_attr: {class: 'audit-form-label'}}) }}
+                        {{ form_widget(form.readAt, {attr: {class: 'audit-form-input'}}) }}
+                        <div class="audit-form-error">{{ form_errors(form.readAt) }}</div>
+                    </div>
+                </div>
+
+                <div class="audit-form-actions">
+                    <button type="submit" class="audit-form-submit">
+                        {{ submit_label }}
+                    </button>
+                    <a href="{{ path('dashboard_alerts_index') }}" class="audit-form-secondary">
+                        Back to list
+                    </a>
+                </div>
+            {{ form_end(form) }}
+        </section>
+
+        <aside class="audit-form-aside">
+            <p class="audit-form-kicker">Entry guidance</p>
+            <h2 class="audit-form-aside-title">Donor alert details</h2>
+            <ul class="audit-form-aside-list">
+                <li>Select the alert and donor pair that this follow-up line belongs to.</li>
+                <li>Mark the delivery and read steps only when the corresponding timestamps are known.</li>
+                <li>Responses other than <code class="rounded bg-slate-100 px-1 py-0.5 text-xs">NO_RESPONSE</code> should reflect an alert already read by the donor.</li>
+            </ul>
+            {% if entry.donorAlertId is defined %}
+                <div class="audit-form-reference">
+                    <strong>Alert reference</strong>
+                    <span class="break-all">{{ entry.donorAlertId }}</span>
+                </div>
+            {% endif %}
+        </aside>
+    </div>
+{% endblock %}

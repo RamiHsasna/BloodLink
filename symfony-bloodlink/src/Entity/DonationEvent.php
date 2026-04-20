@@ -5,50 +5,70 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[
     ORM\Entity(
-        repositoryClass: App\Entity\Repository\DonationEventRepository::class,
+        repositoryClass: \App\Repository\DonationEventRepository::class,
     ),
 ]
 #[ORM\Table(name: "donation_events")]
 class DonationEvent
 {
+    public const STATUS_PLANNED = 'PLANNED';
+    public const STATUS_ACTIVE = 'ACTIVE';
+    public const STATUS_COMPLETED = 'COMPLETED';
+    public const STATUS_CANCELLED = 'CANCELLED';
+
     #[ORM\Id]
     #[ORM\Column(type: "uuid")]
     private string $eventId;
 
     #[ORM\Column(type: "string", length: 255)]
+    #[Assert\NotBlank(message: 'Event name is required.')]
+    #[Assert\Length(max: 255)]
     private string $name;
 
     #[ORM\Column(type: "text", nullable: true)]
+    #[Assert\Length(max: 3000)]
     private string|null $description = null;
 
     #[ORM\Column(type: "datetime")]
+    #[Assert\NotNull(message: 'Start date is required.')]
     private \DateTimeInterface $startDate;
 
     #[ORM\Column(type: "datetime")]
+    #[Assert\NotNull(message: 'End date is required.')]
     private \DateTimeInterface $endDate;
 
     #[ORM\Column(type: "string", length: 255, nullable: true)]
+    #[Assert\Length(max: 255)]
     private string|null $location = null;
 
     #[ORM\Column(type: "decimal", precision: 10, scale: 8, nullable: true)]
+    #[Assert\Length(max: 20)]
     private string|null $latitude = null;
 
     #[ORM\Column(type: "decimal", precision: 11, scale: 8, nullable: true)]
+    #[Assert\Length(max: 20)]
     private string|null $longitude = null;
 
     #[ORM\Column(type: "string", length: 255, nullable: true)]
+    #[Assert\Length(max: 255)]
     private string|null $targetBloodTypes = null;
 
     #[ORM\Column(type: "integer", nullable: true)]
+    #[Assert\Positive(message: 'Target collection units must be positive.')]
     private int|null $targetCollectionUnits = null;
 
     #[ORM\Column(type: "integer", nullable: true)]
+    #[Assert\PositiveOrZero(message: 'Actual collection units cannot be negative.')]
     private int|null $actualCollectionUnits = null;
 
     #[ORM\Column(type: "string", length: 20)]
+    #[Assert\NotBlank(message: 'Status is required.')]
+    #[Assert\Choice(callback: [self::class, 'allowedStatuses'], message: 'Choose a valid event status.')]
     private string $status;
 
     #[ORM\Column(type: "datetime", nullable: true)]
@@ -59,7 +79,29 @@ class DonationEvent
 
     #[ORM\ManyToOne(targetEntity: Hospital::class)]
     #[ORM\JoinColumn(name: "hospital_id", referencedColumnName: "hospital_id")]
+    #[Assert\NotNull(message: 'Select the hospital hosting this event.')]
     private ?Hospital $hospital = null;
+
+    /**
+     * @return array<string, string>
+     */
+    public static function statusChoices(): array
+    {
+        return [
+            'Planned' => self::STATUS_PLANNED,
+            'Active' => self::STATUS_ACTIVE,
+            'Completed' => self::STATUS_COMPLETED,
+            'Cancelled' => self::STATUS_CANCELLED,
+        ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function allowedStatuses(): array
+    {
+        return array_values(self::statusChoices());
+    }
 
     public function getEventId(): string
     {
@@ -241,5 +283,25 @@ class DonationEvent
         $this->hospital = $hospital;
 
         return $this;
+    }
+
+    #[Assert\Callback]
+    public function validateSchedule(ExecutionContextInterface $context): void
+    {
+        if (!isset($this->startDate, $this->endDate)) {
+            return;
+        }
+
+        if ($this->endDate < $this->startDate) {
+            $context->buildViolation('End date must be after the start date.')
+                ->atPath('endDate')
+                ->addViolation();
+        }
+
+        if ($this->actualCollectionUnits !== null && $this->targetCollectionUnits !== null && $this->actualCollectionUnits > $this->targetCollectionUnits) {
+            $context->buildViolation('Actual collection units cannot exceed the target collection units.')
+                ->atPath('actualCollectionUnits')
+                ->addViolation();
+        }
     }
 }

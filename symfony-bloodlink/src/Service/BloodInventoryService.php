@@ -4,6 +4,8 @@ namespace App\Service;
 
 use App\Entity\BloodInventory;
 use App\Repository\BloodInventoryRepository;
+use App\Repository\BloodTypeRepository;
+use App\Repository\HospitalRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -13,9 +15,10 @@ class BloodInventoryService
 {
     public function __construct(
         private readonly BloodInventoryRepository $inventoryRepository,
+        private readonly HospitalRepository $hospitalRepository,
+        private readonly BloodTypeRepository $bloodTypeRepository,
         private readonly EntityManagerInterface $entityManager,
-    ) {
-    }
+    ) {}
 
     /**
      * Get blood inventory for a hospital.
@@ -26,10 +29,13 @@ class BloodInventoryService
      */
     public function getHospitalInventory(string $hospitalId): array
     {
-        // TODO: Implement retrieval of hospital's blood inventory
-        // Get all blood types with their quantities
-
-        return [];
+        return $this->inventoryRepository
+            ->createQueryBuilder("bi")
+            ->where("bi.hospital = :hospitalId")
+            ->setParameter("hospitalId", $hospitalId)
+            ->orderBy("bi.bloodType", "ASC")
+            ->getQuery()
+            ->getResult();
     }
 
     /**
@@ -42,9 +48,16 @@ class BloodInventoryService
      */
     public function getStockLevel(string $hospitalId, string $bloodType): int
     {
-        // TODO: Implement stock level retrieval
+        $inventory = $this->inventoryRepository
+            ->createQueryBuilder("bi")
+            ->where("bi.hospital = :hospitalId")
+            ->andWhere("bi.bloodType = :bloodTypeId")
+            ->setParameter("hospitalId", $hospitalId)
+            ->setParameter("bloodTypeId", $bloodType)
+            ->getQuery()
+            ->getOneOrNullResult();
 
-        return 0;
+        return $inventory ? $inventory->getQuantityUnits() : 0;
     }
 
     /**
@@ -56,11 +69,12 @@ class BloodInventoryService
      *
      * @return bool
      */
-    public function hasAvailableBlood(string $hospitalId, string $bloodType, int $unitsRequired): bool
-    {
-        // TODO: Implement availability check
-
-        return false;
+    public function hasAvailableBlood(
+        string $hospitalId,
+        string $bloodType,
+        int $unitsRequired,
+    ): bool {
+        return $this->getStockLevel($hospitalId, $bloodType) >= $unitsRequired;
     }
 
     /**
@@ -72,14 +86,39 @@ class BloodInventoryService
      *
      * @return BloodInventory Updated inventory record
      */
-    public function addToInventory(string $hospitalId, string $bloodType, int $units): BloodInventory
-    {
-        // TODO: Implement inventory addition
-        // 1. Find or create inventory record
-        // 2. Update quantity
-        // 3. Persist changes
+    public function addToInventory(
+        string $hospitalId,
+        string $bloodType,
+        int $units,
+    ): BloodInventory {
+        $inventory = $this->getInventoryRecord($hospitalId, $bloodType);
 
-        return new BloodInventory();
+        if ($inventory) {
+            $inventory->setQuantityUnits(
+                $inventory->getQuantityUnits() + $units
+            );
+        } else {
+            $hospital = $this->hospitalRepository->find($hospitalId);
+            $bloodTypeEntity = $this->bloodTypeRepository->find($bloodType);
+
+            if (!$hospital || !$bloodTypeEntity) {
+                throw new \InvalidArgumentException(
+                    "Hospital or blood type not found"
+                );
+            }
+
+            $inventory = new BloodInventory();
+            $inventory->setHospital($hospital);
+            $inventory->setBloodType($bloodTypeEntity);
+            $inventory->setQuantityUnits($units);
+
+            $this->entityManager->persist($inventory);
+        }
+
+        $inventory->setUpdatedAt(new \DateTime());
+        $this->entityManager->flush();
+
+        return $inventory;
     }
 
     /**
@@ -93,15 +132,31 @@ class BloodInventoryService
      *
      * @throws \Exception If insufficient blood available
      */
-    public function removeFromInventory(string $hospitalId, string $bloodType, int $units): BloodInventory
-    {
-        // TODO: Implement inventory removal
-        // 1. Check availability
-        // 2. Update quantity
-        // 3. Throw exception if insufficient stock
-        // 4. Log removal
+    public function removeFromInventory(
+        string $hospitalId,
+        string $bloodType,
+        int $units,
+    ): BloodInventory {
+        if (!$this->hasAvailableBlood($hospitalId, $bloodType, $units)) {
+            $available = $this->getStockLevel($hospitalId, $bloodType);
+            throw new \Exception(
+                "Insufficient blood inventory. Required: {$units}, Available: {$available}"
+            );
+        }
 
-        return new BloodInventory();
+        $inventory = $this->getInventoryRecord($hospitalId, $bloodType);
+        if (!$inventory) {
+            throw new \Exception("Inventory record not found");
+        }
+
+        $inventory->setQuantityUnits(
+            $inventory->getQuantityUnits() - $units
+        );
+        $inventory->setUpdatedAt(new \DateTime());
+
+        $this->entityManager->flush();
+
+        return $inventory;
     }
 
     /**
@@ -112,26 +167,75 @@ class BloodInventoryService
      *
      * @return BloodInventory[]
      */
-    public function getCriticalStockAlerts(string $hospitalId, int $minimumThreshold = 5): array
-    {
-        // TODO: Implement alert retrieval
-        // Return inventory records below threshold
-
-        return [];
+    public function getCriticalStockAlerts(
+        string $hospitalId,
+        int $minimumThreshold = 5,
+    ): array {
+        return $this->inventoryRepository
+            ->createQueryBuilder("bi")
+            ->where("bi.hospital = :hospitalId")
+            ->andWhere("bi.quantityUnits < :threshold")
+            ->setParameter("hospitalId", $hospitalId)
+            ->setParameter("threshold", $minimumThreshold)
+            ->orderBy("bi.quantityUnits", "ASC")
+            ->getQuery()
+            ->getResult();
     }
 
     /**
      * Update blood expiration date or status.
      *
-     * @param string $inventoryId Inventory record ID
+     * @param int $inventoryId Inventory record ID
      * @param string $status New status (active, expired, quarantined)
      *
      * @return BloodInventory
+     *
+     * @throws \InvalidArgumentException
      */
-    public function updateInventoryStatus(string $inventoryId, string $status): BloodInventory
-    {
-        // TODO: Implement status update
+    public function updateInventoryStatus(
+        int $inventoryId,
+        string $status,
+    ): BloodInventory {
+        $inventory = $this->inventoryRepository->find($inventoryId);
 
-        return new BloodInventory();
+        if (!$inventory) {
+            throw new \InvalidArgumentException(
+                "Inventory not found: {$inventoryId}"
+            );
+        }
+
+        $validStatuses = ["OPTIMAL", "LOW", "CRITICAL", "EXPIRED", "QUARANTINED"];
+        if (!in_array(strtoupper($status), $validStatuses)) {
+            throw new \InvalidArgumentException("Invalid status: {$status}");
+        }
+
+        $inventory->setStatus(strtoupper($status));
+        $inventory->setUpdatedAt(new \DateTime());
+
+        $this->entityManager->flush();
+
+        return $inventory;
+    }
+
+    /**
+     * Get inventory record for a hospital and blood type.
+     *
+     * @param string $hospitalId Hospital UUID
+     * @param string $bloodType Blood type
+     *
+     * @return BloodInventory|null
+     */
+    private function getInventoryRecord(
+        string $hospitalId,
+        string $bloodType,
+    ): ?BloodInventory {
+        return $this->inventoryRepository
+            ->createQueryBuilder("bi")
+            ->where("bi.hospital = :hospitalId")
+            ->andWhere("bi.bloodType = :bloodTypeId")
+            ->setParameter("hospitalId", $hospitalId)
+            ->setParameter("bloodTypeId", $bloodType)
+            ->getQuery()
+            ->getOneOrNullResult();
     }
 }

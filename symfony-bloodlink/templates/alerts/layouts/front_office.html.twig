@@ -1,0 +1,12 @@
+{% extends 'dashboard/layouts/front_office.html.twig' %}
+
+{% block extra_head_assets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="{{ asset('styles/log-management-tailadmin.css') }}">
+    <link rel="stylesheet" href="{{ asset('styles/log-management-overrides.css') }}">
+{% endblock %}
+
+{% block extra_body_assets %}
+    {{ parent() }}
+    <script src="{{ asset('scripts/log-management-confirm.js') }}"></script>
+{% endblock %}
