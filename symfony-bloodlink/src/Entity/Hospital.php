@@ -6,7 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 
-#[ORM\Entity(repositoryClass: App\Entity\Repository\HospitalRepository::class)]
+#[ORM\Entity(repositoryClass: \App\Repository\HospitalRepository::class)]
 #[ORM\Table(name: "hospital")]
 class Hospital
 {
@@ -22,9 +22,6 @@ class Hospital
 
     #[ORM\Column(type: "string", length: 100, nullable: true)]
     private string|null $city = null;
-
-    #[ORM\Column(type: "string", length: 10, nullable: true)]
-    private string|null $postalCode = null;
 
     #[ORM\Column(type: "decimal", precision: 10, scale: 8, nullable: true)]
     private string|null $latitude = null;
@@ -91,18 +88,6 @@ class Hospital
     public function setCity(?string $city): static
     {
         $this->city = $city;
-
-        return $this;
-    }
-
-    public function getPostalCode(): string|null
-    {
-        return $this->postalCode;
-    }
-
-    public function setPostalCode(?string $postalCode): static
-    {
-        $this->postalCode = $postalCode;
 
         return $this;
     }

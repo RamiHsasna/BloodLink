@@ -1,0 +1,54 @@
+{% set page_title = 'Alert Detail' %}
+{% set page_description = 'One donor-facing detail page to explain when the alert was sent, when it was read, and how your response was stored.' %}
+{% extends 'alerts/layouts/front_office.html.twig' %}
+
+{% block module_content %}
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <section class="rounded-3xl border border-slate-200 bg-slate-50 p-6">
+            <p class="text-xs font-bold uppercase tracking-[0.18em] text-blood-600">{{ entry.alert ? entry.alert.severity : 'Alert' }}</p>
+            <h2 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">{{ entry.alert ? entry.alert.title : 'Untitled alert' }}</h2>
+            <p class="mt-4 text-base leading-7 text-slate-600">{{ entry.alert ? entry.alert.message : 'No message is available for this donor alert.' }}</p>
+
+            <div class="mt-8 grid gap-4 md:grid-cols-2">
+                <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                    <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Notification sent</p>
+                    <p class="mt-3 text-lg font-bold text-slate-950">{{ entry.notificationSentAt ? entry.notificationSentAt|date('Y-m-d H:i') : 'Not sent yet' }}</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                    <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Read state</p>
+                    <p class="mt-3 text-lg font-bold text-slate-950">{{ entry.isRead ? 'Read by you' : 'Not marked as read yet' }}</p>
+                    <p class="mt-1 text-sm text-slate-500">{{ entry.readAt ? entry.readAt|date('Y-m-d H:i') : 'No read timestamp' }}</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-4 md:col-span-2">
+                    <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Stored donor response</p>
+                    <p class="mt-3 inline-flex rounded-full bg-blood-50 px-4 py-2 text-sm font-semibold text-blood-700">{{ entry.donorResponse ?: 'NO_RESPONSE' }}</p>
+                </div>
+            </div>
+        </section>
+
+        <aside class="rounded-3xl border border-slate-200 bg-white p-6">
+            <p class="text-xs font-bold uppercase tracking-[0.18em] text-blood-600">Timeline checkpoints</p>
+            <ol class="mt-5 space-y-4 border-l border-slate-200 pl-5 text-sm text-slate-600">
+                <li class="relative">
+                    <span class="absolute -left-[28px] top-1 h-3 w-3 rounded-full bg-blood-500"></span>
+                    <p class="font-semibold text-slate-900">Notification state</p>
+                    <p class="mt-1">{{ entry.isNotified ? 'The alert was pushed to your donor account.' : 'The alert is still marked as pending notification.' }}</p>
+                </li>
+                <li class="relative">
+                    <span class="absolute -left-[28px] top-1 h-3 w-3 rounded-full bg-slate-400"></span>
+                    <p class="font-semibold text-slate-900">Read state</p>
+                    <p class="mt-1">{{ entry.isRead ? 'The system tracks that you opened the alert.' : 'The alert has not been marked as read yet.' }}</p>
+                </li>
+                <li class="relative">
+                    <span class="absolute -left-[28px] top-1 h-3 w-3 rounded-full bg-emerald-500"></span>
+                    <p class="font-semibold text-slate-900">Response state</p>
+                    <p class="mt-1">Current response: {{ entry.donorResponse ?: 'NO_RESPONSE' }}.</p>
+                </li>
+            </ol>
+
+            <a href="{{ path('dashboard_donor_alerts') }}" class="mt-6 inline-flex items-center justify-center rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-blood-500 hover:text-blood-600">
+                Back to alerts
+            </a>
+        </aside>
+    </div>
+{% endblock %}
