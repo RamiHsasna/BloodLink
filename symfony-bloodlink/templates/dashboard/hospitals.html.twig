@@ -1,0 +1,457 @@
+{% set page_title = 'Hospitals Management' %}
+{% set page_description = 'Manage and monitor all hospitals in the network.' %}
+{% extends 'dashboard/layouts/back_office.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+<style>
+    :root {
+        --bg: #f1f3f7;
+        --panel: #ffffff;
+        --ink: #0f172a;
+        --subtle: #64748b;
+        --line: #e2e8f0;
+        --nav: #0b1736;
+        --nav-2: #121f45;
+        --brand: #8f1d1f;
+        --brand-2: #b3272a;
+        --ok: #16a34a;
+        --warn: #f59e0b;
+        --danger: #dc2626;
+    }
+    body { margin: 0; font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; background: var(--bg); color: var(--ink); }
+    .shell { min-height: 100vh; display: grid; grid-template-columns: 260px 1fr; }
+
+    .sidebar {
+        background: linear-gradient(180deg, var(--nav), #09122d 65%);
+        color: #e2e8f0;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #19254c;
+    }
+    .brand { padding: 24px 20px; border-bottom: 1px solid #22315f; }
+    .brand h2 { margin: 0; font-size: 29px; font-family: Georgia, "Times New Roman", serif; color: #fff; }
+    .brand p { margin: 4px 0 0; color: #8fa0ce; font-size: 13px; }
+    .menu { padding: 16px 12px; display: grid; gap: 8px; }
+    .menu a { text-decoration: none; color: #c8d3f3; padding: 11px 12px; border-radius: 10px; font-weight: 600; }
+    .menu a.active { background: #1d2c56; color: #fff; border-left: 3px solid #ef4444; padding-left: 9px; }
+    .menu a:hover { background: #16254d; }
+    .profile { margin-top: auto; padding: 16px; border-top: 1px solid #22315f; }
+    .profile .name { margin: 0; font-size: 14px; color: #fff; }
+    .profile .role { margin: 4px 0 10px; color: #8fa0ce; font-size: 12px; }
+    .logout-btn { width: 100%; height: 36px; border: 1px solid #2d3e6f; background: #101d42; color: #dbe5ff; border-radius: 8px; font-weight: 600; }
+
+    .main { padding: 24px; }
+    .head { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 14px; }
+    .head h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 40px; }
+    .head p { margin: 6px 0 0; color: var(--subtle); }
+
+    .flash { border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; font-size: 13px; }
+    .flash.success { background: #edf9f0; border: 1px solid #b6e2c1; color: #1b6a34; }
+    .flash.error { background: #fff1f2; border: 1px solid #fecdd3; color: #9f1239; }
+
+    .add-btn { border: 0; border-radius: 10px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 700; padding: 10px 16px; cursor: pointer; }
+    .add-btn:hover { opacity: 0.9; }
+
+    .filters { display: grid; grid-template-columns: 1fr 160px 100px; gap: 12px; margin-bottom: 14px; }
+    .filters input, .filters select { width: 100%; height: 42px; border: 1px solid #d6deea; border-radius: 10px; padding: 0 12px; background: #fff; font-size: 14px; }
+    .filters button { border: 0; border-radius: 10px; background: #0f172a; color: #fff; font-weight: 700; cursor: pointer; }
+    .filters button:hover { opacity: 0.9; }
+
+    .stats { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .stat { background: #fff; border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px; font-size: 14px; }
+    .dot { font-size: 20px; vertical-align: middle; margin-right: 6px; }
+    .dot.green { color: var(--ok); }
+    .dot.red { color: var(--danger); }
+    .dot.gray { color: #cbd5e1; }
+
+    .list { display: grid; gap: 12px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05); }
+    .card-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+    .hospital-name { margin: 0; font-size: 18px; font-weight: 700; }
+    .hospital-city { margin: 2px 0 0; color: var(--subtle); font-size: 13px; }
+    .badge { border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 700; }
+    .badge-active { background: #dcfce7; color: #166534; }
+    .badge-inactive { background: #f3f4f6; color: #6b7280; }
+    .meta { margin-top: 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; color: #475569; font-size: 13px; }
+
+    .crud-bar { margin-top: 12px; display: flex; gap: 8px; justify-content: space-between; align-items: center; }
+    .crud-actions { display: flex; gap: 8px; }
+    .btn-toggle { border: 1px solid #fbbf24; background: #fffbeb; color: #d97706; border-radius: 9px; padding: 8px 12px; font-weight: 700; cursor: pointer; font-size: 12px; }
+    .btn-toggle:hover { opacity: 0.9; }
+    .btn-edit { border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; border-radius: 9px; padding: 8px 12px; font-weight: 700; cursor: pointer; }
+    .btn-edit:hover { opacity: 0.9; }
+    .btn-delete { border: 1px solid #fecaca; background: #fff1f2; color: #b91c1c; border-radius: 9px; padding: 8px 12px; font-weight: 700; cursor: pointer; }
+    .btn-delete:hover { opacity: 0.9; }
+    .checkbox-col { display: flex; align-items: center; }
+    .checkbox-col input { cursor: pointer; width: 18px; height: 18px; }
+
+    .bulk-delete-bar { margin-bottom: 14px; display: none; align-items: center; gap: 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px; }
+    .bulk-delete-bar.visible { display: flex; }
+    .bulk-delete-bar span { font-size: 14px; font-weight: 600; color: #1d4ed8; }
+    .bulk-delete-btn { border: 0; border-radius: 9px; background: #b91c1c; color: #fff; padding: 8px 14px; font-weight: 700; cursor: pointer; font-size: 12px; }
+    .bulk-delete-btn:hover { opacity: 0.9; }
+
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+        width: min(760px, 96vw);
+        max-height: 92vh;
+        overflow: auto;
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        box-shadow: 0 20px 40px rgba(2, 6, 23, 0.25);
+        padding: 16px;
+    }
+    .modal-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+    .modal-head h3 { margin: 0; font-size: 21px; }
+    .modal-close {
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        border-radius: 8px;
+        width: 34px;
+        height: 34px;
+        font-size: 18px;
+        line-height: 1;
+        cursor: pointer;
+    }
+    .modal-close:hover { opacity: 0.7; }
+    .modal-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+    .modal-grid .full { grid-column: 1 / -1; }
+    .field {
+        display: grid;
+        gap: 4px;
+    }
+    .field label { margin: 0; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--subtle); font-weight: 700; }
+    .field input, .field select, .field textarea {
+        height: 40px;
+        border: 1px solid #d6deea;
+        border-radius: 9px;
+        padding: 0 10px;
+        background: #fbfdff;
+        font-size: 14px;
+        font-family: inherit;
+    }
+    .field textarea {
+        height: auto;
+        min-height: 80px;
+        padding: 10px;
+        resize: vertical;
+    }
+    .field input[type="checkbox"] {
+        height: auto;
+        width: auto;
+        cursor: pointer;
+    }
+    .modal-actions {
+        margin-top: 12px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+    .btn-secondary { border: 1px solid #cbd5e1; background: #fff; color: #334155; border-radius: 9px; padding: 8px 12px; cursor: pointer; font-weight: 700; }
+    .btn-secondary:hover { opacity: 0.9; }
+    .btn-primary { border: 0; border-radius: 9px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 700; padding: 8px 12px; cursor: pointer; }
+    .btn-primary:hover { opacity: 0.9; }
+
+    .empty { border: 1px dashed #cbd5e1; border-radius: 12px; padding: 28px; text-align: center; color: var(--subtle); background: #fff; }
+
+    @media (max-width: 1100px) {
+        .shell { grid-template-columns: 1fr; }
+        .sidebar { min-height: auto; }
+        .modal-grid { grid-template-columns: 1fr; }
+        .meta { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 900px) {
+        .filters { grid-template-columns: 1fr; }
+        .stats { flex-direction: column; }
+        .card-head { flex-direction: column; }
+        .crud-bar { flex-direction: column; }
+        .crud-actions { width: 100%; }
+    }
+</style>
+{% endblock %}
+
+{% block page_actions %}
+    <button type="button" class="add-btn" id="openAddHospitalModal">+ Add Hospital</button>
+{% endblock %}
+
+{% block module_content %}
+
+        {% for message in app.flashes('success') %}
+            <div class="flash success">{{ message }}</div>
+        {% endfor %}
+        {% for message in app.flashes('error') %}
+            <div class="flash error">{{ message }}</div>
+        {% endfor %}
+
+        <form class="filters" method="get" action="{{ path('dashboard_hospitals_index') }}">
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Search hospitals by name, city, email...">
+            <select name="status">
+                <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Hospitals</option>
+                <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+            </select>
+            <button type="submit">Apply</button>
+        </form>
+
+        <div class="stats">
+            <div class="stat">Total: <strong>{{ stats.total }}</strong></div>
+            <div class="stat"><span class="dot green">•</span>Active: <strong>{{ stats.active }}</strong></div>
+            <div class="stat"><span class="dot gray">•</span>Inactive: <strong>{{ stats.inactive }}</strong></div>
+        </div>
+
+        <div class="bulk-delete-bar" id="bulkDeleteBar">
+            <span id="selectedCount">0 hospitals selected</span>
+            <button type="button" class="bulk-delete-btn" id="bulkDeleteBtn" onclick="submitBulkDelete()">Delete Selected</button>
+        </div>
+
+        <div class="list">
+            {% if hospitals is empty %}
+                <div class="empty">No hospitals found.</div>
+            {% else %}
+                {% for h in hospitals %}
+                    <div class="card">
+                        <div class="card-head">
+                            <div style="flex: 1;">
+                                <p class="hospital-name">{{ h.name|default('N/A') }}</p>
+                                <p class="hospital-city">{{ h.city|default('City not specified') }}</p>
+                            </div>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                {% if h.isActive %}
+                                    <span class="badge badge-active">Active</span>
+                                {% else %}
+                                    <span class="badge badge-inactive">Inactive</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="meta" style="display:flex;align-items: start;">
+                            <div>📍 {{ h.address|default('Address not provided') }}</div>
+                            <div>📞 {{ h.phone|default('N/A') }}</div>
+                            <div>✉ {{ h.email|default('N/A') }}</div>
+                        </div>
+
+                        <div class="crud-bar">
+                            <div class="checkbox-col">
+                                <input type="checkbox" class="hospital-checkbox" value="{{ h.hospitalId|e('html_attr') }}" onchange="updateBulkDeleteBar()">
+                            </div>
+                            <div class="crud-actions">
+                                <button type="button" class="btn-toggle" onclick="toggleStatus('{{ h.hospitalId|e('html_attr') }}')">
+                                    {% if h.isActive %}Toggle Off{% else %}Toggle On{% endif %}
+                                </button>
+                                <button
+                                    type="button"
+                                    class="btn-edit open-edit-hospital"
+                                    data-hospital-id="{{ h.hospitalId|e('html_attr') }}"
+                                    data-name="{{ h.name|e('html_attr') }}"
+                                    data-address="{{ (h.address|default(''))|e('html_attr') }}"
+                                    data-city="{{ (h.city|default(''))|e('html_attr') }}"
+                                    data-phone="{{ (h.phone|default(''))|e('html_attr') }}"
+                                    data-email="{{ (h.email|default(''))|e('html_attr') }}"
+                                    data-latitude="{{ (h.latitude|default(''))|e('html_attr') }}"
+                                    data-longitude="{{ (h.longitude|default(''))|e('html_attr') }}"
+                                    data-is-active="{{ h.isActive|e('html_attr') }}"
+                                >Modify</button>
+
+                                <form method="post" action="{{ path('dashboard_hospitals_delete', { hospitalId: h.hospitalId }) }}" style="display: inline;" onsubmit="return confirm('Delete this hospital?');">
+                                    <button class="btn-delete" type="submit">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+<div id="hospitalModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="hospitalModalTitle">
+        <div class="modal-head">
+            <h3 id="hospitalModalTitle">Add Hospital</h3>
+            <button type="button" class="modal-close" id="closeHospitalModal">×</button>
+        </div>
+
+        <form id="hospitalModalForm" method="post" action="{{ path('dashboard_hospitals_create') }}">
+            <div class="modal-grid">
+                <div class="field full">
+                    <label for="m_name">Hospital Name *</label>
+                    <input id="m_name" type="text" name="name" required>
+                </div>
+                <div class="field full">
+                    <label for="m_address">Address</label>
+                    <textarea id="m_address" name="address" placeholder="Street address"></textarea>
+                </div>
+                <div class="field">
+                    <label for="m_city">City</label>
+                    <input id="m_city" type="text" name="city" placeholder="City name">
+                </div>
+                <div class="field">
+                    <label for="m_phone">Phone</label>
+                    <input id="m_phone" type="tel" name="phone" placeholder="+216 98 123 4567">
+                </div>
+                <div class="field">
+                    <label for="m_email">Email</label>
+                    <input id="m_email" type="email" name="email" placeholder="hospital@example.com">
+                </div>
+                <div class="field">
+                    <label for="m_latitude">Latitude</label>
+                    <input id="m_latitude" type="number" name="latitude" placeholder="-90 to 90" step="0.00000001">
+                </div>
+                <div class="field">
+                    <label for="m_longitude">Longitude</label>
+                    <input id="m_longitude" type="number" name="longitude" placeholder="-180 to 180" step="0.00000001">
+                </div>
+                <div class="field" style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
+                    <input id="m_isActive" type="checkbox" name="isActive" checked>
+                    <label for="m_isActive" style="margin: 0; text-transform: none; text-decoration: none; font-weight: 600;">Active</label>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" id="cancelHospitalModal">Cancel</button>
+                <button type="submit" class="btn-primary" id="submitHospitalModal">Create Hospital</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<form id="bulkDeleteForm" method="post" action="{{ path('dashboard_hospitals_bulk_delete') }}" style="display: none;">
+</form>
+
+<script>
+    (function () {
+        const overlay = document.getElementById('hospitalModal');
+        const openAddBtn = document.getElementById('openAddHospitalModal');
+        const closeBtn = document.getElementById('closeHospitalModal');
+        const cancelBtn = document.getElementById('cancelHospitalModal');
+        const form = document.getElementById('hospitalModalForm');
+        const title = document.getElementById('hospitalModalTitle');
+        const submitBtn = document.getElementById('submitHospitalModal');
+
+        function openModal() {
+            overlay.classList.add('open');
+            overlay.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeModal() {
+            overlay.classList.remove('open');
+            overlay.setAttribute('aria-hidden', 'true');
+        }
+
+        function resetForCreate() {
+            form.reset();
+            form.action = '{{ path('dashboard_hospitals_create') }}';
+            title.textContent = 'Add Hospital';
+            submitBtn.textContent = 'Create Hospital';
+            document.getElementById('m_isActive').checked = true;
+        }
+
+        function fillForEdit(btn) {
+            form.action = '{{ path('dashboard_hospitals_edit', { hospitalId: '__ID__' }) }}'.replace('__ID__', btn.dataset.hospitalId);
+            title.textContent = 'Modify Hospital';
+            submitBtn.textContent = 'Save Changes';
+
+            document.getElementById('m_name').value = btn.dataset.name || '';
+            document.getElementById('m_address').value = btn.dataset.address || '';
+            document.getElementById('m_city').value = btn.dataset.city || '';
+            document.getElementById('m_phone').value = btn.dataset.phone || '';
+            document.getElementById('m_email').value = btn.dataset.email || '';
+            document.getElementById('m_latitude').value = btn.dataset.latitude || '';
+            document.getElementById('m_longitude').value = btn.dataset.longitude || '';
+            document.getElementById('m_isActive').checked = btn.dataset.isActive === '1' || btn.dataset.isActive === 'true';
+        }
+
+        openAddBtn.addEventListener('click', function () {
+            resetForCreate();
+            openModal();
+        });
+
+        document.querySelectorAll('.open-edit-hospital').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                fillForEdit(btn);
+                openModal();
+            });
+        });
+
+        closeBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) {
+                closeModal();
+            }
+        });
+    })();
+
+    function updateBulkDeleteBar() {
+        const checkboxes = document.querySelectorAll('.hospital-checkbox:checked');
+        const bulkBar = document.getElementById('bulkDeleteBar');
+        const countSpan = document.getElementById('selectedCount');
+
+        if (checkboxes.length > 0) {
+            bulkBar.classList.add('visible');
+            countSpan.textContent = checkboxes.length + ' hospital(s) selected';
+        } else {
+            bulkBar.classList.remove('visible');
+        }
+    }
+
+    function submitBulkDelete() {
+        if (!confirm('Delete selected hospitals? This action cannot be undone.')) {
+            return;
+        }
+
+        const checkboxes = document.querySelectorAll('.hospital-checkbox:checked');
+        const form = document.getElementById('bulkDeleteForm');
+        form.innerHTML = '';
+
+        checkboxes.forEach(function (checkbox) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'hospital_ids[]';
+            input.value = checkbox.value;
+            form.appendChild(input);
+        });
+
+        form.submit();
+    }
+
+    function toggleStatus(hospitalId) {
+        fetch('{{ path('dashboard_hospitals_toggle_status', { hospitalId: '__ID__' }) }}'.replace('__ID__', hospitalId), {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            alert('Error toggling status: ' + error);
+        });
+    }
+</script>
+{% endblock %}
