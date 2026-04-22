@@ -87,3 +87,5 @@ symfony/vendor/
 symfony/node_modules/
 symfony/.php-cs-fixer.cache
 symfony/.phpunit.result.cache
+
+/vendor/
