@@ -208,7 +208,9 @@ class DashboardController extends AbstractController
             return $this->redirectToRoute("dashboard_users");
         }
 
-        $email = trim((string) $request->request->get("email", ""));
+        $email = $this->normalizeEmail(
+            (string) $request->request->get("email", ""),
+        );
         $firstName = trim((string) $request->request->get("first_name", ""));
         $lastName = trim((string) $request->request->get("last_name", ""));
         $phone = trim((string) $request->request->get("phone", ""));
@@ -243,6 +245,15 @@ class DashboardController extends AbstractController
             $this->addFlash(
                 "error",
                 "Email, first name, last name and password are required.",
+            );
+
+            return $this->redirectToRoute("dashboard_users");
+        }
+
+        if (!$this->isValidEmailAddress($email)) {
+            $this->addFlash(
+                "error",
+                "Please enter a valid email address (example: name@example.com).",
             );
 
             return $this->redirectToRoute("dashboard_users");
@@ -349,7 +360,9 @@ class DashboardController extends AbstractController
             return $this->redirectToRoute("dashboard_users");
         }
 
-        $email = trim((string) $request->request->get("email", ""));
+        $email = $this->normalizeEmail(
+            (string) $request->request->get("email", ""),
+        );
         $firstName = trim((string) $request->request->get("first_name", ""));
         $lastName = trim((string) $request->request->get("last_name", ""));
         $phone = trim((string) $request->request->get("phone", ""));
@@ -378,6 +391,15 @@ class DashboardController extends AbstractController
             $this->addFlash(
                 "error",
                 "Email, first name, and last name are required.",
+            );
+
+            return $this->redirectToRoute("dashboard_users");
+        }
+
+        if (!$this->isValidEmailAddress($email)) {
+            $this->addFlash(
+                "error",
+                "Please enter a valid email address (example: name@example.com).",
             );
 
             return $this->redirectToRoute("dashboard_users");
@@ -905,11 +927,11 @@ class DashboardController extends AbstractController
 
         try {
             $connection->executeStatement(
-                "INSERT INTO donor_eligibility (user_id, blood_type_cache, is_currently_eligible, days_until_eligible, last_calculated_at, latitude_cache, longitude_cache, eligibility_details) VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO donor_eligibility (user_id, blood_type_cache, is_currently_eligible, days_until_eligible, last_calculated_at, latitude_cache, longitude_cache, eligibility_details) VALUES (?::uuid, ?, ?::boolean, ?, ?, ?, ?, ?)",
                 [
                     $userId,
                     $bloodType !== "" ? $bloodType : null,
-                    $eligible,
+                    $eligible ? "true" : "false",
                     $parsedDaysUntil,
                     $lastCalculated !== "" ? $lastCalculated : null,
                     $lat,
@@ -1080,10 +1102,10 @@ class DashboardController extends AbstractController
 
         try {
             $connection->executeStatement(
-                "UPDATE donor_eligibility SET blood_type_cache = ?, is_currently_eligible = ?, days_until_eligible = ?, last_calculated_at = ?, latitude_cache = ?, longitude_cache = ?, eligibility_details = ? WHERE user_id::text = ?",
+                "UPDATE donor_eligibility SET blood_type_cache = ?, is_currently_eligible = ?::boolean, days_until_eligible = ?, last_calculated_at = ?, latitude_cache = ?, longitude_cache = ?, eligibility_details = ? WHERE user_id::text = ?",
                 [
                     $bloodType !== "" ? $bloodType : null,
-                    $eligible,
+                    $eligible ? "true" : "false",
                     $parsedDaysUntil,
                     $lastCalculated !== "" ? $lastCalculated : null,
                     $lat,
@@ -1983,6 +2005,36 @@ class DashboardController extends AbstractController
         $value = strtolower(trim((string) $request->request->get($name, "")));
 
         return in_array($value, ["1", "true", "yes", "on"], true);
+    }
+
+    private function normalizeEmail(string $email): string
+    {
+        $normalized = trim($email);
+
+        if ($normalized === "") {
+            return "";
+        }
+
+        // Remove whitespace copied from rich text and optional mailto prefix.
+        $normalized = preg_replace('/\s+/u', '', $normalized) ?? $normalized;
+        if (str_starts_with(strtolower($normalized), 'mailto:')) {
+            $normalized = substr($normalized, 7);
+        }
+
+        return $normalized;
+    }
+
+    private function isValidEmailAddress(string $email): bool
+    {
+        if ($email === "") {
+            return false;
+        }
+
+        // Keep validation aligned with DB constraint chk_email_format.
+        return preg_match(
+            '/^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/',
+            $email,
+        ) === 1;
     }
 
     /**

@@ -55,7 +55,7 @@ class AuthService
     {
         $firstName = trim((string) ($data['first_name'] ?? ''));
         $lastName = trim((string) ($data['last_name'] ?? ''));
-        $email = trim((string) ($data['email'] ?? ''));
+        $email = $this->normalizeEmail((string) ($data['email'] ?? ''));
         $phone = trim((string) ($data['phone'] ?? ''));
         $city = trim((string) ($data['city'] ?? ''));
         $bloodTypeId = trim((string) ($data['blood_type_id'] ?? ''));
@@ -67,14 +67,21 @@ class AuthService
 
         if ($firstName == '') {
             $errors['first_name'] = 'First name is required.';
+        } elseif (!$this->isValidPersonName($firstName)) {
+            $errors['first_name'] = 'First name may only contain letters, spaces, and hyphens.';
         }
         if ($lastName == '') {
             $errors['last_name'] = 'Last name is required.';
+        } elseif (!$this->isValidPersonName($lastName)) {
+            $errors['last_name'] = 'Last name may only contain letters, spaces, and hyphens.';
         }
         if ($email == '') {
             $errors['email'] = 'Email is required.';
-        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        } elseif (!$this->isValidEmailAddress($email)) {
             $errors['email'] = 'Please enter a valid email address.';
+        }
+        if ($phone !== '' && !$this->isValidPhoneNumber($phone)) {
+            $errors['phone'] = 'Phone number must contain 8 to 15 digits.';
         }
         if ($bloodTypeId == '') {
             $errors['blood_type_id'] = 'Please select a blood type.';
@@ -91,10 +98,6 @@ class AuthService
         }
         if (!$acceptedTerms) {
             $errors['terms'] = 'Please accept the Terms of Service and Privacy Policy.';
-        }
-
-        if ($email !== '' && $this->findUserByEmailInsensitive($email) !== null) {
-            $errors['email'] = 'An account with this email already exists.';
         }
 
         $bloodTypeExists = false;
@@ -187,6 +190,39 @@ class AuthService
                 'user_type' => 'DONOR',
             ],
         ];
+    }
+
+    private function normalizeEmail(string $email): string
+    {
+        $normalized = trim($email);
+        if ($normalized === '') {
+            return '';
+        }
+
+        $normalized = preg_replace('/\s+/u', '', $normalized) ?? $normalized;
+        if (str_starts_with(strtolower($normalized), 'mailto:')) {
+            $normalized = substr($normalized, 7);
+        }
+
+        return $normalized;
+    }
+
+    private function isValidEmailAddress(string $email): bool
+    {
+        return preg_match(
+            '/^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/',
+            $email,
+        ) === 1;
+    }
+
+    private function isValidPersonName(string $value): bool
+    {
+        return preg_match('/^[A-Za-z -]+$/', $value) === 1;
+    }
+
+    private function isValidPhoneNumber(string $value): bool
+    {
+        return preg_match('/^[0-9]{8,15}$/', $value) === 1;
     }
 
     /**
