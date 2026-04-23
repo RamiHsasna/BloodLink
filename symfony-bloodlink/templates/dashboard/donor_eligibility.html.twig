@@ -1,8 +1,10 @@
-{% extends 'base.html.twig' %}
+{% set layout = donor_mode ? 'log_management/layouts/front_office.html.twig' : 'dashboard/layouts/back_office.html.twig' %}
+{% set page_title = donor_mode ? 'My Eligibility' : 'Donor Eligibility Dashboard' %}
+{% set page_description = donor_mode ? 'Review your current eligibility status and screening history.' : 'Calculate and maintain donor eligibility records for the blood bank network.' %}
+{% extends layout %}
 
-{% block title %}Donor Eligibility Dashboard{% endblock %}
-
-{% block body %}
+{% block stylesheets %}
+    {{ parent() }}
 <style>
     :root {
         --bg: #f1f3f7;
@@ -26,6 +28,20 @@
         flex-direction: column;
         border-right: 1px solid #19254c;
     }
+    .sidebar.donor-sidebar {
+        position: relative;
+        overflow: hidden;
+    }
+    .sidebar.donor-sidebar::after {
+        content: "";
+        position: absolute;
+        inset: auto -120px -130px auto;
+        width: 260px;
+        height: 260px;
+        border-radius: 999px;
+        background: radial-gradient(circle, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0) 72%);
+        pointer-events: none;
+    }
     .brand { padding: 24px 20px; border-bottom: 1px solid #22315f; }
     .brand h2 { margin: 0; font-size: 29px; font-family: Georgia, "Times New Roman", serif; color: #fff; }
     .brand p { margin: 4px 0 0; color: #8fa0ce; font-size: 13px; }
@@ -37,6 +53,163 @@
     .profile .name { margin: 0; font-size: 14px; color: #fff; }
     .profile .role { margin: 4px 0 10px; color: #8fa0ce; font-size: 12px; }
     .logout-btn { width: 100%; height: 36px; border: 1px solid #2d3e6f; background: #101d42; color: #dbe5ff; border-radius: 8px; font-weight: 600; }
+    .sidebar.donor-sidebar .brand {
+        padding: 22px 18px;
+        border-bottom: 1px solid #22315f;
+    }
+    .sidebar.donor-sidebar .brand-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .sidebar.donor-sidebar .brand-logo {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: #fff;
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        box-shadow: 0 8px 18px rgba(239, 68, 68, 0.35);
+    }
+    .sidebar.donor-sidebar .brand h2 {
+        margin: 0;
+        font-size: 25px;
+        font-family: "Manrope", "Segoe UI", Arial, sans-serif;
+        color: #fff;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+    }
+    .sidebar.donor-sidebar .brand p {
+        margin: 3px 0 0;
+        color: #93a6d6;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .sidebar.donor-sidebar .menu {
+        padding: 16px 12px 10px;
+        gap: 8px;
+    }
+    .sidebar.donor-sidebar .menu-label {
+        margin: 0 0 2px;
+        padding: 0 8px;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #8fa0ce;
+        font-weight: 700;
+    }
+    .sidebar.donor-sidebar .menu a {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 11px 12px;
+        border-radius: 12px;
+        font-weight: 700;
+        border: 1px solid transparent;
+        transition: background .2s ease, border-color .2s ease, transform .2s ease;
+    }
+    .sidebar.donor-sidebar .menu .ico {
+        width: 22px;
+        height: 22px;
+        border-radius: 7px;
+        border: 1px solid #2f4378;
+        background: #0f1f47;
+        color: #a9b9e4;
+        font-size: 12px;
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        flex-shrink: 0;
+    }
+    .sidebar.donor-sidebar .menu a.active {
+        background: linear-gradient(135deg, #1c2e5c, #162650);
+        color: #fff;
+        border: 1px solid #2b3f74;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+        border-left: 1px solid #2b3f74;
+        padding-left: 12px;
+    }
+    .sidebar.donor-sidebar .menu a.active .ico {
+        border-color: #f87171;
+        background: #7f1d1d;
+        color: #ffd7d7;
+    }
+    .sidebar.donor-sidebar .menu a:hover {
+        background: #16254d;
+        border-color: #2f4378;
+        transform: translateX(2px);
+    }
+    .sidebar.donor-sidebar .quick-card {
+        margin: 0 14px 14px;
+        border: 1px solid #2a3d70;
+        background: linear-gradient(160deg, rgba(26, 39, 77, 0.95), rgba(14, 27, 61, 0.98));
+        border-radius: 14px;
+        padding: 12px;
+    }
+    .sidebar.donor-sidebar .quick-card .k {
+        margin: 0;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #8fa0ce;
+        font-weight: 700;
+    }
+    .sidebar.donor-sidebar .quick-card .v {
+        margin: 6px 0 0;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 800;
+    }
+    .sidebar.donor-sidebar .quick-card.good { border-color: rgba(16, 185, 129, 0.5); }
+    .sidebar.donor-sidebar .quick-card.bad { border-color: rgba(239, 68, 68, 0.5); }
+    .sidebar.donor-sidebar .quick-link {
+        display: inline-block;
+        margin-top: 9px;
+        color: #dbe5ff;
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 700;
+    }
+    .sidebar.donor-sidebar .quick-link:hover { color: #fff; }
+    .sidebar.donor-sidebar .profile-card {
+        border: 1px solid #2a3d70;
+        background: #0d1b3e;
+        border-radius: 14px;
+        padding: 12px;
+    }
+    .sidebar.donor-sidebar .profile-top {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 10px;
+    }
+    .sidebar.donor-sidebar .profile-avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #334155, #1e293b);
+        color: #fff;
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        font-size: 12px;
+    }
+    .sidebar.donor-sidebar .profile .name { margin: 0; font-size: 13px; color: #fff; font-weight: 700; }
+    .sidebar.donor-sidebar .profile .role { margin: 2px 0 0; color: #8fa0ce; font-size: 11px; }
+    .sidebar.donor-sidebar .logout-btn {
+        height: 34px;
+        border: 1px solid #374d83;
+        background: #101f45;
+        border-radius: 9px;
+        font-weight: 700;
+        transition: background .2s ease, border-color .2s ease;
+    }
+    .sidebar.donor-sidebar .logout-btn:hover {
+        background: #162a5e;
+        border-color: #4762a6;
+    }
 
     .main { padding: 24px; }
     .head { margin-bottom: 14px; }
@@ -199,6 +372,9 @@
 
     @media (max-width: 900px) {
         .shell { grid-template-columns: 1fr; }
+        .sidebar.donor-sidebar { border-right: 0; border-bottom: 1px solid #1e2d5b; }
+        .sidebar.donor-sidebar .menu { grid-template-columns: 1fr 1fr; }
+        .sidebar.donor-sidebar .menu-label { grid-column: 1 / -1; }
         .filters { grid-template-columns: 1fr; }
         .cards3 { grid-template-columns: 1fr; }
         .meta { grid-template-columns: 1fr; }
@@ -206,35 +382,10 @@
         .checks { grid-template-columns: 1fr; }
     }
 </style>
+{% endblock %}
 
-<div class="shell">
-    <aside class="sidebar">
-        <div class="brand">
-            <h2>BloodLink</h2>
-            <p>Dashboard</p>
-        </div>
-        <nav class="menu">
-            {% if donor_mode %}
-                <a href="{{ path('dashboard_donor_home') }}">Dashboard</a>
-                <a href="{{ path('donations_index') }}">My Donations</a>
-                <a class="active" href="{{ path('dashboard_donor_eligibility') }}">Eligibility</a>
-            {% else %}
-                <a href="{{ path('dashboard_users') }}">Users</a>
-                <a href="{{ path('donations_index') }}">Donations</a>
-                <a href="{{ path('donation_events_index') }}">Donation Events</a>
-                <a class="active" href="{{ path('dashboard_donor_eligibility') }}">Donor Eligibility</a>
-            {% endif %}
-        </nav>
-        <div class="profile">
-            <p class="name">{{ session_user.first_name|default('User') }} {{ session_user.last_name|default('') }}</p>
-            <p class="role">{{ session_user.user_type|default('N/A') }}</p>
-            <form method="post" action="{{ path('auth_logout') }}">
-                <button class="logout-btn" type="submit">Logout</button>
-            </form>
-        </div>
-    </aside>
-
-    <main class="main">
+{% block module_content %}
+<main class="main">
     <div class="head" style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
         <div>
             <h1>Donor Eligibility</h1>
@@ -476,6 +627,7 @@
 
         if (donorMode) {
             const openCheckBtn = document.getElementById('openDonorCheck');
+            const quickCheckLink = document.getElementById('quickDonorCheckLink');
             const calcBtn = document.getElementById('calculateEligibilityBtn');
             const resultBox = document.getElementById('eligibilityCheckResult');
             const resultTitle = document.getElementById('checkResultTitle');
@@ -648,6 +800,17 @@
                     resultReasons.textContent = 'No reasons to display yet.';
                     clearDonorFormErrors();
                     openModal();
+                });
+            }
+
+            if (quickCheckLink) {
+                quickCheckLink.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    if (openCheckBtn) {
+                        openCheckBtn.click();
+                    } else {
+                        openModal();
+                    }
                 });
             }
 

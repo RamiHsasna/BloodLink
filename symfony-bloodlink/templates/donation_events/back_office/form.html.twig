@@ -1,0 +1,57 @@
+{% extends 'dashboard/layouts/back_office.html.twig' %}
+
+{% block extra_head_assets %}
+    <link rel="stylesheet" href="{{ asset('styles/donation-events.css') }}">
+{% endblock %}
+
+{% block page_actions %}
+    <a href="{{ path('dashboard_events_index') }}" class="inline-flex items-center justify-center rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-blood-500 hover:text-blood-600">Back to list</a>
+{% endblock %}
+
+{% block module_content %}
+    <div class="event-form-layout">
+        <section class="event-form-card">
+            {{ form_start(form) }}
+                {{ form_errors(form) }}
+                <div class="event-form-grid">
+                    {% for field in [form.name, form.status, form.hospital, form.startDate, form.endDate, form.location, form.targetBloodTypes, form.targetCollectionUnits, form.actualCollectionUnits, form.latitude, form.longitude] %}
+                        <div class="event-form-field">
+                            {{ form_label(field, null, {'label_attr': {'class': 'event-form-label'}}) }}
+                            {{ form_widget(field, {'attr': {'class': 'event-form-input'}}) }}
+                            {{ form_errors(field) }}
+                        </div>
+                    {% endfor %}
+
+                    <div class="event-form-field event-form-field--full">
+                        {{ form_label(form.description, null, {'label_attr': {'class': 'event-form-label'}}) }}
+                        {{ form_widget(form.description, {'attr': {'class': 'event-form-input event-form-textarea'}}) }}
+                        {{ form_errors(form.description) }}
+                    </div>
+                </div>
+
+                <div class="event-form-actions">
+                    <button type="submit" class="event-form-submit">{{ submit_label }}</button>
+                    <a href="{{ path('dashboard_events_index') }}" class="event-form-secondary">Cancel</a>
+                </div>
+            {{ form_end(form) }}
+        </section>
+
+        <aside class="event-form-aside">
+            <p class="event-form-kicker">Donation Event</p>
+            <h2 class="event-form-title">What this page controls</h2>
+            <ul class="event-form-list">
+                <li>Schedule the campaign dates donors will see in Front Office.</li>
+                <li>Keep the hosting hospital explicit for staff scoping and traceability.</li>
+                <li>Use target blood types to help donors quickly spot relevant events.</li>
+                <li>Track target units and collected units as the campaign evolves.</li>
+            </ul>
+
+            {% if entry.eventId is defined and entry.eventId %}
+                <div class="event-form-reference">
+                    <strong>Event UUID</strong>
+                    {{ entry.eventId }}
+                </div>
+            {% endif %}
+        </aside>
+    </div>
+{% endblock %}

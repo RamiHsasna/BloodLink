@@ -1,0 +1,15 @@
+{% for message in app.flashes('success') %}
+    <div class="shared-flash shared-flash--success">{{ message }}</div>
+{% endfor %}
+
+{% for message in app.flashes('error') %}
+    <div class="shared-flash shared-flash--error">{{ message }}</div>
+{% endfor %}
+
+{% for message in app.flashes('warning') %}
+    <div class="shared-flash shared-flash--warning">{{ message }}</div>
+{% endfor %}
+
+{% for message in app.flashes('info') %}
+    <div class="shared-flash shared-flash--info">{{ message }}</div>
+{% endfor %}

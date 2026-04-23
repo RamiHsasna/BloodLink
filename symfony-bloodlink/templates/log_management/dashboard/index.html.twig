@@ -1,0 +1,139 @@
+{% set page_title = 'Audit Logs Overview' %}
+{% set page_description = 'Track donation and transfer audit records from one operational dashboard.' %}
+{% extends 'log_management/layouts/back_office.html.twig' %}
+
+{% block module_content %}
+    {% set mix_chart = mix_chart|default({}) %}
+    {% set activity_chart = activity_chart|default({days: [], max: 1}) %}
+    <div class="grid gap-4 lg:grid-cols-4">
+        {% for card in summary_cards %}
+            <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">{{ card.label }}</p>
+                <p class="mt-3 text-3xl font-extrabold tracking-tight text-slate-950">{{ card.value }}</p>
+                <p class="mt-2 text-sm text-slate-500">{{ card.caption }}</p>
+            </article>
+        {% endfor %}
+    </div>
+
+    <div class="mt-6 grid gap-6 lg:items-start xl:grid-cols-[1.4fr_minmax(0,1fr)]">
+        <section class="rounded-3xl border border-slate-200 bg-white p-6">
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-extrabold tracking-tight text-slate-950">Recent Audit Activity</h2>
+                    <p class="mt-1 text-sm text-slate-500">A unified timeline from donation logs and transfer logs only.</p>
+                </div>
+                <a
+                    href="{{ path('dashboard_logs_donations') }}"
+                    class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-blood-500 hover:text-blood-600"
+                >
+                    Open audits
+                </a>
+            </div>
+
+            <div class="mt-5 space-y-4">
+                {% for item in recent_activity %}
+                    <a
+                        href="{{ path(item.route, item.route_params) }}"
+                        class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 transition hover:border-blood-500 hover:bg-white md:flex-row md:items-center md:justify-between"
+                    >
+                        <div class="flex items-start gap-3">
+                            <div class="mt-1 h-3 w-3 rounded-full bg-blood-500"></div>
+                            <div>
+                                <p class="text-xs font-bold uppercase tracking-[0.18em] text-blood-600">{{ item.type }}</p>
+                                <p class="mt-1 text-base font-bold text-slate-950">{{ item.title }}</p>
+                                <p class="mt-1 text-sm text-slate-500">{{ item.caption }}</p>
+                            </div>
+                        </div>
+                        <p class="text-sm font-medium text-slate-500">
+                            {{ item.occurred_at ? item.occurred_at|date('Y-m-d H:i') : 'No timestamp' }}
+                        </p>
+                    </a>
+                {% else %}
+                    <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                        No recent log activity was found in the current database.
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="rounded-3xl border border-slate-200 bg-white p-6">
+            <div>
+                <h2 class="text-xl font-extrabold tracking-tight text-slate-950">Audit scope</h2>
+                <p class="mt-1 text-sm text-slate-500">This workspace stays focused on trace records, filters, and review actions.</p>
+            </div>
+
+            <div class="mt-6 space-y-3">
+                <a href="{{ path('dashboard_logs_donations') }}" class="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-700 transition hover:border-blood-500 hover:text-blood-600">
+                    <span>Donation logs</span>
+                    <span class="text-xs uppercase tracking-[0.18em] text-slate-500">Open</span>
+                </a>
+                <a href="{{ path('dashboard_logs_transfers') }}" class="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-700 transition hover:border-blood-500 hover:text-blood-600">
+                    <span>Transfer logs</span>
+                    <span class="text-xs uppercase tracking-[0.18em] text-slate-500">Open</span>
+                </a>
+            </div>
+
+            <div class="audit-insights-card mt-6">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-[0.18em] text-blood-600">Audit insights</p>
+                    <h3 class="mt-2 text-lg font-extrabold tracking-tight text-slate-950">Live activity mix</h3>
+                    <p class="mt-1 text-sm text-slate-500">A quick visual read of the audit distribution and the last 7 days of movement.</p>
+                </div>
+
+                <div class="audit-donut-shell">
+                    <div
+                        class="audit-donut"
+                        style="--audit-donation-share: {{ mix_chart.donation_percent|default(0) }}%; --audit-transfer-share: {{ mix_chart.transfer_percent|default(0) }}%;"
+                    >
+                        <div class="audit-donut-core">
+                            <span class="audit-donut-total">{{ mix_chart.total|default(0) }}</span>
+                            <span class="audit-donut-caption">entries</span>
+                        </div>
+                    </div>
+
+                    <div class="audit-legend">
+                        <div class="audit-legend-item">
+                            <span class="audit-legend-swatch audit-legend-swatch--donation"></span>
+                            <div>
+                                <p class="audit-legend-label">Donation logs</p>
+                                <p class="audit-legend-value">{{ mix_chart.donations|default(0) }} · {{ mix_chart.donation_percent|default(0) }}%</p>
+                            </div>
+                        </div>
+                        <div class="audit-legend-item">
+                            <span class="audit-legend-swatch audit-legend-swatch--transfer"></span>
+                            <div>
+                                <p class="audit-legend-label">Transfer logs</p>
+                                <p class="audit-legend-value">{{ mix_chart.transfers|default(0) }} · {{ mix_chart.transfer_percent|default(0) }}%</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="audit-pulse">
+                    <div class="audit-pulse-head">
+                        <div>
+                            <p class="audit-pulse-title">Last 7 days</p>
+                            <p class="audit-pulse-copy">Donation and transfer audit entries grouped by day.</p>
+                        </div>
+                        <p class="audit-pulse-max">Peak day: {{ activity_chart.max|default(1) }}</p>
+                    </div>
+
+                    <div class="audit-pulse-grid">
+                        {% for day in activity_chart.days %}
+                            <div class="audit-pulse-day">
+                                <div class="audit-pulse-bars">
+                                    <span class="audit-pulse-bar audit-pulse-bar--donation" style="height: {{ day.donation_height }}%"></span>
+                                    <span class="audit-pulse-bar audit-pulse-bar--transfer" style="height: {{ day.transfer_height }}%"></span>
+                                </div>
+                                <p class="audit-pulse-day-label">{{ day.label }}</p>
+                                <p class="audit-pulse-day-total">{{ day.donation_count + day.transfer_count }}</p>
+                            </div>
+                        {% else %}
+                            <p class="text-sm text-slate-500">No audit activity is available in the current 7-day window.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+{% endblock %}

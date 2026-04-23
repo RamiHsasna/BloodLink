@@ -6,7 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 
-#[ORM\Entity(repositoryClass: App\Entity\Repository\DonorRepository::class)]
+#[ORM\Entity(repositoryClass: \App\Repository\DonorRepository::class)]
 #[ORM\Table(name: "donors")]
 class Donor
 {
