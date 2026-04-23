@@ -216,9 +216,12 @@
         <nav class="menu">
             {% if donor_mode %}
                 <a href="{{ path('dashboard_donor_home') }}">Dashboard</a>
+                <a href="{{ path('donations_index') }}">My Donations</a>
                 <a class="active" href="{{ path('dashboard_donor_eligibility') }}">Eligibility</a>
             {% else %}
                 <a href="{{ path('dashboard_users') }}">Users</a>
+                <a href="{{ path('donations_index') }}">Donations</a>
+                <a href="{{ path('donation_events_index') }}">Donation Events</a>
                 <a class="active" href="{{ path('dashboard_donor_eligibility') }}">Donor Eligibility</a>
             {% endif %}
         </nav>
