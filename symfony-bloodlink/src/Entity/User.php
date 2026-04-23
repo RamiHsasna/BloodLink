@@ -3,13 +3,15 @@
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 
-#[ORM\Entity(repositoryClass: App\Entity\Repository\UserRepository::class)]
+#[ORM\Entity(repositoryClass: \App\Repository\UserRepository::class)]
 #[ORM\Table(name: "users")]
 class User
 {
+    public const TYPE_ADMIN = 'ADMIN';
+    public const TYPE_DONOR = 'DONOR';
+    public const TYPE_HOSPITAL_STAFF = 'HOSPITAL_STAFF';
+
     #[ORM\Id]
     #[ORM\Column(type: "uuid")]
     private string $userId;
@@ -129,5 +131,16 @@ class User
         $this->createdAt = $createdAt;
 
         return $this;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function backOfficeTypes(): array
+    {
+        return [
+            self::TYPE_ADMIN,
+            self::TYPE_HOSPITAL_STAFF,
+        ];
     }
 }

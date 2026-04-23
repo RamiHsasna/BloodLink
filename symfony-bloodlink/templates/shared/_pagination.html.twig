@@ -1,0 +1,27 @@
+{% if pagination.pages|default(0) > 1 %}
+    {% set route_name = route_name|default(app.request.attributes.get('_route')) %}
+    {% set current_query = app.request.query.all|merge(extra_query|default({})) %}
+    <div class="shared-pagination">
+        <p class="shared-pagination__summary">
+            Page <span>{{ pagination.page }}</span> of <span>{{ pagination.pages }}</span>
+        </p>
+
+        <div class="shared-pagination__pages">
+            {% if pagination.page > 1 %}
+                <a href="{{ path(route_name, current_query|merge({page: pagination.page - 1})) }}" class="shared-pagination__link">Previous</a>
+            {% endif %}
+
+            {% for page_number in 1..pagination.pages %}
+                {% if page_number == pagination.page %}
+                    <span class="shared-pagination__current">{{ page_number }}</span>
+                {% elseif page_number >= pagination.page - 1 and page_number <= pagination.page + 1 %}
+                    <a href="{{ path(route_name, current_query|merge({page: page_number})) }}" class="shared-pagination__link">{{ page_number }}</a>
+                {% endif %}
+            {% endfor %}
+
+            {% if pagination.page < pagination.pages %}
+                <a href="{{ path(route_name, current_query|merge({page: pagination.page + 1})) }}" class="shared-pagination__link">Next</a>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}

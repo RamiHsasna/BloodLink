@@ -76,9 +76,6 @@ class AuthService
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errors['email'] = 'Please enter a valid email address.';
         }
-        if ($city == '') {
-            $errors['city'] = 'City is required.';
-        }
         if ($bloodTypeId == '') {
             $errors['blood_type_id'] = 'Please select a blood type.';
         }
@@ -122,6 +119,15 @@ class AuthService
 
         $userId = $this->generateUuidV4();
         $createdAt = (new DateTimeImmutable())->format('Y-m-d H:i:s');
+        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+
+        if ($passwordHash === false) {
+            return [
+                'success' => false,
+                'errors' => ['global' => 'Unable to secure your password right now. Please try again.'],
+                'user' => null,
+            ];
+        }
 
         try {
             $this->connection->beginTransaction();
@@ -131,7 +137,7 @@ class AuthService
                 [
                     $userId,
                     $email,
-                    $password,
+                    $passwordHash,
                     $firstName,
                     $lastName,
                     $phone === '' ? null : $phone,
@@ -146,21 +152,26 @@ class AuthService
                     $userId,
                     $firstName,
                     $lastName,
-                    $city,
+                    $city === '' ? null : $city,
                     $bloodTypeId,
                     $createdAt,
                 ],
             );
 
             $this->connection->commit();
-        } catch (Throwable) {
+        } catch (Throwable $e) {
             if ($this->connection->isTransactionActive()) {
                 $this->connection->rollBack();
             }
 
+            $message = 'Unable to create account right now. Please try again.';
+            if (($e->getCode() !== 0 || $e->getMessage() !== '')) {
+                $message .= ' (' . $e->getMessage() . ')';
+            }
+
             return [
                 'success' => false,
-                'errors' => ['global' => 'Unable to create account right now. Please try again.'],
+                'errors' => ['global' => $message],
                 'user' => null,
             ];
         }
@@ -188,7 +199,19 @@ class AuthService
         }
 
         $user = $this->connection->fetchAssociative(
-            'SELECT user_id, email, password_hash, first_name, last_name, user_type FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1',
+            'SELECT u.user_id,
+                    u.email,
+                    u.password_hash,
+                    u.first_name,
+                    u.last_name,
+                    u.user_type,
+                    hs.hospital_id::text AS hospital_id,
+                    h.name AS hospital_name
+             FROM users u
+             LEFT JOIN hospital_staff hs ON hs.user_id = u.user_id
+             LEFT JOIN hospital h ON h.hospital_id = hs.hospital_id
+             WHERE LOWER(u.email) = LOWER(?)
+             LIMIT 1',
             [$email],
         );
 

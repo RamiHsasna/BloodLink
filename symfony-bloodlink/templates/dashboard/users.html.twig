@@ -1,8 +1,9 @@
-{% extends 'base.html.twig' %}
+{% set page_title = 'Users Dashboard' %}
+{% set page_description = 'Manage and monitor all registered users in the network.' %}
+{% extends 'dashboard/layouts/back_office.html.twig' %}
 
-{% block title %}Users Dashboard{% endblock %}
-
-{% block body %}
+{% block stylesheets %}
+    {{ parent() }}
 <style>
     :root {
         --bg: #f1f3f7;
@@ -167,36 +168,13 @@
         .meta { grid-template-columns: 1fr; }
     }
 </style>
+{% endblock %}
 
-<div class="shell">
-    <aside class="sidebar">
-        <div class="brand">
-            <h2>BloodLink</h2>
-            <p>Dashboard</p>
-        </div>
-        <nav class="menu">
-            <a class="active" href="{{ path('dashboard_users') }}">Users</a>
-            <a href="{{ path('donations_index') }}">Donations</a>
-            <a href="{{ path('donation_events_index') }}">Donation Events</a>
-            <a href="{{ path('dashboard_donor_eligibility') }}">Donor Eligibility</a>
-        </nav>
-        <div class="profile">
-            <p class="name">{{ session_user.first_name|default('User') }} {{ session_user.last_name|default('') }}</p>
-            <p class="role">{{ session_user.user_type|default('N/A') }}</p>
-            <form method="post" action="{{ path('auth_logout') }}">
-                <button class="logout-btn" type="submit">Logout</button>
-            </form>
-        </div>
-    </aside>
+{% block page_actions %}
+    <button type="button" class="add-btn" id="openAddUserModal">+ Add User</button>
+{% endblock %}
 
-    <main class="main">
-        <div class="head">
-            <div>
-                <h1>Users Dashboard</h1>
-                <p>Manage and monitor all registered users in the network.</p>
-            </div>
-            <button type="button" class="add-btn" id="openAddUserModal">+ Add User</button>
-        </div>
+{% block module_content %}
 
         {% for message in app.flashes('success') %}
             <div class="flash success">{{ message }}</div>
@@ -271,8 +249,6 @@
                 {% endfor %}
             {% endif %}
         </div>
-    </main>
-</div>
 
 <div id="userModal" class="modal-overlay" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="userModalTitle">

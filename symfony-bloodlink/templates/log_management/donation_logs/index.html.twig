@@ -1,0 +1,135 @@
+{% set page_title = 'Donation Logs' %}
+{% set page_description = 'Back Office CRUD workspace for donation status transitions, with scoped search, date range, action, and status filtering.' %}
+{% extends 'log_management/layouts/back_office.html.twig' %}
+
+{% block page_actions %}
+    <a
+        href="{{ path('dashboard_logs_donations_new') }}"
+        class="inline-flex items-center justify-center rounded-2xl bg-blood-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blood-700"
+    >
+        New Donation Log
+    </a>
+{% endblock %}
+
+{% block module_content %}
+    <form method="get" action="{{ path('dashboard_logs_donations') }}" class="audit-filter-card">
+        <div class="audit-filter-head">
+            <div>
+                <p class="audit-filter-kicker">Refine results</p>
+                <p class="audit-filter-copy">Search by action, actor, donor, or note, then narrow the list with a date window and the captured transition values.</p>
+            </div>
+        </div>
+
+        <div class="audit-filter-grid">
+            <label class="audit-filter-field audit-filter-field--search">
+                <span class="audit-filter-label">Search</span>
+                <input type="text" name="q" value="{{ filters.query }}" placeholder="Action, actor, donor, note..." class="audit-filter-input">
+            </label>
+
+            <label class="audit-filter-field">
+                <span class="audit-filter-label">Start date</span>
+                <input type="date" name="start" value="{{ filters.start }}" class="audit-filter-input">
+            </label>
+
+            <label class="audit-filter-field">
+                <span class="audit-filter-label">End date</span>
+                <input type="date" name="end" value="{{ filters.end }}" class="audit-filter-input">
+            </label>
+
+            <label class="audit-filter-field">
+                <span class="audit-filter-label">Action</span>
+                <select name="action" class="audit-filter-input">
+                    <option value="">All actions</option>
+                    {% for label, value in action_choices %}
+                        <option value="{{ value }}" {{ filters.action == value ? 'selected' : '' }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <label class="audit-filter-field">
+                <span class="audit-filter-label">New status</span>
+                <select name="status" class="audit-filter-input">
+                    <option value="">All new statuses</option>
+                    {% for label, value in status_choices %}
+                        <option value="{{ value }}" {{ filters.status == value ? 'selected' : '' }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+
+        <div class="audit-filter-actions">
+            <button type="submit" class="audit-filter-submit">Apply filters</button>
+            <a href="{{ path('dashboard_logs_donations') }}" class="audit-filter-reset">Reset</a>
+        </div>
+    </form>
+
+    <div class="mt-6 overflow-hidden rounded-3xl border border-slate-200 bg-white">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-200">
+                <thead class="bg-slate-50">
+                    <tr class="text-left text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                        <th class="px-5 py-4">Action</th>
+                        <th class="px-5 py-4">Donation</th>
+                        <th class="px-5 py-4">Actor</th>
+                        <th class="px-5 py-4">Status Shift</th>
+                        <th class="px-5 py-4">Created</th>
+                        <th class="px-5 py-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for entry in entries %}
+                        <tr class="align-top text-sm text-slate-600">
+                            <td class="px-5 py-4">
+                                <p class="font-bold text-slate-950">{{ entry.action }}</p>
+                                <p class="mt-1 text-xs text-slate-500">#{{ entry.logId|slice(0, 8) }}</p>
+                                {% if entry.notes %}
+                                    <p class="mt-2 max-w-xs text-xs leading-5 text-slate-500">{{ entry.notes|length > 100 ? entry.notes|slice(0, 100) ~ '…' : entry.notes }}</p>
+                                {% endif %}
+                            </td>
+                            <td class="px-5 py-4">
+                                <p class="font-semibold text-slate-900">#{{ entry.donation ? entry.donation.donationId|slice(0, 8) : 'Missing' }}</p>
+                                <p class="mt-1 text-xs text-slate-500">
+                                    {{ entry.donation and entry.donation.donor ? entry.donation.donor.firstName ~ ' ' ~ entry.donation.donor.lastName : 'Unknown donor' }}
+                                </p>
+                            </td>
+                            <td class="px-5 py-4">
+                                {% if entry.user %}
+                                    <p class="font-semibold text-slate-900">{{ entry.user.firstName }} {{ entry.user.lastName }}</p>
+                                    <p class="mt-1 text-xs text-slate-500">{{ entry.user.userType }}</p>
+                                {% else %}
+                                    <span class="text-xs text-slate-400">Unknown</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-5 py-4">
+                                <div class="flex items-center gap-2 text-xs font-semibold">
+                                    <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-600">{{ entry.previousStatus ?: 'N/A' }}</span>
+                                    <span class="text-blood-600">→</span>
+                                    <span class="rounded-full bg-blood-50 px-3 py-1 text-blood-700">{{ entry.newStatus ?: 'N/A' }}</span>
+                                </div>
+                            </td>
+                            <td class="px-5 py-4 text-sm text-slate-500">
+                                {{ entry.createdAt ? entry.createdAt|date('Y-m-d H:i') : 'N/A' }}
+                            </td>
+                            <td class="px-5 py-4">
+                                <div class="flex flex-wrap gap-2">
+                                    <a href="{{ path('dashboard_logs_donations_show', {logId: entry.logId}) }}" class="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-blood-500 hover:text-blood-600">View</a>
+                                    <a href="{{ path('dashboard_logs_donations_edit', {logId: entry.logId}) }}" class="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-blood-500 hover:text-blood-600">Edit</a>
+                                    <form method="post" action="{{ path('dashboard_logs_donations_delete', {logId: entry.logId}) }}" data-confirm-message="Delete this donation log?">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('delete-donation-log-' ~ entry.logId) }}">
+                                        <button type="submit" class="rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:border-rose-400 hover:bg-rose-50">Delete</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="px-5 py-12 text-center text-sm text-slate-500">No donation logs match the current filters.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% include 'log_management/partials/_pagination.html.twig' with {pagination: result, route_name: 'dashboard_logs_donations', extra_query: {q: filters.query, start: filters.start, end: filters.end, action: filters.action, status: filters.status}} %}
+{% endblock %}
