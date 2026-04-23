@@ -31,10 +31,24 @@ class DashboardController extends AbstractController
         $ownRecord = $records[0] ?? null;
         $donorSummary = $this->buildDonorSummary($connection, $userId, $ownRecord);
 
+        // Fetch donor's recent donations (last 5)
+        $recentDonations = $connection->fetchAllAssociative("
+            SELECT d.*,
+                   de.name AS donation_event_name,
+                   h.name AS hospital_name
+            FROM donations d
+            LEFT JOIN donation_events de ON de.event_id = d.donation_event_id
+            LEFT JOIN hospitals h ON h.hospital_id = d.hospital_id
+            WHERE d.user_id = :donor_id
+            ORDER BY d.donation_date DESC
+            LIMIT 5
+        ", ['donor_id' => $userId]);
+
         return $this->render('dashboard/donor_home.html.twig', [
             'session_user' => $sessionUser,
             'own_record' => $ownRecord,
             'donor_summary' => $donorSummary,
+            'recent_donations' => $recentDonations,
         ]);
     }
 
