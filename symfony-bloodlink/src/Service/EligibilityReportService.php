@@ -9,12 +9,14 @@ use App\Repository\DonorRepository;
 use App\Repository\DonorEligibilityRepository;
 use Dompdf\Dompdf;
 use Dompdf\Options;
+use Twig\Environment;
 
 class EligibilityReportService
 {
     public function __construct(
         private DonorRepository $donorRepository,
         private DonorEligibilityRepository $eligibilityRepository,
+        private Environment $twig,
     ) {}
 
     /**
@@ -42,263 +44,200 @@ class EligibilityReportService
      */
     private function generateHtml(User $user, Donor $donor, ?DonorEligibility $eligibility): string
     {
-        $isEligible = $eligibility && $eligibility->getIsCurrentlyEligible();
-        $statusText = $isEligible ? 'CURRENTLY ELIGIBLE' : 'NOT ELIGIBLE';
-        $statusColor = $isEligible ? '#10b981' : '#ef4444';
-        $statusBgColor = $isEligible ? '#ecfdf5' : '#fef2f2';
-        
-        $reportDate = new \DateTime();
-        $lastCalculatedAt = $eligibility?->getLastCalculatedAt() 
-            ? $eligibility->getLastCalculatedAt()->format('Y-m-d')
-            : 'N/A';
-        
-        // Calculate values outside heredoc to avoid parse errors
-        $donorCity = $donor->getCity() ?: 'Not specified';
-        $lastDonationDisplay = $this->getLastDonationDisplay($donor);
-        $bloodTypeDisplay = $this->getBloodTypeDisplay($eligibility);
-        $donorIdTruncated = $this->truncateId($user->getUserId());
-        $totalDonations = $donor->getTotalDonations() ?? 0;
+        $reportDate = new \DateTimeImmutable();
+        $parsed = $this->parseEligibilityDetails($eligibility?->getEligibilityDetails());
 
-        $html = <<<HTML
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BloodLink - Donor Eligibility Report</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            color: #0f172a;
-            background-color: #f1f3f7;
-            line-height: 1.6;
-        }
-        
-        .container {
-            max-width: 800px;
-            margin: 0;
-            background-color: #ffffff;
-            padding: 40px;
-        }
-        
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 3px solid #8f1d1f;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .logo {
-            font-size: 28px;
-            font-weight: bold;
-            color: #8f1d1f;
-            font-family: Georgia, serif;
-        }
-        
-        .report-type {
-            text-align: right;
-            font-size: 12px;
-            color: #64748b;
-        }
-        
-        .report-type .title {
-            font-size: 14px;
-            font-weight: bold;
-            color: #0f172a;
-        }
-        
-        .status-badge {
-            display: inline-block;
-            background-color: {$statusBgColor};
-            color: {$statusColor};
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 16px;
-            margin: 20px 0;
-        }
-        
-        .section {
-            margin-bottom: 30px;
-        }
-        
-        .section-title {
-            font-size: 14px;
-            font-weight: bold;
-            text-transform: uppercase;
-            color: #64748b;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 8px;
-            margin-bottom: 16px;
-        }
-        
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        
-        .info-item {
-            padding: 12px;
-            background-color: #f8fafc;
-            border-radius: 8px;
-            border-left: 4px solid #8f1d1f;
-        }
-        
-        .info-label {
-            font-size: 11px;
-            text-transform: uppercase;
-            color: #64748b;
-            font-weight: 600;
-            margin-bottom: 4px;
-            letter-spacing: 0.5px;
-        }
-        
-        .info-value {
-            font-size: 16px;
-            font-weight: bold;
-            color: #0f172a;
-        }
-        
-        .details-box {
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 16px;
-            margin-top: 16px;
-        }
-        
-        .details-box .label {
-            font-size: 12px;
-            text-transform: uppercase;
-            color: #64748b;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        
-        .details-box .content {
-            font-size: 13px;
-            color: #475569;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-        
-        .footer {
-            border-top: 1px solid #e2e8f0;
-            padding-top: 20px;
-            margin-top: 30px;
-            text-align: center;
-            font-size: 11px;
-            color: #64748b;
-        }
-        
-        .footer-note {
-            font-size: 10px;
-            color: #94a3b8;
-            margin-top: 10px;
-        }
-        
-        .warning-box {
-            background-color: #fffbeb;
-            border-left: 4px solid #f59e0b;
-            padding: 12px;
-            border-radius: 4px;
-            margin: 16px 0;
-            font-size: 12px;
-            color: #7c2d12;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <div class="logo">BloodLink</div>
-            <div class="report-type">
-                <div class="title">ELIGIBILITY REPORT</div>
-                <div>{$reportDate->format('F d, Y')}</div>
-            </div>
-        </div>
-        
-        <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="font-size: 24px; margin-bottom: 12px;">Donor Eligibility Assessment</h1>
-            <div class="status-badge">{$statusText}</div>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">Donor Information</div>
-            <div class="info-grid">
-                <div class="info-item">
-                    <div class="info-label">Full Name</div>
-                    <div class="info-value">{$donor->getFirstName()} {$donor->getLastName()}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Blood Type</div>
-                    <div class="info-value">{$bloodTypeDisplay}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Location</div>
-                    <div class="info-value">{$donorCity}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Donor ID</div>
-                    <div class="info-value">{$donorIdTruncated}</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">Eligibility Status</div>
-            <div class="info-grid">
-                <div class="info-item">
-                    <div class="info-label">Current Status</div>
-                    <div class="info-value" style="color: {$statusColor};">{$statusText}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Last Calculated</div>
-                    <div class="info-value">{$lastCalculatedAt}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Last Donation</div>
-                    <div class="info-value">{$lastDonationDisplay}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Total Donations</div>
-                    <div class="info-value">{$totalDonations}</div>
-                </div>
-            </div>
-        </div>
-        
-        {$this->getDaysUntilEligibleSection($eligibility)}
-        
-        {$this->getDetailsSection($eligibility)}
-        
-        <div class="warning-box">
-             This report is generated for informational purposes only. Final eligibility determination 
-            will be made by a qualified healthcare professional during your screening appointment.
-        </div>
-        
-        <div class="footer">
-            <div>BloodLink - Donor Management Platform</div>
-            <div class="footer-note">
-                This is an official eligibility report. Please present this report to the medical staff 
-                at your nearest blood donation center.
-            </div>
-        </div>
-    </div>
-</body>
-</html>
-HTML;
+        $fullName = trim($donor->getFirstName() . ' ' . $donor->getLastName());
+        $donorId = $this->truncateId($user->getUserId());
+        $dateOfBirth = $parsed['Date of birth'] ?? '';
+        $gender = $parsed['Gender'] ?? '';
+        $bloodType = $this->getBloodTypeDisplay($eligibility);
 
-        return $html;
+        $weight = $parsed['Weight'] ?? '';
+        $temperature = '';
+        $bloodPressure = '';
+        $pulseRate = '';
+        $hemoglobin = '';
+
+        $isEligible = (bool) ($eligibility?->getIsCurrentlyEligible() ?? false);
+        $daysUntilEligible = $eligibility?->getDaysUntilEligible();
+        $infectiousDisease = $this->isYes($parsed['Infectious disease'] ?? null);
+
+        $accepted = $isEligible;
+        $deferredTemporary = !$isEligible && !$infectiousDisease;
+        $deferredPermanent = !$isEligible && $infectiousDisease;
+
+        $reasonsText = $this->extractAssessmentReasons($eligibility?->getEligibilityDetails());
+        if ($reasonsText === '') {
+            if ($isEligible) {
+                $reasonsText = 'No deferral reason. Donor is currently eligible.';
+            } elseif ($daysUntilEligible !== null && $daysUntilEligible > 0) {
+                $reasonsText = 'Deferred for ' . (string) $daysUntilEligible . ' day(s) pending reevaluation.';
+            } else {
+                $reasonsText = 'Further medical review required.';
+            }
+        }
+
+        $questionnaireItems = $this->buildQuestionnaireItems($parsed);
+
+        return $this->twig->render('dashboard/eligibility_report_pdf.html.twig', [
+            'reportDate' => $reportDate->format('Y-m-d H:i'),
+            'fullName' => $fullName,
+            'donorId' => $donorId,
+            'dateOfBirth' => $dateOfBirth,
+            'gender' => $gender,
+            'bloodType' => $bloodType,
+            'weight' => $weight,
+            'temperature' => $temperature,
+            'bloodPressure' => $bloodPressure,
+            'pulseRate' => $pulseRate,
+            'hemoglobin' => $hemoglobin,
+            'questionnaireItems' => $questionnaireItems,
+            'accepted' => $accepted,
+            'deferredTemporary' => $deferredTemporary,
+            'deferredPermanent' => $deferredPermanent,
+            'reasonsText' => $reasonsText,
+        ]);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function parseEligibilityDetails(?string $details): array
+    {
+        if ($details === null || trim($details) === '') {
+            return [];
+        }
+
+        $parsed = [];
+        $lines = preg_split('/\R/u', $details) ?: [];
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '' || str_starts_with($line, '===') || str_starts_with($line, '- ')) {
+                continue;
+            }
+
+            if (!str_contains($line, ':')) {
+                continue;
+            }
+
+            [$key, $value] = explode(':', $line, 2);
+            $key = trim($key);
+            $value = trim($value);
+            if ($key !== '') {
+                $parsed[$key] = $value;
+            }
+        }
+
+        return $parsed;
+    }
+
+    private function extractAssessmentReasons(?string $details): string
+    {
+        if ($details === null || trim($details) === '') {
+            return '';
+        }
+
+        $lines = preg_split('/\R/u', $details) ?: [];
+        $reasons = [];
+        $inReasons = false;
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '=== ASSESSMENT REASONS ===') {
+                $inReasons = true;
+                continue;
+            }
+
+            if (!$inReasons) {
+                continue;
+            }
+
+            if ($line === '' || str_starts_with($line, '===')) {
+                continue;
+            }
+
+            if (str_starts_with($line, '- ')) {
+                $reasons[] = substr($line, 2);
+            } else {
+                $reasons[] = $line;
+            }
+        }
+
+        return implode("\n", $reasons);
+    }
+
+    /**
+     * @param array<string, string> $parsed
+     */
+    private function buildQuestionnaireItems(array $parsed): array
+    {
+        $map = [
+            'Are you feeling well and healthy today?' => $this->invertYesNo($parsed['Not feeling well'] ?? null),
+            'Do you have fever or elevated temperature?' => $parsed['Have fever/elevated temperature'] ?? null,
+            'Do you currently have any acute illness?' => $parsed['Have acute illness'] ?? null,
+            'Female: are you currently pregnant or recent birth?' => $parsed['Pregnant or recent birth'] ?? null,
+            'Do you have a heart disease or cardiac condition?' => $parsed['Heart disease/cardiac condition'] ?? null,
+            'Do you have anemia or iron deficiency?' => $parsed['Anemia/iron deficiency'] ?? null,
+            'Do you have chronic illness or disease?' => $parsed['Chronic illness or disease'] ?? null,
+            'Have you taken any medication in the last week?' => $parsed['On medication'] ?? null,
+            'Do you have a bleeding disorder or clotting issue?' => $parsed['Bleeding disorder/clotting issue'] ?? null,
+            'Have you tested positive for HIV, hepatitis, or malaria?' => $parsed['Infectious disease'] ?? null,
+            'Have you had surgery or procedures in the last 6 months?' => $parsed['Recent surgery/procedures'] ?? null,
+            'Have you received any vaccine recently?' => $parsed['Recent vaccine'] ?? null,
+            'Have you traveled abroad recently?' => $parsed['Recent travel abroad'] ?? null,
+            'Have you had a tattoo or piercing in the last 6 months?' => $parsed['Recent tattoo/piercing'] ?? null,
+            'Have you had a blood transfusion in the last 6 months?' => $parsed['Recent blood transfusion'] ?? null,
+        ];
+
+        $items = [];
+        foreach ($map as $question => $answer) {
+            $yes = $this->isYes($answer);
+            $no = $this->isNo($answer);
+
+            $items[] = [
+                'question' => $question,
+                'yes' => $yes,
+                'no' => $no,
+            ];
+        }
+
+        return $items;
+    }
+
+    private function invertYesNo(?string $value): ?string
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+
+        if ($this->isYes($value)) {
+            return 'No';
+        }
+
+        if ($this->isNo($value)) {
+            return 'Yes';
+        }
+
+        return null;
+    }
+
+    private function isYes(?string $value): bool
+    {
+        if ($value === null) {
+            return false;
+        }
+
+        return in_array(strtolower(trim($value)), ['yes', 'true', '1'], true);
+    }
+
+    private function isNo(?string $value): bool
+    {
+        if ($value === null) {
+            return false;
+        }
+
+        return in_array(strtolower(trim($value)), ['no', 'false', '0'], true);
     }
 
     /**
@@ -307,69 +246,9 @@ HTML;
     private function getBloodTypeDisplay(?DonorEligibility $eligibility): string
     {
         if (!$eligibility || !$eligibility->getBloodTypeCache()) {
-            return 'Not specified';
+            return '';
         }
         return $eligibility->getBloodTypeCache();
-    }
-
-    /**
-     * Get last donation display
-     */
-    private function getLastDonationDisplay(Donor $donor): string
-    {
-        if (!$donor->getLastDonationDate()) {
-            return 'Never';
-        }
-        
-        $lastDonation = $donor->getLastDonationDate();
-        $today = new \DateTime();
-        $interval = $today->diff($lastDonation);
-        
-        return $lastDonation->format('Y-m-d') . ' (' . $interval->days . ' days ago)';
-    }
-
-    /**
-     * Get days until eligible section HTML
-     */
-    private function getDaysUntilEligibleSection(?DonorEligibility $eligibility): string
-    {
-        if (!$eligibility || $eligibility->getIsCurrentlyEligible() || $eligibility->getDaysUntilEligible() === null) {
-            return '';
-        }
-
-        $daysUntil = $eligibility->getDaysUntilEligible();
-        return <<<HTML
-<div class="section">
-    <div class="section-title">Eligibility Timeline</div>
-    <div class="info-grid">
-        <div class="info-item">
-            <div class="info-label">Days Until Eligible</div>
-            <div class="info-value">{$daysUntil} days</div>
-        </div>
-    </div>
-</div>
-HTML;
-    }
-
-    /**
-     * Get details section HTML
-     */
-    private function getDetailsSection(?DonorEligibility $eligibility): string
-    {
-        if (!$eligibility || !$eligibility->getEligibilityDetails()) {
-            return '';
-        }
-
-        $details = htmlspecialchars($eligibility->getEligibilityDetails(), ENT_QUOTES, 'UTF-8');
-        return <<<HTML
-<div class="section">
-    <div class="section-title">Assessment Details</div>
-    <div class="details-box">
-        <div class="label">Eligibility Assessment</div>
-        <div class="content">{$details}</div>
-    </div>
-</div>
-HTML;
     }
 
     /**

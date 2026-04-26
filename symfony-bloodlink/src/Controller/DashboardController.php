@@ -1766,6 +1766,9 @@ class DashboardController extends AbstractController
         string $userId,
     ): array {
         $ageRaw = trim((string) $request->request->get("age", ""));
+        $dateOfBirthRaw = trim(
+            (string) $request->request->get("date_of_birth", ""),
+        );
         $weightRaw = trim((string) $request->request->get("weight", ""));
         $lastDonationRaw = trim(
             (string) $request->request->get("last_donation_date", ""),
@@ -1791,6 +1794,25 @@ class DashboardController extends AbstractController
         }
 
         $today = new DateTimeImmutable("today");
+        $dateOfBirth = null;
+        if ($dateOfBirthRaw !== "") {
+            try {
+                $dateOfBirth = new DateTimeImmutable($dateOfBirthRaw);
+            } catch (Throwable) {
+                return [
+                    "ok" => false,
+                    "error" => "Date of birth must be a valid date.",
+                ];
+            }
+
+            if ($dateOfBirth > $today) {
+                return [
+                    "ok" => false,
+                    "error" => "Date of birth cannot be in the future.",
+                ];
+            }
+        }
+
         $lastDonationDate = null;
         if ($lastDonationRaw !== "") {
             try {
@@ -1965,6 +1987,7 @@ class DashboardController extends AbstractController
         $details = $this->buildDonorEligibilityDetails(
             $outcome,
             $age,
+            $dateOfBirth,
             $gender,
             $weightRaw,
             $lastDonationDate,
@@ -2043,6 +2066,7 @@ class DashboardController extends AbstractController
     private function buildDonorEligibilityDetails(
         string $outcome,
         int $age,
+        ?DateTimeImmutable $dateOfBirth,
         string $gender,
         string $weight,
         ?DateTimeImmutable $lastDonationDate,
@@ -2073,6 +2097,10 @@ class DashboardController extends AbstractController
         // Basic Details
         $lines[] = "=== BASIC DETAILS ===";
         $lines[] = "Age: " . $age;
+        $lines[] = "Date of birth: " .
+            ($dateOfBirth !== null
+                ? $dateOfBirth->format("Y-m-d")
+                : "Not provided");
         $lines[] = "Gender: " . ($gender ?: "Not specified");
         $lines[] = "Weight: " . $weight . " kg";
         $lines[] = "";
