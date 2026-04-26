@@ -528,6 +528,11 @@
                     <div id="e_age_error" class="field-error"></div>
                 </div>
                 <div class="field">
+                    <label for="e_date_of_birth">Date of Birth</label>
+                    <input id="e_date_of_birth" type="date" name="date_of_birth" max="{{ "now"|date('Y-m-d') }}" required>
+                    <div id="e_date_of_birth_error" class="field-error"></div>
+                </div>
+                <div class="field">
                     <label for="e_weight">Weight (kg)</label>
                     <input id="e_weight" type="number" step="0.1" min="0.1" name="weight" required>
                     <div id="e_weight_error" class="field-error"></div>
@@ -682,6 +687,7 @@
             const resultDescription = document.getElementById('checkResultDescription');
             const resultReasons = document.getElementById('checkResultReasons');
             const ageInput = document.getElementById('e_age');
+            const dateOfBirthInput = document.getElementById('e_date_of_birth');
             const weightInput = document.getElementById('e_weight');
             const lastDonationInput = document.getElementById('e_last_donation_date');
 
@@ -709,6 +715,7 @@
 
             function clearDonorFormErrors() {
                 clearFieldError(ageInput, 'e_age_error');
+                clearFieldError(dateOfBirthInput, 'e_date_of_birth_error');
                 clearFieldError(weightInput, 'e_weight_error');
                 clearFieldError(lastDonationInput, 'e_last_donation_date_error');
             }
@@ -727,6 +734,7 @@
             function calculate() {
                 clearDonorFormErrors();
                 const age = parseInt((ageInput.value || '').trim(), 10);
+                const dateOfBirthRaw = (dateOfBirthInput.value || '').trim();
                 const weight = parseFloat((weightInput.value || '').trim());
                 const lastDonationRaw = (lastDonationInput.value || '').trim();
                 const today = new Date();
@@ -737,6 +745,21 @@
                     setFieldError(ageInput, 'e_age_error', 'Age is required and must be a valid number.');
                     hasErrors = true;
                 }
+
+                if (dateOfBirthRaw === '') {
+                    setFieldError(dateOfBirthInput, 'e_date_of_birth_error', 'Date of birth is required.');
+                    hasErrors = true;
+                } else {
+                    const dateOfBirth = new Date(dateOfBirthRaw + 'T00:00:00');
+                    if (Number.isNaN(dateOfBirth.getTime())) {
+                        setFieldError(dateOfBirthInput, 'e_date_of_birth_error', 'Date of birth must be a valid date.');
+                        hasErrors = true;
+                    } else if (dateOfBirth > today) {
+                        setFieldError(dateOfBirthInput, 'e_date_of_birth_error', 'Date of birth cannot be in the future.');
+                        hasErrors = true;
+                    }
+                }
+
                 if (Number.isNaN(weight)) {
                     setFieldError(weightInput, 'e_weight_error', 'Weight is required and must be a valid number.');
                     hasErrors = true;
@@ -896,6 +919,7 @@
             });
 
             ageInput.addEventListener('input', function () { clearFieldError(ageInput, 'e_age_error'); });
+            dateOfBirthInput.addEventListener('input', function () { clearFieldError(dateOfBirthInput, 'e_date_of_birth_error'); });
             weightInput.addEventListener('input', function () { clearFieldError(weightInput, 'e_weight_error'); });
             lastDonationInput.addEventListener('input', function () { clearFieldError(lastDonationInput, 'e_last_donation_date_error'); });
         } else {
