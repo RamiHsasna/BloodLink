@@ -24,7 +24,7 @@ class DashboardController extends AbstractController
         }
 
         $userType = strtoupper((string) ($sessionUser["user_type"] ?? ""));
-        if ($userType !== "DONOR") {
+        if ($userType == "ADMIN") {
             return $this->redirectToRoute("dashboard_users");
         }
 
@@ -164,13 +164,31 @@ class DashboardController extends AbstractController
             return $this->redirectToRoute("auth_index");
         }
 
+        $bloodTypes = $this->fetchBloodTypes($connection);
+        //récupèrer ce que l’utilisateur a tapé dans la barre de recherche, le type de filtre sélectionné, le groupe sanguin et la ville
         $q = trim((string) $request->query->get("q", ""));
         $type = strtoupper(trim((string) $request->query->get("type", "ALL")));
+        $bloodType = strtoupper(
+            trim((string) $request->query->get("blood_type", "")),
+        );
+        $city = trim((string) $request->query->get("city", ""));
+
         if (!in_array($type, ["ALL", "DONOR", "HOSPITAL_STAFF"], true)) {
             $type = "ALL";
         }
+//vérifier que le groupe sanguin sélectionné est valide
+        if ($bloodType !== "" && !in_array($bloodType, $bloodTypes, true)) {
+            $bloodType = "";
+        }
 
-        $users = $this->fetchUsers($connection, $q, $type);
+        //récupérer la liste des utilisateurs en fonction des critères de recherche et de filtrage
+        $users = $this->fetchUsers(
+            $connection,
+            $q,
+            $type,
+            $bloodType,
+            $city,
+        );
         $stats = $this->fetchUserStats($connection);
 
         return $this->render("dashboard/users.html.twig", [
@@ -178,8 +196,10 @@ class DashboardController extends AbstractController
             "users" => $users,
             "q" => $q,
             "type" => $type,
+            "blood_type" => $bloodType,
+            "city" => $city,
             "stats" => $stats,
-            "blood_types" => $this->fetchBloodTypes($connection),
+            "blood_types" => $bloodTypes,
             "hospital_options" => $this->fetchHospitalOptions($connection),
         ]);
     }
@@ -548,7 +568,6 @@ class DashboardController extends AbstractController
         $hospitals = [];
         $currentHospital = null;
 
-        // For HOSPITAL_STAFF: get their assigned hospital
         if ($userType === "HOSPITAL_STAFF") {
             try {
                 $staffRecord = $connection->fetchAssociative(
@@ -560,7 +579,7 @@ class DashboardController extends AbstractController
                         (string) ($staffRecord["hospital_id"] ?? "");
                 }
             } catch (Throwable) {
-                // Staff has no hospital assignment
+                
             }
         } else {
             // For ADMIN: check query param or use first hospital
@@ -753,7 +772,13 @@ class DashboardController extends AbstractController
         $status = strtolower(
             trim((string) $request->query->get("status", "all")),
         );
-        if (!in_array($status, ["all", "eligible", "not_eligible"], true)) {
+        if (
+            !in_array(
+                $status,
+                ["all", "eligible", "temporarily_not_eligible", "not_eligible"],
+                true,
+            )
+        ) {
             $status = "all";
         }
 
@@ -1233,15 +1258,30 @@ class DashboardController extends AbstractController
         Connection $connection,
         string $q,
         string $type,
+        string $bloodType,
+        string $city,
     ): array {
         try {
             $sql =
                 "SELECT " .
                 "u.user_id, u.email, u.first_name, u.last_name, u.phone, u.user_type, u.created_at, " .
                 "d.blood_type_id AS donor_blood_type_id, d.last_donation_date, d.city AS donor_city, d.total_donations, " .
+                "de.is_currently_eligible AS donor_is_currently_eligible, de.days_until_eligible AS donor_days_until_eligible, " .
+                "CASE " .
+                "WHEN de.is_currently_eligible = true THEN 'eligible' " .
+                "WHEN COALESCE(de.days_until_eligible, 0) > 0 THEN 'temporarily_not_eligible' " .
+                "ELSE 'not_eligible' " .
+                "END AS donor_eligibility_status, " .
                 "hs.role AS staff_role, hs.hospital_id::text AS staff_hospital_id, hs.department AS staff_department " .
                 "FROM users u " .
                 "LEFT JOIN donors d ON d.user_id = u.user_id " .
+                "LEFT JOIN LATERAL (" .
+                "SELECT e.user_id, e.is_currently_eligible, e.days_until_eligible, e.last_calculated_at " .
+                "FROM donor_eligibility e " .
+                "WHERE e.user_id = u.user_id " .
+                "ORDER BY e.last_calculated_at DESC NULLS LAST " .
+                "LIMIT 1" .
+                ") de ON true " .
                 "LEFT JOIN hospital_staff hs ON hs.user_id = u.user_id " .
                 "WHERE 1=1";
             $params = [];
@@ -1260,6 +1300,18 @@ class DashboardController extends AbstractController
             if ($type !== "ALL") {
                 $sql .= " AND u.user_type = :type";
                 $params["type"] = $type;
+            }
+
+            if ($bloodType !== "") {
+                $sql .=
+                    " AND u.user_type = 'DONOR' AND UPPER(COALESCE(d.blood_type_id, '')) = :bloodType";
+                $params["bloodType"] = $bloodType;
+            }
+
+            if ($city !== "") {
+                $sql .=
+                    " AND u.user_type = 'DONOR' AND LOWER(COALESCE(d.city, '')) LIKE :city";
+                $params["city"] = "%" . mb_strtolower($city) . "%";
             }
 
             $sql .= " ORDER BY u.created_at DESC NULLS LAST";
@@ -1283,7 +1335,7 @@ class DashboardController extends AbstractController
                     "SELECT blood_type_id FROM blood_type ORDER BY blood_type_id ASC",
                 )
                 ->fetchFirstColumn();
-
+            // Ensure all values are strings and filter out nulls
             return array_map(static fn($v): string => (string) $v, $rows);
         } catch (Throwable) {
             return [];
@@ -1310,7 +1362,6 @@ class DashboardController extends AbstractController
                 }, $rows);
             }
         } catch (Throwable) {
-            // Fallback below.
         }
 
         try {
@@ -1488,9 +1539,14 @@ class DashboardController extends AbstractController
                 $sql .= " AND de.is_currently_eligible = true";
             }
 
+            if ($status === "temporarily_not_eligible") {
+                $sql .=
+                    " AND COALESCE(de.is_currently_eligible, false) = false AND COALESCE(de.days_until_eligible, 0) > 0";
+            }
+
             if ($status === "not_eligible") {
                 $sql .=
-                    " AND (de.is_currently_eligible = false OR de.is_currently_eligible IS NULL)";
+                    " AND COALESCE(de.is_currently_eligible, false) = false AND (de.days_until_eligible IS NULL OR de.days_until_eligible <= 0)";
             }
 
             $sql .= " ORDER BY de.last_calculated_at DESC NULLS LAST";
