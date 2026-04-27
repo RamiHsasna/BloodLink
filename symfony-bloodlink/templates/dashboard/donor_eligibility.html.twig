@@ -449,14 +449,15 @@
             </div>
         </section>
     {% else %}
-        <form class="filters" method="get" action="{{ path('dashboard_donor_eligibility') }}">
+        <form class="filters" method="get" action="{{ path('dashboard_donor_eligibility') }}" id="eligibilityFiltersForm">
             <input type="text" name="q" value="{{ q }}" placeholder="Search by donor ID or blood type...">
             <select name="status">
                 <option value="all" {% if status == 'all' %}selected{% endif %}>All Eligibility</option>
                 <option value="eligible" {% if status == 'eligible' %}selected{% endif %}>Eligible</option>
+                <option value="temporarily_not_eligible" {% if status == 'temporarily_not_eligible' %}selected{% endif %}>Temporarily Not Eligible</option>
                 <option value="not_eligible" {% if status == 'not_eligible' %}selected{% endif %}>Not Eligible</option>
             </select>
-            <button type="submit">Apply</button>
+            <noscript><button type="submit">Apply</button></noscript>
         </form>
 
         <div class="stats">
@@ -667,6 +668,32 @@
         const form = document.getElementById('eligibilityModalForm');
         const title = document.getElementById('eligibilityModalTitle');
         const submitBtn = document.getElementById('submitEligibilityModal');
+
+        if (!donorMode) {
+            const filtersForm = document.getElementById('eligibilityFiltersForm');
+            if (filtersForm) {
+                const qInput = filtersForm.querySelector('input[name="q"]');
+                const statusSelect = filtersForm.querySelector('select[name="status"]');
+                let typingTimer = null;
+
+                const submitFilters = function () {
+                    filtersForm.submit();
+                };
+
+                if (qInput) {
+                    qInput.addEventListener('input', function () {
+                        if (typingTimer !== null) {
+                            window.clearTimeout(typingTimer);
+                        }
+                        typingTimer = window.setTimeout(submitFilters, 300);
+                    });
+                }
+
+                if (statusSelect) {
+                    statusSelect.addEventListener('change', submitFilters);
+                }
+            }
+        }
 
         function openModal() {
             overlay.classList.add('open');

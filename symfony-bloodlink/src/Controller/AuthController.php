@@ -124,9 +124,15 @@ class AuthController extends AbstractController
     #[Route('/auth/logout', name: 'auth_logout', methods: ['POST'])]
     public function logout(Request $request): Response
     {
-        $request->getSession()->remove('auth_user');
-        $this->addFlash('success', 'You are now signed out.');
+        $session = $request->getSession();
+        $session->remove('auth_user');
+        $session->invalidate();
 
-        return $this->redirectToRoute('auth_index');
+        $response = $this->redirectToRoute('auth_index');
+        $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private, max-age=0');
+        $response->headers->set('Pragma', 'no-cache');
+        $response->headers->set('Expires', '0');
+
+        return $response;
     }
 }
