@@ -30,6 +30,8 @@ The integrated Audit Logs workspace includes:
 - transfer log CRUD
 - filters, pagination, timeline, and overview cards
 - audit-specific charts on the overview page
+- AI anomaly detection with severity, score, reasons, recommendation, and review state
+- high-risk SMS alert attempts for critical audit signals
 
 Routes:
 
@@ -37,11 +39,17 @@ Routes:
 - `/dashboard/logs/donations`
 - `/dashboard/logs/donations/new`
 - `/dashboard/logs/donations/{logId}`
+- `/dashboard/logs/donations/{logId}/review-anomaly`
 - `/dashboard/logs/donations/{logId}/edit`
+- `/dashboard/logs/donations/{logId}/delete`
+- `/dashboard/logs/donations/{logId}/export-pdf`
 - `/dashboard/logs/transfers`
 - `/dashboard/logs/transfers/new`
 - `/dashboard/logs/transfers/{logId}`
+- `/dashboard/logs/transfers/{logId}/review-anomaly`
 - `/dashboard/logs/transfers/{logId}/edit`
+- `/dashboard/logs/transfers/{logId}/delete`
+- `/dashboard/logs/transfers/{logId}/export-pdf`
 
 ### Donor Front Office Audit View
 
@@ -79,6 +87,8 @@ The main audit entities used by the module are:
 
 - `DonationLog`
 - `BloodTransferRequestLog`
+
+Both log entities now carry module-owned anomaly metadata and SMS delivery metadata. This keeps AI review traceability with the audit record itself.
 
 The module continues to rely on the shared PostgreSQL / Supabase dataset rather than mock data.
 
@@ -121,6 +131,19 @@ The module keeps the intended audit-trail rules:
 - on edit, snapshot fields stay locked
 - action and notes remain editable where allowed
 - status-transition validation stays server-side
+
+## AI and SMS Integration
+
+Translation and generic chatbot behavior are not part of the Audit Logs smart feature.
+
+The implemented smart feature is AI-assisted anomaly review:
+
+- deterministic audit rules always run
+- NVIDIA-backed AI enrichment runs only when `NVIDIA_API_KEY` is configured
+- the AI payload avoids donor names and actor emails; local Symfony screens keep full attribution
+- high/critical anomaly results attempt SMS delivery through Twilio credentials when available
+- missing AI or SMS configuration degrades to stored review metadata instead of blocking CRUD
+- staff can mark anomaly results reviewed from the donation/transfer detail page
 
 This applies to both donation logs and transfer logs.
 

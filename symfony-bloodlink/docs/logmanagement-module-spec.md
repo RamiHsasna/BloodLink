@@ -90,6 +90,7 @@ The hospital fields are populated at sign-in by joining `users` to `hospital_sta
 - linked to `Donation`
 - linked to `User`
 - stores `action`, `previous_status`, `new_status`, `notes`, `created_at`
+- stores AI anomaly metadata, human review state, and high-risk SMS alert status
 - `previous_status` and `new_status` must differ
 - on create, `previous_status` is captured from the selected donation
 - on edit, snapshot fields stay locked
@@ -99,6 +100,7 @@ The hospital fields are populated at sign-in by joining `users` to `hospital_sta
 - linked to `BloodTransferRequest`
 - linked to `User`
 - stores `action`, `previous_status`, `new_status`, `notes`, `created_at`
+- stores AI anomaly metadata, human review state, and high-risk SMS alert status
 - `previous_status` and `new_status` must differ
 - on create, `previous_status` is captured from the selected transfer request
 - on edit, snapshot fields stay locked
@@ -129,11 +131,17 @@ The hospital fields are populated at sign-in by joining `users` to `hospital_sta
 | `/dashboard/logs/donations` | donation log listing + filters + pagination |
 | `/dashboard/logs/donations/new` | create donation log |
 | `/dashboard/logs/donations/{logId}` | donation log detail |
+| `/dashboard/logs/donations/{logId}/review-anomaly` | mark donation anomaly as reviewed |
 | `/dashboard/logs/donations/{logId}/edit` | edit donation log |
+| `/dashboard/logs/donations/{logId}/delete` | delete donation log |
+| `/dashboard/logs/donations/{logId}/export-pdf` | export donation log PDF |
 | `/dashboard/logs/transfers` | transfer log listing + filters + pagination |
 | `/dashboard/logs/transfers/new` | create transfer log |
 | `/dashboard/logs/transfers/{logId}` | transfer log detail |
+| `/dashboard/logs/transfers/{logId}/review-anomaly` | mark transfer anomaly as reviewed |
 | `/dashboard/logs/transfers/{logId}/edit` | edit transfer log |
+| `/dashboard/logs/transfers/{logId}/delete` | delete transfer log |
+| `/dashboard/logs/transfers/{logId}/export-pdf` | export transfer log PDF |
 
 ### Donor Front Office pages
 
@@ -214,15 +222,32 @@ The Audit Logs workspace includes:
 - end date filter
 - action filter
 - status filter
+- AI anomaly-state filter
 - pagination
 - recent-activity ordering
 - hospital-scoped aggregate cards for staff
+- anomaly severity counts and unreviewed-review shortcuts
+
+## 10. AI anomaly detection and SMS alerts
+
+The smart feature is owned by Audit Logs, not by translation or a generic chatbot.
+
+On create or edit of a donation/transfer audit log:
+
+1. the controller saves the trusted server-side log entity
+2. `AuditAnomalyDetector` applies deterministic audit rules
+3. `AuditAiClient` optionally enriches the result when `NVIDIA_API_KEY` is configured, using a reduced payload that avoids donor names and actor emails
+4. anomaly metadata is stored on the log row
+5. high/critical anomalies attempt SMS delivery through `AuditSmsAlertNotifier`
+6. staff can mark the anomaly reviewed from the detail page
+
+If AI or Twilio credentials are missing, the module keeps deterministic detection active and records SMS status as skipped rather than blocking CRUD.
 
 The Alerts workspace keeps its own lifecycle filters and CRUD. The Audit Logs overview stays lightweight and does not carry the alerts chart or donor-response summary.
 
 ---
 
-## 10. Delete UX and error handling
+## 11. Delete UX and error handling
 
 - Audit delete actions use the integrated in-page confirmation modal, not the browser's raw `confirm()` dialog.
 - Branded 403 / 404 / 500 templates exist under `templates/error/`.
@@ -230,7 +255,7 @@ The Alerts workspace keeps its own lifecycle filters and CRUD. The Audit Logs ov
 
 ---
 
-## 11. What to say if asked “what proves the professor requirements were followed?”
+## 12. What to say if asked “what proves the professor requirements were followed?”
 
 Short answer:
 

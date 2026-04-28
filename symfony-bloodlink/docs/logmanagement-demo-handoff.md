@@ -2,6 +2,8 @@
 
 This guide is for the final merged Symfony copy only. It explains how to run the app locally, which accounts to use, and which routes to show during the professor demo.
 
+For the full Audit Logs module explanation, file structure, AI assistant details, smart anomaly feature, Twilio test, and packaging notes, see [Audit Logs Module - Professor Technical Guide](logmanagement-professor-guide.md).
+
 ---
 
 ## 1. What is included in this copy
