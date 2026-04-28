@@ -9,6 +9,8 @@
 {% set is_logs_route = route starts with 'dashboard_logs_' %}
 {% set is_events_route = route starts with 'dashboard_events_' %}
 {% set is_hospital_mgmt_route = route starts with 'dashboard_hospitals_' or route == 'dashboard_blood_inventory' or route == 'dashboard_transfers' %}
+{% set is_events_route = route starts with 'dashboard_events_' or route starts with 'donation_events_' %}
+{% set is_donations_route = route starts with 'donations_' %}
 
 {% block title %}{{ page_title|default('BloodLink Back Office') }}{% endblock %}
 
@@ -59,6 +61,12 @@
                             <a href="{{ path('dashboard_transfers') }}" class="bo-subnav-link {{ route == 'dashboard_transfers' ? 'is-active' : '' }}">Transfers</a>
                         </div>
                     </div>
+
+
+                    <a href="{{ path('donations_index') }}" class="bo-link {{ is_donations_route ? 'is-active' : '' }}">
+                        <span>Donations</span>
+                        {% if is_donations_route %}<span class="bo-pill">Live</span>{% endif %}
+                    </a>
 
                     <a href="{{ path('dashboard_events_index') }}" class="bo-link {{ is_events_route ? 'is-active' : '' }}">
                         <span>Donation Events</span>

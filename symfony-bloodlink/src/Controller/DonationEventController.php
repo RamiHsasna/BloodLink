@@ -2,433 +2,319 @@
 
 namespace App\Controller;
 
-use App\Entity\DonationEvent;
-use App\Entity\Donor;
-use App\Entity\Hospital;
-use App\Entity\User;
-use App\Form\DonationEventType;
-use App\Repository\DonationEventRepository;
-use DateTimeImmutable;
-use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\DBAL\Connection;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Throwable;
 
 class DonationEventController extends AbstractController
 {
-    public function __construct(
-        private readonly DonationEventRepository $donationEventRepository,
-        private readonly EntityManagerInterface $entityManager,
-    ) {
+    // ─── AUTO STATUS SYNC ────────────────────────────────────────────────────
+    private function syncStatuses(Connection $connection): void
+    {
+        $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
+
+        // PLANNED → ACTIVE when start_date has arrived
+        $connection->executeStatement("
+            UPDATE donation_events
+            SET status = 'ACTIVE', updated_at = :now
+            WHERE status = 'PLANNED'
+              AND start_date <= :now
+              AND end_date >= :now
+        ", ['now' => $now]);
+
+        // ACTIVE → COMPLETED when end_date has passed
+        $connection->executeStatement("
+            UPDATE donation_events
+            SET status = 'COMPLETED', updated_at = :now
+            WHERE status = 'ACTIVE'
+              AND end_date < :now
+        ", ['now' => $now]);
+
+        // PLANNED → COMPLETED if missed active window
+        $connection->executeStatement("
+            UPDATE donation_events
+            SET status = 'COMPLETED', updated_at = :now
+            WHERE status = 'PLANNED'
+              AND end_date < :now
+        ", ['now' => $now]);
     }
 
+    // ─── LIST ────────────────────────────────────────────────────────────────
+    #[Route('/dashboard/donation-events', name: 'donation_events_index', methods: ['GET'])]
     #[Route('/dashboard/donation-events', name: 'dashboard_events_index', methods: ['GET'])]
-    public function index(Request $request): Response
-    {
-        if ($guard = $this->denyUnlessBackOffice($request)) {
-            return $guard;
-        }
-
-        $sessionUser = $this->getSessionUser($request);
-        $hospitalId = $this->getScopedHospitalId($sessionUser);
-        $query = trim((string) $request->query->get('q', ''));
-        $status = strtoupper(trim((string) $request->query->get('status', '')));
-        if (!in_array($status, DonationEvent::allowedStatuses(), true)) {
-            $status = '';
-        }
-
-        $result = $this->donationEventRepository->searchPaginated(
-            $query,
-            $status,
-            $hospitalId,
-            max(1, $request->query->getInt('page', 1)),
-            9,
-        );
-        $donationCounts = $this->donationEventRepository->getDonationCountsForEvents(
-            array_map(
-                static fn (DonationEvent $event): string => $event->getEventId(),
-                $result['items'],
-            ),
-        );
-
-        return $this->render('donation_events/back_office/index.html.twig', [
-            'session_user' => $sessionUser,
-            'filters' => [
-                'q' => $query,
-                'status' => $status,
-            ],
-            'result' => $result,
-            'entries' => $result['items'],
-            'donation_counts' => $donationCounts,
-            'summary_cards' => [
-                [
-                    'label' => 'All Events',
-                    'value' => $result['total'],
-                    'caption' => 'Donation-event records currently visible in this workspace.',
-                ],
-                [
-                    'label' => 'Upcoming',
-                    'value' => $this->donationEventRepository->countUpcoming($hospitalId),
-                    'caption' => 'Events whose schedule is still open or upcoming.',
-                ],
-                [
-                    'label' => 'Active',
-                    'value' => $this->donationEventRepository->countByStatus(DonationEvent::STATUS_ACTIVE, $hospitalId),
-                    'caption' => 'Live collection windows happening right now.',
-                ],
-                [
-                    'label' => 'Planned',
-                    'value' => $this->donationEventRepository->countByStatus(DonationEvent::STATUS_PLANNED, $hospitalId),
-                    'caption' => 'Prepared campaigns waiting to go live.',
-                ],
-            ],
-            'status_choices' => DonationEvent::statusChoices(),
-        ]);
-    }
-
-    #[Route('/dashboard/donation-events/new', name: 'dashboard_events_new', methods: ['GET', 'POST'])]
-    public function new(Request $request): Response
-    {
-        if ($guard = $this->denyUnlessBackOffice($request)) {
-            return $guard;
-        }
-
-        $sessionUser = $this->getSessionUser($request);
-        $hospitalId = $this->getScopedHospitalId($sessionUser);
-        $now = new DateTimeImmutable();
-
-        $event = (new DonationEvent())
-            ->setEventId($this->generateUuidV4())
-            ->setStatus(DonationEvent::STATUS_PLANNED)
-            ->setCreatedAt($now)
-            ->setUpdatedAt($now)
-            ->setStartDate($now->modify('+1 day')->setTime(9, 0))
-            ->setEndDate($now->modify('+1 day')->setTime(17, 0));
-
-        if ($hospitalId !== null) {
-            $hospital = $this->entityManager->find(Hospital::class, $hospitalId);
-            if ($hospital instanceof Hospital) {
-                $event->setHospital($hospital);
-            }
-        }
-
-        $form = $this->createForm(DonationEventType::class, $event, [
-            'lock_hospital' => $hospitalId !== null,
-            'allowed_hospital_id' => $hospitalId,
-        ]);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $event->setUpdatedAt(new DateTimeImmutable());
-            if ($event->getCreatedAt() === null) {
-                $event->setCreatedAt(new DateTimeImmutable());
-            }
-
-            $this->entityManager->persist($event);
-            $this->entityManager->flush();
-
-            $this->addFlash('success', 'Donation event created successfully.');
-
-            return $this->redirectToRoute('dashboard_events_show', ['eventId' => $event->getEventId()]);
-        }
-
-        return $this->render('donation_events/back_office/form.html.twig', [
-            'session_user' => $sessionUser,
-            'form' => $form->createView(),
-            'page_title' => 'Create Donation Event',
-            'page_description' => 'Schedule a donor-facing collection campaign and assign it to the hosting hospital.',
-            'submit_label' => 'Create Event',
-            'entry' => $event,
-        ]);
-    }
-
-    #[Route('/dashboard/donation-events/{eventId}', name: 'dashboard_events_show', methods: ['GET'])]
-    public function show(Request $request, string $eventId): Response
-    {
-        if ($guard = $this->denyUnlessBackOffice($request)) {
-            return $guard;
-        }
-
-        $sessionUser = $this->getSessionUser($request);
-        $event = $this->findEventOrThrow($eventId, $sessionUser);
-        $donationCount = $this->donationEventRepository->getDonationCountsForEvents([$event->getEventId()])[$event->getEventId()] ?? 0;
-
-        return $this->render('donation_events/back_office/show.html.twig', [
-            'session_user' => $sessionUser,
-            'entry' => $event,
-            'donation_count' => $donationCount,
-        ]);
-    }
-
-    #[Route('/dashboard/donation-events/{eventId}/edit', name: 'dashboard_events_edit', methods: ['GET', 'POST'])]
-    public function edit(Request $request, string $eventId): Response
-    {
-        if ($guard = $this->denyUnlessBackOffice($request)) {
-            return $guard;
-        }
-
-        $sessionUser = $this->getSessionUser($request);
-        $event = $this->findEventOrThrow($eventId, $sessionUser);
-        $hospitalId = $this->getScopedHospitalId($sessionUser);
-
-        $form = $this->createForm(DonationEventType::class, $event, [
-            'lock_hospital' => $hospitalId !== null,
-            'allowed_hospital_id' => $hospitalId,
-        ]);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $event->setUpdatedAt(new DateTimeImmutable());
-            $this->entityManager->flush();
-
-            $this->addFlash('success', 'Donation event updated successfully.');
-
-            return $this->redirectToRoute('dashboard_events_show', ['eventId' => $event->getEventId()]);
-        }
-
-        return $this->render('donation_events/back_office/form.html.twig', [
-            'session_user' => $sessionUser,
-            'form' => $form->createView(),
-            'page_title' => 'Edit Donation Event',
-            'page_description' => 'Adjust the campaign schedule, blood-type focus, and hosting location.',
-            'submit_label' => 'Save Changes',
-            'entry' => $event,
-        ]);
-    }
-
-    #[Route('/dashboard/donation-events/{eventId}/delete', name: 'dashboard_events_delete', methods: ['POST'])]
-    public function delete(Request $request, string $eventId): Response
-    {
-        if ($guard = $this->denyUnlessBackOffice($request)) {
-            return $guard;
-        }
-
-        $event = $this->findEventOrThrow($eventId, $this->getSessionUser($request));
-
-        if ($this->isCsrfTokenValid('delete-donation-event-' . $eventId, (string) $request->request->get('_token'))) {
-            try {
-                $this->entityManager->remove($event);
-                $this->entityManager->flush();
-                $this->addFlash('success', 'Donation event deleted successfully.');
-            } catch (Throwable) {
-                $this->addFlash('error', 'This donation event cannot be deleted while linked donation records still reference it.');
-            }
-        } else {
-            $this->addFlash('error', 'The delete request is invalid.');
-        }
-
-        return $this->redirectToRoute('dashboard_events_index');
-    }
-
-    #[Route('/dashboard/donor/events', name: 'dashboard_donor_events', methods: ['GET'])]
-    public function donorIndex(Request $request): Response
-    {
-        if ($guard = $this->denyUnlessDonor($request)) {
-            return $guard;
-        }
-
-        $sessionUser = $this->getSessionUser($request);
-        $donor = $this->resolveDonorFromSession($sessionUser);
-        $bloodTypeId = $donor?->getBloodType()?->getBloodTypeId();
-        $events = $this->donationEventRepository->findUpcomingForDonor($bloodTypeId, 8);
-        $donationCounts = $this->donationEventRepository->getDonationCountsForEvents(
-            array_map(static fn (DonationEvent $event): string => $event->getEventId(), $events),
-        );
-
-        $matchedCount = 0;
-        foreach ($events as $event) {
-            if ($this->eventMatchesBloodType($event, $bloodTypeId)) {
-                ++$matchedCount;
-            }
-        }
-
-        return $this->render('donation_events/front/index.html.twig', [
-            'session_user' => $sessionUser,
-            'entries' => $events,
-            'donation_counts' => $donationCounts,
-            'donor_blood_type' => $bloodTypeId,
-            'summary_cards' => [
-                [
-                    'label' => 'Upcoming Events',
-                    'value' => count($events),
-                    'caption' => 'Campaigns currently visible to the donor front office.',
-                ],
-                [
-                    'label' => 'Matching Blood Type',
-                    'value' => $matchedCount,
-                    'caption' => $bloodTypeId !== null ? 'Events that explicitly mention ' . $bloodTypeId . '.' : 'No donor blood type could be resolved.',
-                ],
-                [
-                    'label' => 'Always Read-only',
-                    'value' => 'FO',
-                    'caption' => 'Donors can inspect campaigns, but not manage them.',
-                ],
-            ],
-        ]);
-    }
-
-    #[Route('/dashboard/donor/events/{eventId}', name: 'dashboard_donor_events_show', methods: ['GET'])]
-    public function donorShow(Request $request, string $eventId): Response
-    {
-        if ($guard = $this->denyUnlessDonor($request)) {
-            return $guard;
-        }
-
-        $sessionUser = $this->getSessionUser($request);
-        $event = $this->findEventOrThrow($eventId);
-        $donor = $this->resolveDonorFromSession($sessionUser);
-        $bloodTypeId = $donor?->getBloodType()?->getBloodTypeId();
-        $donationCount = $this->donationEventRepository->getDonationCountsForEvents([$event->getEventId()])[$event->getEventId()] ?? 0;
-
-        return $this->render('donation_events/front/show.html.twig', [
-            'session_user' => $sessionUser,
-            'entry' => $event,
-            'donation_count' => $donationCount,
-            'donor_blood_type' => $bloodTypeId,
-            'blood_type_match' => $this->eventMatchesBloodType($event, $bloodTypeId),
-        ]);
-    }
-
-    /**
-     * @return array<string, mixed>|null
-     */
-    private function getSessionUser(Request $request): ?array
+    public function index(Request $request, Connection $connection): Response
     {
         $sessionUser = $request->getSession()->get('auth_user');
-
-        return is_array($sessionUser) ? $sessionUser : null;
-    }
-
-    private function denyUnlessBackOffice(Request $request): ?RedirectResponse
-    {
-        $sessionUser = $this->getSessionUser($request);
-        if ($sessionUser === null) {
+        if (!$sessionUser) {
             return $this->redirectToRoute('auth_index');
         }
 
         $userType = strtoupper((string) ($sessionUser['user_type'] ?? ''));
-        if ($userType === User::TYPE_DONOR) {
-            $this->addFlash('error', 'This area is available only to the Back Office team.');
-
-            return $this->redirectToRoute('dashboard_donor_home');
-        }
-
-        if ($userType === User::TYPE_HOSPITAL_STAFF && $this->getScopedHospitalId($sessionUser) === null) {
-            $this->addFlash('error', 'Your hospital staff account is not linked to a hospital yet.');
-
+        if ($userType === 'DONOR') {
+            $this->addFlash('error', 'Donors cannot manage donation events.');
             return $this->redirectToRoute('dashboard_users');
         }
 
-        return null;
+        // Auto-sync statuses on every page load
+        $this->syncStatuses($connection);
+
+        $search = trim((string) $request->query->get('q', ''));
+        $status = trim((string) $request->query->get('status', ''));
+
+        $sql = "
+         SELECT de.*,
+            de.cancellation_reason,
+            h.name AS hospital_name,
+            COUNT(d.donation_id) AS total_donations,
+            COALESCE(SUM(d.volume_collected), 0) AS total_litres_collected
+         FROM donation_events de
+            LEFT JOIN hospital h ON h.hospital_id = de.hospital_id
+            LEFT JOIN donations d ON d.donation_event_id = de.event_id
+            WHERE 1=1
+        ";
+        $params = [];
+
+        if ($search !== '') {
+            $sql .= " AND (de.name ILIKE :q OR de.description ILIKE :q OR de.location ILIKE :q)";
+            $params['q'] = '%' . $search . '%';
+        }
+
+        if ($status !== '') {
+            $sql .= " AND de.status = :status";
+            $params['status'] = strtoupper($status);
+        }
+
+        $sql .= " GROUP BY de.event_id, h.name ORDER BY de.start_date DESC";
+
+        $events = $connection->fetchAllAssociative($sql, $params);
+
+        $stats = $connection->fetchAssociative("
+            SELECT
+                COUNT(DISTINCT de.event_id)                                         AS total_events,
+                COUNT(DISTINCT CASE WHEN de.status = 'PLANNED'   THEN de.event_id END) AS planned,
+                COUNT(DISTINCT CASE WHEN de.status = 'ACTIVE'    THEN de.event_id END) AS active,
+                COUNT(DISTINCT CASE WHEN de.status = 'COMPLETED' THEN de.event_id END) AS completed,
+                COUNT(DISTINCT CASE WHEN de.status = 'CANCELLED' THEN de.event_id END) AS cancelled,
+                COALESCE(SUM(d.volume_collected), 0)                                AS total_litres
+            FROM donation_events de
+            LEFT JOIN donations d ON d.donation_event_id = de.event_id
+        ");
+
+        return $this->render('dashboard/donation_events.html.twig', [
+            'session_user'  => $sessionUser,
+            'events'        => $events,
+            'stats'         => $stats,
+            'search'        => $search,
+            'status_filter' => $status,
+            'user_type'     => $userType,
+        ]);
     }
 
-    private function denyUnlessDonor(Request $request): ?RedirectResponse
+    // ─── CREATE ───────────────────────────────────────────────────────────────
+    #[Route('/dashboard/donation-events/create', name: 'donation_events_create', methods: ['POST'])]
+    public function create(Request $request, Connection $connection): Response
     {
-        $sessionUser = $this->getSessionUser($request);
-        if ($sessionUser === null) {
-            return $this->redirectToRoute('auth_index');
+        $sessionUser = $request->getSession()->get('auth_user');
+        if (!$sessionUser) return $this->redirectToRoute('auth_index');
+
+        $userType = strtoupper((string) ($sessionUser['user_type'] ?? ''));
+        if ($userType === 'DONOR') {
+            $this->addFlash('error', 'Donors cannot create donation events.');
+            return $this->redirectToRoute('donation_events_index');
         }
 
-        if (strtoupper((string) ($sessionUser['user_type'] ?? '')) !== User::TYPE_DONOR) {
-            $this->addFlash('error', 'This page is reserved for donor accounts.');
+        $startDate = $request->request->get('start_date');
+        $endDate   = $request->request->get('end_date');
+        $now       = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
+        $today     = (new \DateTimeImmutable())->format('Y-m-d');
 
-            return $this->redirectToRoute('dashboard_events_index');
+        // Start date cannot be in the past
+        if ($startDate && substr($startDate, 0, 10) < $today) {
+            $this->addFlash('error', 'Start date cannot be in the past.');
+            return $this->redirectToRoute('donation_events_index');
         }
 
-        return null;
+        // End date must be at least 12 hours after start date
+            if ($startDate && $endDate) {
+               $start = new \DateTimeImmutable($startDate);
+               $end   = new \DateTimeImmutable($endDate);
+               $diff  = $end->getTimestamp() - $start->getTimestamp();
+               if ($diff < 43200) { // 43200 seconds = 12 hours
+                $this->addFlash('error', 'The event must last at least 12 hours. Please adjust the end date and time.');
+                return $this->redirectToRoute('donation_events_index');
+            }
+        }
+
+        $id         = $this->generateUuidV4();
+        $hospitalId = $this->resolveHospital($connection, $request->request->get('hospital_name'), $now);
+
+        $connection->executeStatement("
+            INSERT INTO donation_events
+                (event_id, name, description, start_date, end_date, location,
+                 target_blood_types, target_collection_units,
+                 actual_collection_units, hospital_id, status, created_at, updated_at)
+            VALUES
+                (:event_id, :name, :description, :start_date, :end_date, :location,
+                 :target_blood_types, :target_collection_units,
+                 0, :hospital_id, 'PLANNED', :now, :now)
+        ", [
+            'event_id'                => $id,
+            'name'                    => $request->request->get('name'),
+            'description'             => $request->request->get('description') ?: null,
+            'start_date'              => $startDate,
+            'end_date'                => $endDate,
+            'location'                => $request->request->get('location') ?: null,
+            'target_blood_types'      => $request->request->get('target_blood_types') ?: null,
+            'target_collection_units' => $request->request->get('target_collection_units') ? (int) $request->request->get('target_collection_units') : null,
+            'hospital_id'             => $hospitalId,
+            'now'                     => $now,
+        ]);
+
+        $this->addFlash('success', 'Donation event created successfully.');
+        return $this->redirectToRoute('donation_events_index');
     }
 
-    /**
-     * @param array<string, mixed>|null $sessionUser
-     */
-    private function getScopedHospitalId(?array $sessionUser): ?string
+    // ─── EDIT ─────────────────────────────────────────────────────────────────
+    #[Route('/dashboard/donation-events/{id}/edit', name: 'donation_events_edit', methods: ['POST'])]
+    public function edit(string $id, Request $request, Connection $connection): Response
     {
-        if (strtoupper((string) ($sessionUser['user_type'] ?? '')) !== User::TYPE_HOSPITAL_STAFF) {
-            return null;
+        $sessionUser = $request->getSession()->get('auth_user');
+        if (!$sessionUser) return $this->redirectToRoute('auth_index');
+
+        $userType = strtoupper((string) ($sessionUser['user_type'] ?? ''));
+        if ($userType === 'DONOR') {
+            $this->addFlash('error', 'Donors cannot edit donation events.');
+            return $this->redirectToRoute('donation_events_index');
         }
 
-        $hospitalId = trim((string) ($sessionUser['hospital_id'] ?? ''));
+        $startDate = $request->request->get('start_date');
+        $endDate   = $request->request->get('end_date');
 
-        return $hospitalId !== '' ? $hospitalId : null;
+        // End date must be >= start date
+        if ($startDate && $endDate && $endDate < $startDate) {
+            $this->addFlash('error', 'End date must be on or after the start date.');
+            return $this->redirectToRoute('donation_events_index');
+        }
+
+        $now        = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
+        $hospitalId = $this->resolveHospital($connection, $request->request->get('hospital_name'), $now);
+
+        $status = $request->request->get('status', 'PLANNED');
+        if (!in_array($status, ['PLANNED', 'ACTIVE', 'COMPLETED', 'CANCELLED'])) {
+            $status = 'PLANNED';
+        }
+
+        $connection->executeStatement("
+            UPDATE donation_events SET
+                name                     = :name,
+                description              = :description,
+                start_date               = :start_date,
+                end_date                 = :end_date,
+                location                 = :location,
+                target_blood_types       = :target_blood_types,
+                target_collection_units  = :target_collection_units,
+                hospital_id              = :hospital_id,
+                status                   = :status,
+                updated_at               = :now
+            WHERE event_id = :event_id
+        ", [
+            'event_id'                => $id,
+            'name'                    => $request->request->get('name'),
+            'description'             => $request->request->get('description') ?: null,
+            'start_date'              => $startDate,
+            'end_date'                => $endDate,
+            'location'                => $request->request->get('location') ?: null,
+            'target_blood_types'      => $request->request->get('target_blood_types') ?: null,
+            'target_collection_units' => $request->request->get('target_collection_units') ?: null,
+            'hospital_id'             => $hospitalId,
+            'status'                  => $status,
+            'now'                     => $now,
+        ]);
+
+        $this->addFlash('success', 'Donation event updated successfully.');
+        return $this->redirectToRoute('donation_events_index');
     }
 
-    /**
-     * @param array<string, mixed>|null $sessionUser
-     */
-    private function resolveDonorFromSession(?array $sessionUser): ?Donor
+    // ─── DELETE ───────────────────────────────────────────────────────────────
+    #[Route('/dashboard/donation-events/{id}/delete', name: 'donation_events_delete', methods: ['POST'])]
+    public function delete(string $id, Request $request, Connection $connection): Response
     {
-        $userId = trim((string) ($sessionUser['id'] ?? ''));
-        if ($userId === '') {
-            return null;
+        $sessionUser = $request->getSession()->get('auth_user');
+        if (!$sessionUser) return $this->redirectToRoute('auth_index');
+
+        $userType = strtoupper((string) ($sessionUser['user_type'] ?? ''));
+        if ($userType === 'DONOR') {
+            $this->addFlash('error', 'Donors cannot delete donation events.');
+            return $this->redirectToRoute('donation_events_index');
         }
 
-        $donor = $this->entityManager->find(Donor::class, $userId);
+        $connection->executeStatement(
+            "DELETE FROM donation_events WHERE event_id = :id",
+            ['id' => $id]
+        );
 
-        return $donor instanceof Donor ? $donor : null;
+        $this->addFlash('success', 'Event deleted successfully.');
+        return $this->redirectToRoute('donation_events_index');
     }
 
-    /**
-     * @param array<string, mixed>|null $sessionUser
-     */
-    private function findEventOrThrow(string $eventId, ?array $sessionUser = null): DonationEvent
+    // ─── HELPERS ──────────────────────────────────────────────────────────────
+    private function resolveHospital(Connection $connection, ?string $input, string $now): ?string
     {
-        if (!$this->isUuid($eventId)) {
-            throw $this->createNotFoundException('Donation event not found.');
-        }
+        if (!$input) return null;
 
-        $event = $this->donationEventRepository->find($eventId);
-        if (!$event instanceof DonationEvent) {
-            throw $this->createNotFoundException('Donation event not found.');
-        }
+        $hospital = $connection->fetchAssociative(
+            "SELECT hospital_id FROM hospital WHERE name ILIKE :name LIMIT 1",
+            ['name' => $input]
+        );
 
-        $scopedHospitalId = $this->getScopedHospitalId($sessionUser);
-        if ($scopedHospitalId !== null && $event->getHospital()?->getHospitalId() !== $scopedHospitalId) {
-            throw $this->createNotFoundException('Donation event not found.');
-        }
+        if ($hospital) return $hospital['hospital_id'];
 
-        return $event;
+        $hospitalId = $this->generateUuidV4();
+        $connection->executeStatement("
+            INSERT INTO hospital (hospital_id, name, address, city, created_at, updated_at)
+            VALUES (:id, :name, '', '', :now, :now)
+        ", ['id' => $hospitalId, 'name' => $input, 'now' => $now]);
+
+        return $hospitalId;
     }
-
-    private function eventMatchesBloodType(DonationEvent $event, ?string $bloodTypeId): bool
+     #[Route('/dashboard/donation-events/{id}/cancel', name: 'donation_events_cancel', methods: ['POST'])]
+     public function cancel(string $id, Request $request, Connection $connection): Response
     {
-        if ($bloodTypeId === null || $bloodTypeId === '') {
-            return false;
-        }
+       $sessionUser = $request->getSession()->get('auth_user');
+       if (!$sessionUser) return $this->redirectToRoute('auth_index');
 
-        $targetBloodTypes = trim((string) $event->getTargetBloodTypes());
-        if ($targetBloodTypes === '') {
-            return false;
-        }
+       $reason = trim((string) $request->request->get('cancellation_reason', ''));
+       if ($reason === '') {
+        $this->addFlash('error', 'Cancellation reason is required.');
+        return $this->redirectToRoute('donation_events_index');
+     }
 
-        return str_contains(mb_strtolower($targetBloodTypes), mb_strtolower($bloodTypeId));
-    }
+     $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
 
-    private function isUuid(string $value): bool
-    {
-        return preg_match(
-            '/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i',
-            $value,
-        ) === 1;
-    }
+     $connection->executeStatement("
+        UPDATE donation_events
+        SET status = 'CANCELLED',
+            cancellation_reason = :reason,
+            updated_at = :now
+        WHERE event_id = :id
+     ", ['id' => $id, 'reason' => $reason, 'now' => $now]);
 
+    $this->addFlash('success', 'Event cancelled successfully.');
+    return $this->redirectToRoute('donation_events_index');
+ }
+    
     private function generateUuidV4(): string
     {
         $bytes = random_bytes(16);
         $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40);
         $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
-
         $hex = bin2hex($bytes);
-
-        return sprintf(
-            '%s-%s-%s-%s-%s',
-            substr($hex, 0, 8),
-            substr($hex, 8, 4),
-            substr($hex, 12, 4),
-            substr($hex, 16, 4),
-            substr($hex, 20, 12),
+        return sprintf('%s-%s-%s-%s-%s',
+            substr($hex, 0, 8), substr($hex, 8, 4),
+            substr($hex, 12, 4), substr($hex, 16, 4),
+            substr($hex, 20, 12)
         );
     }
 }
