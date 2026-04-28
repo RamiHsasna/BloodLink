@@ -231,80 +231,12 @@
             <noscript><button type="submit">Apply</button></noscript>
         </form>
 
-        <div class="stats">
-            <div class="stat">Total: <strong>{{ stats.total }}</strong></div>
-            <div class="stat"><span class="dot green">•</span>Donors: <strong>{{ stats.donors }}</strong></div>
-            <div class="stat"><span class="dot orange">•</span>Hospital Staff: <strong>{{ stats.staff }}</strong></div>
+        <div id="usersStatsContainer">
+            {% include 'dashboard/partials/users/_stats.html.twig' with { stats: stats } %}
         </div>
 
-        <div class="list">
-            {% if users is empty %}
-                <div class="empty">No users found.</div>
-            {% else %}
-                {% for u in users %}
-                    <div
-                        class="card clickable-user open-user-details"
-                        role="button"
-                        tabindex="0"
-                        aria-label="View details for {{ (u.first_name|default('')) ~ ' ' ~ (u.last_name|default('')) }}"
-                        data-user-id="{{ (u.user_id|default(''))|e('html_attr') }}"
-                        data-first-name="{{ (u.first_name|default(''))|e('html_attr') }}"
-                        data-last-name="{{ (u.last_name|default(''))|e('html_attr') }}"
-                        data-email="{{ (u.email|default(''))|e('html_attr') }}"
-                        data-phone="{{ (u.phone|default(''))|e('html_attr') }}"
-                        data-user-type="{{ (u.user_type|default('DONOR'))|e('html_attr') }}"
-                        data-created-at="{{ u.created_at ? u.created_at|date('Y-m-d H:i') : '' }}"
-                        data-donor-blood-type-id="{{ (u.donor_blood_type_id|default(''))|e('html_attr') }}"
-                        data-donor-last-donation-date="{{ u.last_donation_date ? u.last_donation_date|date('Y-m-d') : '' }}"
-                        data-donor-city="{{ (u.donor_city|default(''))|e('html_attr') }}"
-                        data-donor-total-donations="{{ (u.total_donations is not null ? u.total_donations : 0)|e('html_attr') }}"
-                        data-staff-role="{{ (u.staff_role|default(''))|e('html_attr') }}"
-                        data-staff-hospital-id="{{ (u.staff_hospital_id|default(''))|e('html_attr') }}"
-                        data-staff-department="{{ (u.staff_department|default(''))|e('html_attr') }}"
-                    >
-                        <div class="card-head">
-                            <div>
-                                <p class="user-name">{{ u.first_name|default('') }} {{ u.last_name|default('') }}</p>
-                                <p class="email">{{ u.email|default('N/A') }}</p>
-                            </div>
-                            {% if u.user_type == 'DONOR' %}
-                                <span class="badge badge-donor">Donor</span>
-                            {% else %}
-                                <span class="badge badge-staff">Hospital Staff</span>
-                            {% endif %}
-                        </div>
-                        <div class="meta">
-                            <div>Phone: {{ u.phone ?: 'N/A' }}</div>
-                            <div>ID: {{ (u.user_id|default('')|slice(0, 8)) ~ '...' }}</div>
-                            <div>Added: {{ u.created_at ? u.created_at|date('Y-m-d H:i') : 'N/A' }}</div>
-                        </div>
-
-                        <div class="crud-bar">
-                            <button
-                                type="button"
-                                class="btn-edit open-edit-user"
-                                data-user-id="{{ u.user_id|e('html_attr') }}"
-                                data-first-name="{{ (u.first_name|default(''))|e('html_attr') }}"
-                                data-last-name="{{ (u.last_name|default(''))|e('html_attr') }}"
-                                data-email="{{ (u.email|default(''))|e('html_attr') }}"
-                                data-phone="{{ (u.phone|default(''))|e('html_attr') }}"
-                                data-user-type="{{ (u.user_type|default('DONOR'))|e('html_attr') }}"
-                                data-donor-blood-type-id="{{ (u.donor_blood_type_id|default(''))|e('html_attr') }}"
-                                data-donor-last-donation-date="{{ u.last_donation_date ? u.last_donation_date|date('Y-m-d') : '' }}"
-                                data-donor-city="{{ (u.donor_city|default(''))|e('html_attr') }}"
-                                data-donor-total-donations="{{ (u.total_donations is not null ? u.total_donations : 0)|e('html_attr') }}"
-                                data-staff-role="{{ (u.staff_role|default(''))|e('html_attr') }}"
-                                data-staff-hospital-id="{{ (u.staff_hospital_id|default(''))|e('html_attr') }}"
-                                data-staff-department="{{ (u.staff_department|default(''))|e('html_attr') }}"
-                            >Modify</button>
-
-                            <form method="post" action="{{ path('dashboard_users_delete', { userId: u.user_id }) }}" onsubmit="return confirm('Delete this user?');">
-                                <button class="btn-delete" type="submit">Delete</button>
-                            </form>
-                        </div>
-                    </div>
-                {% endfor %}
-            {% endif %}
+        <div id="usersListContainer">
+            {% include 'dashboard/partials/users/_list.html.twig' with { users: users } %}
         </div>
 
 <div id="userModal" class="modal-overlay" aria-hidden="true">
@@ -478,26 +410,77 @@
 <script>
     (function () {
         const filtersForm = document.getElementById('usersFiltersForm');
+        const statsContainer = document.getElementById('usersStatsContainer');
+        const listContainer = document.getElementById('usersListContainer');
+        let typingTimer = null;
+        let currentRequestController = null;
+
+        function submitFiltersAjax() {
+            if (!filtersForm || !window.fetch || !statsContainer || !listContainer) {
+                if (filtersForm) {
+                    filtersForm.submit();
+                }
+                return;
+            }
+
+            const params = new URLSearchParams(new FormData(filtersForm));
+            const url = filtersForm.action + '?' + params.toString();
+
+            if (currentRequestController !== null) {
+                currentRequestController.abort();
+            }
+
+            currentRequestController = new AbortController();
+
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                signal: currentRequestController.signal
+            })
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch filtered users');
+                    }
+                    return response.json();
+                })
+                .then(function (payload) {
+                    if (typeof payload.statsHtml === 'string') {
+                        statsContainer.innerHTML = payload.statsHtml;
+                    }
+                    if (typeof payload.listHtml === 'string') {
+                        listContainer.innerHTML = payload.listHtml;
+                    }
+
+                    bindUserListInteractions();
+                    window.history.replaceState({}, '', url);
+                })
+                .catch(function (error) {
+                    if (error.name === 'AbortError') {
+                        return;
+                    }
+
+                    filtersForm.submit();
+                });
+        }
+
         if (filtersForm) {
             const textInputs = filtersForm.querySelectorAll('input[type="text"]');
             const selects = filtersForm.querySelectorAll('select');
-            let typingTimer = null;
-
-            const submitFilters = function () {
-                filtersForm.submit();
-            };
 
             textInputs.forEach(function (input) {
                 input.addEventListener('input', function () {
                     if (typingTimer !== null) {
                         window.clearTimeout(typingTimer);
                     }
-                    typingTimer = window.setTimeout(submitFilters, 300);
+                    typingTimer = window.setTimeout(submitFiltersAjax, 300);
                 });
             });
 
             selects.forEach(function (select) {
-                select.addEventListener('change', submitFilters);
+                select.addEventListener('change', submitFiltersAjax);
             });
         }
 
@@ -615,34 +598,53 @@
             openModal();
         });
 
-        document.querySelectorAll('.open-edit-user').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                fillForEdit(btn);
-                openModal();
-            });
-        });
-
-        document.querySelectorAll('.open-user-details').forEach(function (card) {
-            card.addEventListener('click', function (e) {
-                if (e.target.closest('.crud-bar')) {
+        function bindUserListInteractions() {
+            document.querySelectorAll('.open-edit-user').forEach(function (btn) {
+                if (btn.dataset.boundEdit === '1') {
                     return;
                 }
-                openDetailsModal(card);
+
+                btn.dataset.boundEdit = '1';
+                btn.addEventListener('click', function () {
+                    fillForEdit(btn);
+                    openModal();
+                });
             });
 
-            card.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    openDetailsModal(card);
+            document.querySelectorAll('.open-user-details').forEach(function (card) {
+                if (card.dataset.boundDetails === '1') {
+                    return;
                 }
-            });
-        });
 
-        document.querySelectorAll('.crud-bar').forEach(function (bar) {
-            bar.addEventListener('click', function (e) {
-                e.stopPropagation();
+                card.dataset.boundDetails = '1';
+                card.addEventListener('click', function (e) {
+                    if (e.target.closest('.crud-bar')) {
+                        return;
+                    }
+                    openDetailsModal(card);
+                });
+
+                card.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openDetailsModal(card);
+                    }
+                });
             });
-        });
+
+            document.querySelectorAll('.crud-bar').forEach(function (bar) {
+                if (bar.dataset.boundCrud === '1') {
+                    return;
+                }
+
+                bar.dataset.boundCrud = '1';
+                bar.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                });
+            });
+        }
+
+        bindUserListInteractions();
 
         closeBtn.addEventListener('click', closeModal);
         cancelBtn.addEventListener('click', closeModal);
