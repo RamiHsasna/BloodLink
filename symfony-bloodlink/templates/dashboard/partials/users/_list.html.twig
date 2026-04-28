@@ -1,0 +1,69 @@
+<div class="list">
+    {% if users is empty %}
+        <div class="empty">No users found.</div>
+    {% else %}
+        {% for u in users %}
+            <div
+                class="card clickable-user open-user-details"
+                role="button"
+                tabindex="0"
+                aria-label="View details for {{ (u.first_name|default('')) ~ ' ' ~ (u.last_name|default('')) }}"
+                data-user-id="{{ (u.user_id|default(''))|e('html_attr') }}"
+                data-first-name="{{ (u.first_name|default(''))|e('html_attr') }}"
+                data-last-name="{{ (u.last_name|default(''))|e('html_attr') }}"
+                data-email="{{ (u.email|default(''))|e('html_attr') }}"
+                data-phone="{{ (u.phone|default(''))|e('html_attr') }}"
+                data-user-type="{{ (u.user_type|default('DONOR'))|e('html_attr') }}"
+                data-created-at="{{ u.created_at ? u.created_at|date('Y-m-d H:i') : '' }}"
+                data-donor-blood-type-id="{{ (u.donor_blood_type_id|default(''))|e('html_attr') }}"
+                data-donor-last-donation-date="{{ u.last_donation_date ? u.last_donation_date|date('Y-m-d') : '' }}"
+                data-donor-city="{{ (u.donor_city|default(''))|e('html_attr') }}"
+                data-donor-total-donations="{{ (u.total_donations is not null ? u.total_donations : 0)|e('html_attr') }}"
+                data-staff-role="{{ (u.staff_role|default(''))|e('html_attr') }}"
+                data-staff-hospital-id="{{ (u.staff_hospital_id|default(''))|e('html_attr') }}"
+                data-staff-department="{{ (u.staff_department|default(''))|e('html_attr') }}"
+            >
+                <div class="card-head">
+                    <div>
+                        <p class="user-name">{{ u.first_name|default('') }} {{ u.last_name|default('') }}</p>
+                        <p class="email">{{ u.email|default('N/A') }}</p>
+                    </div>
+                    {% if u.user_type == 'DONOR' %}
+                        <span class="badge badge-donor">Donor</span>
+                    {% else %}
+                        <span class="badge badge-staff">Hospital Staff</span>
+                    {% endif %}
+                </div>
+                <div class="meta">
+                    <div>Phone: {{ u.phone ?: 'N/A' }}</div>
+                    <div>ID: {{ (u.user_id|default('')|slice(0, 8)) ~ '...' }}</div>
+                    <div>Added: {{ u.created_at ? u.created_at|date('Y-m-d H:i') : 'N/A' }}</div>
+                </div>
+
+                <div class="crud-bar">
+                    <button
+                        type="button"
+                        class="btn-edit open-edit-user"
+                        data-user-id="{{ u.user_id|e('html_attr') }}"
+                        data-first-name="{{ (u.first_name|default(''))|e('html_attr') }}"
+                        data-last-name="{{ (u.last_name|default(''))|e('html_attr') }}"
+                        data-email="{{ (u.email|default(''))|e('html_attr') }}"
+                        data-phone="{{ (u.phone|default(''))|e('html_attr') }}"
+                        data-user-type="{{ (u.user_type|default('DONOR'))|e('html_attr') }}"
+                        data-donor-blood-type-id="{{ (u.donor_blood_type_id|default(''))|e('html_attr') }}"
+                        data-donor-last-donation-date="{{ u.last_donation_date ? u.last_donation_date|date('Y-m-d') : '' }}"
+                        data-donor-city="{{ (u.donor_city|default(''))|e('html_attr') }}"
+                        data-donor-total-donations="{{ (u.total_donations is not null ? u.total_donations : 0)|e('html_attr') }}"
+                        data-staff-role="{{ (u.staff_role|default(''))|e('html_attr') }}"
+                        data-staff-hospital-id="{{ (u.staff_hospital_id|default(''))|e('html_attr') }}"
+                        data-staff-department="{{ (u.staff_department|default(''))|e('html_attr') }}"
+                    >Modify</button>
+
+                    <form method="post" action="{{ path('dashboard_users_delete', { userId: u.user_id }) }}" onsubmit="return confirm('Delete this user?');">
+                        <button class="btn-delete" type="submit">Delete</button>
+                    </form>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>

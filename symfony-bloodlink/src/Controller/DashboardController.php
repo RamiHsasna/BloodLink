@@ -191,6 +191,19 @@ class DashboardController extends AbstractController
         );
         $stats = $this->fetchUserStats($connection);
 
+        if ($request->isXmlHttpRequest()) {
+            return $this->json([
+                "statsHtml" => $this->renderView(
+                    "dashboard/partials/users/_stats.html.twig",
+                    ["stats" => $stats],
+                ),
+                "listHtml" => $this->renderView(
+                    "dashboard/partials/users/_list.html.twig",
+                    ["users" => $users],
+                ),
+            ]);
+        }
+
         return $this->render("dashboard/users.html.twig", [
             "session_user" => $sessionUser,
             "users" => $users,
