@@ -11,6 +11,11 @@ use App\Repository\BloodTransferRequestLogRepository;
 use App\Repository\BloodTransferRequestRepository;
 use App\Repository\DonationLogRepository;
 use App\Repository\DonationRepository;
+use App\Service\AuditAnomalyDetector;
+use App\Service\AuditAnomalyResult;
+use App\Service\AuditLogQrCodeGenerator;
+use App\Service\AuditSmsAlertNotifier;
+use Knp\Snappy\Pdf as SnappyPdf;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Form\FormError;
@@ -27,6 +32,10 @@ class LogManagementController extends AbstractController
         private readonly DonationLogRepository $donationLogRepository,
         private readonly BloodTransferRequestLogRepository $transferLogRepository,
         private readonly EntityManagerInterface $entityManager,
+        private readonly AuditAnomalyDetector $anomalyDetector,
+        private readonly AuditSmsAlertNotifier $smsAlertNotifier,
+        private readonly AuditLogQrCodeGenerator $qrCodeGenerator,
+        private readonly SnappyPdf $snappyPdf,
     ) {
     }
 
@@ -44,6 +53,12 @@ class LogManagementController extends AbstractController
         $transferCount = $this->transferLogRepository->countAllLogs($hospitalId);
         $recentDonationCount = $this->donationLogRepository->countRecentSince($since, $hospitalId);
         $recentTransferCount = $this->transferLogRepository->countRecentSince($since, $hospitalId);
+        $donationAnomalyCount = $this->donationLogRepository->countAnomalies($hospitalId);
+        $transferAnomalyCount = $this->transferLogRepository->countAnomalies($hospitalId);
+        $highRiskAnomalyCount = $this->donationLogRepository->countHighRiskAnomalies($hospitalId)
+            + $this->transferLogRepository->countHighRiskAnomalies($hospitalId);
+        $unreviewedAnomalyCount = $this->donationLogRepository->countUnreviewedAnomalies($hospitalId)
+            + $this->transferLogRepository->countUnreviewedAnomalies($hospitalId);
         $dailyDonationCounts = $this->donationLogRepository->getDailyCountsSince($since, $hospitalId);
         $dailyTransferCounts = $this->transferLogRepository->getDailyCountsSince($since, $hospitalId);
 
@@ -70,6 +85,16 @@ class LogManagementController extends AbstractController
                     'value' => $recentDonationCount + $recentTransferCount,
                     'caption' => 'New audit records in the last 7 days',
                 ],
+                [
+                    'label' => 'AI Anomalies',
+                    'value' => $donationAnomalyCount + $transferAnomalyCount,
+                    'caption' => $unreviewedAnomalyCount . ' waiting for human review',
+                ],
+                [
+                    'label' => 'High Risk',
+                    'value' => $highRiskAnomalyCount,
+                    'caption' => 'High or critical audit signals',
+                ],
             ],
             'workspace_cards' => [
                 [
@@ -95,6 +120,17 @@ class LogManagementController extends AbstractController
                     : 0,
             ],
             'activity_chart' => $this->buildActivityChart($since, $dailyDonationCounts, $dailyTransferCounts),
+            'anomaly_summary' => [
+                'total' => $donationAnomalyCount + $transferAnomalyCount,
+                'donations' => $donationAnomalyCount,
+                'transfers' => $transferAnomalyCount,
+                'high_risk' => $highRiskAnomalyCount,
+                'unreviewed' => $unreviewedAnomalyCount,
+                'severity_counts' => $this->mergeSeverityCounts(
+                    $this->donationLogRepository->getAnomalySeverityCounts($hospitalId),
+                    $this->transferLogRepository->getAnomalySeverityCounts($hospitalId),
+                ),
+            ],
             'recent_activity' => $this->buildRecentActivity($hospitalId),
         ]);
     }
@@ -111,6 +147,7 @@ class LogManagementController extends AbstractController
         $filters = $this->extractFilters($request, [
             'action' => DonationLog::allowedActions(),
             'status' => DonationLog::allowedStatuses(),
+            'anomaly' => array_values($this->anomalyFilterChoices()),
         ]);
         $result = $this->donationLogRepository->searchPaginated(
             $filters['query'],
@@ -119,6 +156,7 @@ class LogManagementController extends AbstractController
             $filters['action'],
             $filters['status'],
             $hospitalId,
+            $filters['anomaly'],
             $filters['page'],
             10,
         );
@@ -130,6 +168,7 @@ class LogManagementController extends AbstractController
             'entries' => $result['items'],
             'action_choices' => DonationLog::actionChoices(),
             'status_choices' => DonationLog::statusChoices(),
+            'anomaly_filter_choices' => $this->anomalyFilterChoices(),
         ]);
     }
 
@@ -172,6 +211,7 @@ class LogManagementController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->entityManager->persist($log);
             $this->entityManager->flush();
+            $this->analyzeDonationLogAndAlert($log);
 
             $this->addFlash('success', 'Donation log created successfully.');
 
@@ -187,7 +227,7 @@ class LogManagementController extends AbstractController
         ]);
     }
 
-    #[Route('/dashboard/logs/donations/{logId}', name: 'dashboard_logs_donations_show', methods: ['GET'])]
+    #[Route('/dashboard/logs/donations/{logId}', name: 'dashboard_logs_donations_show', methods: ['GET'], requirements: ['logId' => '[0-9a-fA-F-]{36}'])]
     public function showDonationLog(Request $request, string $logId): Response
     {
         if ($guard = $this->denyUnlessBackOffice($request)) {
@@ -200,10 +240,44 @@ class LogManagementController extends AbstractController
         return $this->render('log_management/donation_logs/show.html.twig', [
             'session_user' => $sessionUser,
             'entry' => $log,
+            'qr_code' => $this->qrCodeGenerator->donationLogDataUri($log),
         ]);
     }
 
-    #[Route('/dashboard/logs/donations/{logId}/edit', name: 'dashboard_logs_donations_edit', methods: ['GET', 'POST'])]
+    #[Route('/dashboard/logs/donations/{logId}/review-anomaly', name: 'dashboard_logs_donations_review_anomaly', methods: ['POST'], requirements: ['logId' => '[0-9a-fA-F-]{36}'])]
+    public function reviewDonationAnomaly(Request $request, string $logId): Response
+    {
+        if ($guard = $this->denyUnlessBackOffice($request)) {
+            return $guard;
+        }
+
+        $sessionUser = $this->getSessionUser($request);
+        $log = $this->findDonationLogOrThrow($logId, $sessionUser);
+
+        if (!$this->isCsrfTokenValid('review-donation-anomaly-' . $logId, (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'The anomaly review request is invalid.');
+
+            return $this->redirectToRoute('dashboard_logs_donations_show', ['logId' => $logId]);
+        }
+
+        if (!$log->isAnomalyDetected()) {
+            $this->addFlash('warning', 'This donation log has no anomaly requiring review.');
+
+            return $this->redirectToRoute('dashboard_logs_donations_show', ['logId' => $logId]);
+        }
+
+        $log
+            ->setAnomalyReviewed(true)
+            ->setAnomalyReviewedAt(new DateTimeImmutable())
+            ->setAnomalyReviewedBy($this->resolveSessionActor($sessionUser));
+        $this->entityManager->flush();
+
+        $this->addFlash('success', 'Donation anomaly marked as reviewed.');
+
+        return $this->redirectToRoute('dashboard_logs_donations_show', ['logId' => $logId]);
+    }
+
+    #[Route('/dashboard/logs/donations/{logId}/edit', name: 'dashboard_logs_donations_edit', methods: ['GET', 'POST'], requirements: ['logId' => '[0-9a-fA-F-]{36}'])]
     public function editDonationLog(Request $request, string $logId): Response
     {
         if ($guard = $this->denyUnlessBackOffice($request)) {
@@ -224,6 +298,7 @@ class LogManagementController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $this->entityManager->flush();
+            $this->analyzeDonationLogAndAlert($log);
             $this->addFlash('success', 'Donation log updated successfully.');
 
             return $this->redirectToRoute('dashboard_logs_donations_show', ['logId' => $log->getLogId()]);
@@ -238,7 +313,7 @@ class LogManagementController extends AbstractController
         ]);
     }
 
-    #[Route('/dashboard/logs/donations/{logId}/delete', name: 'dashboard_logs_donations_delete', methods: ['POST'])]
+    #[Route('/dashboard/logs/donations/{logId}/delete', name: 'dashboard_logs_donations_delete', methods: ['POST'], requirements: ['logId' => '[0-9a-fA-F-]{36}'])]
     public function deleteDonationLog(Request $request, string $logId): Response
     {
         if ($guard = $this->denyUnlessBackOffice($request)) {
@@ -258,6 +333,85 @@ class LogManagementController extends AbstractController
         return $this->redirectToRoute('dashboard_logs_donations');
     }
 
+    #[Route('/dashboard/logs/donations/export-pdf-list', name: 'dashboard_logs_donations_export_pdf_list', methods: ['GET'])]
+    public function exportDonationLogListPdf(Request $request): Response
+    {
+        if ($guard = $this->denyUnlessBackOffice($request)) {
+            return $guard;
+        }
+
+        $sessionUser = $this->getSessionUser($request);
+        $hospitalId = $this->getScopedHospitalId($sessionUser);
+        $filters = $this->extractFilters($request, [
+            'action' => DonationLog::allowedActions(),
+            'status' => DonationLog::allowedStatuses(),
+            'anomaly' => array_values($this->anomalyFilterChoices()),
+        ]);
+
+        $maxRows = 500;
+        $result = $this->donationLogRepository->searchPaginated(
+            $filters['query'],
+            $filters['start_date'],
+            $filters['end_date'],
+            $filters['action'],
+            $filters['status'],
+            $hospitalId,
+            $filters['anomaly'],
+            1,
+            $maxRows,
+        );
+
+        $html = $this->renderView('log_management/pdf_report.html.twig', [
+            'mode' => 'list',
+            'list_kind' => 'donation',
+            'type' => 'Donation Logs Export',
+            'entries' => $result['items'],
+            'total' => $result['total'] ?? count($result['items']),
+            'max_rows' => $maxRows,
+            'filters' => $filters,
+            'action_choices' => DonationLog::actionChoices(),
+            'status_choices' => DonationLog::statusChoices(),
+            'anomaly_filter_choices' => $this->anomalyFilterChoices(),
+            'session_user' => $sessionUser,
+        ]);
+
+        return new Response(
+            $this->snappyPdf->getOutputFromHtml($html, ['page-size' => 'A4', 'orientation' => 'Landscape']),
+            200,
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="donation_logs_list_'.date('Ymd_His').'.pdf"',
+            ]
+        );
+    }
+
+    #[Route('/dashboard/logs/donations/{logId}/export-pdf', name: 'dashboard_logs_donations_export_pdf', methods: ['GET'], requirements: ['logId' => '[0-9a-fA-F-]{36}'])]
+    public function exportDonationLogPdf(string $logId, Request $request): Response
+    {
+        if ($guard = $this->denyUnlessBackOffice($request)) {
+            return $guard;
+        }
+
+        $sessionUser = $this->getSessionUser($request);
+        $log = $this->findDonationLogOrThrow($logId, $sessionUser);
+
+        $html = $this->renderView('log_management/pdf_report.html.twig', [
+            'entry' => $log,
+            'type' => 'Donation Log',
+            'session_user' => $sessionUser,
+            'qr_code' => $this->qrCodeGenerator->donationLogDataUri($log),
+        ]);
+
+        return new Response(
+            $this->snappyPdf->getOutputFromHtml($html, ['page-size' => 'A4', 'orientation' => 'Portrait']),
+            200,
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="donation_log_'.$log->getLogId().'.pdf"',
+            ]
+        );
+    }
+
     #[Route('/dashboard/logs/transfers', name: 'dashboard_logs_transfers', methods: ['GET'])]
     public function transferLogs(Request $request): Response
     {
@@ -270,6 +424,7 @@ class LogManagementController extends AbstractController
         $filters = $this->extractFilters($request, [
             'action' => BloodTransferRequestLog::allowedActions(),
             'status' => BloodTransferRequestLog::allowedStatuses(),
+            'anomaly' => array_values($this->anomalyFilterChoices()),
         ]);
         $result = $this->transferLogRepository->searchPaginated(
             $filters['query'],
@@ -278,6 +433,7 @@ class LogManagementController extends AbstractController
             $filters['action'],
             $filters['status'],
             $hospitalId,
+            $filters['anomaly'],
             $filters['page'],
             10,
         );
@@ -289,6 +445,7 @@ class LogManagementController extends AbstractController
             'entries' => $result['items'],
             'action_choices' => BloodTransferRequestLog::actionChoices(),
             'status_choices' => BloodTransferRequestLog::statusChoices(),
+            'anomaly_filter_choices' => $this->anomalyFilterChoices(),
         ]);
     }
 
@@ -331,6 +488,7 @@ class LogManagementController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->entityManager->persist($log);
             $this->entityManager->flush();
+            $this->analyzeTransferLogAndAlert($log);
 
             $this->addFlash('success', 'Transfer log created successfully.');
 
@@ -346,7 +504,7 @@ class LogManagementController extends AbstractController
         ]);
     }
 
-    #[Route('/dashboard/logs/transfers/{logId}', name: 'dashboard_logs_transfers_show', methods: ['GET'])]
+    #[Route('/dashboard/logs/transfers/{logId}', name: 'dashboard_logs_transfers_show', methods: ['GET'], requirements: ['logId' => '[0-9a-fA-F-]{36}'])]
     public function showTransferLog(Request $request, string $logId): Response
     {
         if ($guard = $this->denyUnlessBackOffice($request)) {
@@ -359,10 +517,44 @@ class LogManagementController extends AbstractController
         return $this->render('log_management/transfer_logs/show.html.twig', [
             'session_user' => $sessionUser,
             'entry' => $log,
+            'qr_code' => $this->qrCodeGenerator->transferLogDataUri($log),
         ]);
     }
 
-    #[Route('/dashboard/logs/transfers/{logId}/edit', name: 'dashboard_logs_transfers_edit', methods: ['GET', 'POST'])]
+    #[Route('/dashboard/logs/transfers/{logId}/review-anomaly', name: 'dashboard_logs_transfers_review_anomaly', methods: ['POST'], requirements: ['logId' => '[0-9a-fA-F-]{36}'])]
+    public function reviewTransferAnomaly(Request $request, string $logId): Response
+    {
+        if ($guard = $this->denyUnlessBackOffice($request)) {
+            return $guard;
+        }
+
+        $sessionUser = $this->getSessionUser($request);
+        $log = $this->findTransferLogOrThrow($logId, $sessionUser);
+
+        if (!$this->isCsrfTokenValid('review-transfer-anomaly-' . $logId, (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'The anomaly review request is invalid.');
+
+            return $this->redirectToRoute('dashboard_logs_transfers_show', ['logId' => $logId]);
+        }
+
+        if (!$log->isAnomalyDetected()) {
+            $this->addFlash('warning', 'This transfer log has no anomaly requiring review.');
+
+            return $this->redirectToRoute('dashboard_logs_transfers_show', ['logId' => $logId]);
+        }
+
+        $log
+            ->setAnomalyReviewed(true)
+            ->setAnomalyReviewedAt(new DateTimeImmutable())
+            ->setAnomalyReviewedBy($this->resolveSessionActor($sessionUser));
+        $this->entityManager->flush();
+
+        $this->addFlash('success', 'Transfer anomaly marked as reviewed.');
+
+        return $this->redirectToRoute('dashboard_logs_transfers_show', ['logId' => $logId]);
+    }
+
+    #[Route('/dashboard/logs/transfers/{logId}/edit', name: 'dashboard_logs_transfers_edit', methods: ['GET', 'POST'], requirements: ['logId' => '[0-9a-fA-F-]{36}'])]
     public function editTransferLog(Request $request, string $logId): Response
     {
         if ($guard = $this->denyUnlessBackOffice($request)) {
@@ -383,6 +575,7 @@ class LogManagementController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $this->entityManager->flush();
+            $this->analyzeTransferLogAndAlert($log);
             $this->addFlash('success', 'Transfer log updated successfully.');
 
             return $this->redirectToRoute('dashboard_logs_transfers_show', ['logId' => $log->getLogId()]);
@@ -397,7 +590,7 @@ class LogManagementController extends AbstractController
         ]);
     }
 
-    #[Route('/dashboard/logs/transfers/{logId}/delete', name: 'dashboard_logs_transfers_delete', methods: ['POST'])]
+    #[Route('/dashboard/logs/transfers/{logId}/delete', name: 'dashboard_logs_transfers_delete', methods: ['POST'], requirements: ['logId' => '[0-9a-fA-F-]{36}'])]
     public function deleteTransferLog(Request $request, string $logId): Response
     {
         if ($guard = $this->denyUnlessBackOffice($request)) {
@@ -415,6 +608,85 @@ class LogManagementController extends AbstractController
         }
 
         return $this->redirectToRoute('dashboard_logs_transfers');
+    }
+
+    #[Route('/dashboard/logs/transfers/export-pdf-list', name: 'dashboard_logs_transfers_export_pdf_list', methods: ['GET'])]
+    public function exportTransferLogListPdf(Request $request): Response
+    {
+        if ($guard = $this->denyUnlessBackOffice($request)) {
+            return $guard;
+        }
+
+        $sessionUser = $this->getSessionUser($request);
+        $hospitalId = $this->getScopedHospitalId($sessionUser);
+        $filters = $this->extractFilters($request, [
+            'action' => BloodTransferRequestLog::allowedActions(),
+            'status' => BloodTransferRequestLog::allowedStatuses(),
+            'anomaly' => array_values($this->anomalyFilterChoices()),
+        ]);
+
+        $maxRows = 500;
+        $result = $this->transferLogRepository->searchPaginated(
+            $filters['query'],
+            $filters['start_date'],
+            $filters['end_date'],
+            $filters['action'],
+            $filters['status'],
+            $hospitalId,
+            $filters['anomaly'],
+            1,
+            $maxRows,
+        );
+
+        $html = $this->renderView('log_management/pdf_report.html.twig', [
+            'mode' => 'list',
+            'list_kind' => 'transfer',
+            'type' => 'Transfer Logs Export',
+            'entries' => $result['items'],
+            'total' => $result['total'] ?? count($result['items']),
+            'max_rows' => $maxRows,
+            'filters' => $filters,
+            'action_choices' => BloodTransferRequestLog::actionChoices(),
+            'status_choices' => BloodTransferRequestLog::statusChoices(),
+            'anomaly_filter_choices' => $this->anomalyFilterChoices(),
+            'session_user' => $sessionUser,
+        ]);
+
+        return new Response(
+            $this->snappyPdf->getOutputFromHtml($html, ['page-size' => 'A4', 'orientation' => 'Landscape']),
+            200,
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="transfer_logs_list_'.date('Ymd_His').'.pdf"',
+            ]
+        );
+    }
+
+    #[Route('/dashboard/logs/transfers/{logId}/export-pdf', name: 'dashboard_logs_transfers_export_pdf', methods: ['GET'], requirements: ['logId' => '[0-9a-fA-F-]{36}'])]
+    public function exportTransferLogPdf(string $logId, Request $request): Response
+    {
+        if ($guard = $this->denyUnlessBackOffice($request)) {
+            return $guard;
+        }
+
+        $sessionUser = $this->getSessionUser($request);
+        $log = $this->findTransferLogOrThrow($logId, $sessionUser);
+
+        $html = $this->renderView('log_management/pdf_report.html.twig', [
+            'entry' => $log,
+            'type' => 'Transfer Log',
+            'session_user' => $sessionUser,
+            'qr_code' => $this->qrCodeGenerator->transferLogDataUri($log),
+        ]);
+
+        return new Response(
+            $this->snappyPdf->getOutputFromHtml($html, ['page-size' => 'A4', 'orientation' => 'Portrait']),
+            200,
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="transfer_log_'.$log->getLogId().'.pdf"',
+            ]
+        );
     }
 
     #[Route('/dashboard/donor/audit-trail', name: 'dashboard_donor_audit_trail', methods: ['GET'])]
@@ -475,7 +747,7 @@ class LogManagementController extends AbstractController
     /**
      * @param array<string, array<int, string>> $allowedValues
      *
-     * @return array{query: string, start: string, end: string, action: string, status: string, response: string, delivery: string, start_date: ?DateTimeImmutable, end_date: ?DateTimeImmutable, page: int}
+     * @return array{query: string, start: string, end: string, action: string, status: string, anomaly: string, response: string, delivery: string, start_date: ?DateTimeImmutable, end_date: ?DateTimeImmutable, page: int}
      */
     private function extractFilters(Request $request, array $allowedValues = []): array
     {
@@ -484,6 +756,7 @@ class LogManagementController extends AbstractController
         $end = trim((string) $request->query->get('end', ''));
         $action = $this->sanitizeFilterValue((string) $request->query->get('action', ''), $allowedValues['action'] ?? null);
         $status = $this->sanitizeFilterValue((string) $request->query->get('status', ''), $allowedValues['status'] ?? null);
+        $anomaly = $this->sanitizeFilterValue((string) $request->query->get('anomaly', ''), $allowedValues['anomaly'] ?? null);
         $response = $this->sanitizeFilterValue((string) $request->query->get('response', ''), $allowedValues['response'] ?? null);
         $delivery = $this->sanitizeFilterValue((string) $request->query->get('delivery', ''), $allowedValues['delivery'] ?? null);
 
@@ -493,6 +766,7 @@ class LogManagementController extends AbstractController
             'end' => $end,
             'action' => $action,
             'status' => $status,
+            'anomaly' => $anomaly,
             'response' => $response,
             'delivery' => $delivery,
             'start_date' => $this->parseDate($start),
@@ -619,7 +893,7 @@ class LogManagementController extends AbstractController
     }
 
     /**
-     * @return array<int, array{type: string, title: string, caption: string, occurred_at: ?\DateTimeInterface, route: string, route_params: array<string, scalar>}>
+     * @return array<int, array{type: string, title: string, caption: string, occurred_at: ?\DateTimeInterface, route: string, route_params: array<string, scalar>, anomaly_severity: ?string, anomaly_score: ?int, anomaly_reviewed: bool}>
      */
     private function buildRecentActivity(?string $hospitalId = null): array
     {
@@ -637,6 +911,9 @@ class LogManagementController extends AbstractController
                 'occurred_at' => $log->getCreatedAt(),
                 'route' => 'dashboard_logs_donations_show',
                 'route_params' => ['logId' => $log->getLogId()],
+                'anomaly_severity' => $log->getAnomalySeverity(),
+                'anomaly_score' => $log->getAnomalyScore(),
+                'anomaly_reviewed' => $log->isAnomalyReviewed(),
             ];
         }
 
@@ -652,6 +929,9 @@ class LogManagementController extends AbstractController
                 'occurred_at' => $log->getCreatedAt(),
                 'route' => 'dashboard_logs_transfers_show',
                 'route_params' => ['logId' => $log->getLogId()],
+                'anomaly_severity' => $log->getAnomalySeverity(),
+                'anomaly_score' => $log->getAnomalyScore(),
+                'anomaly_reviewed' => $log->isAnomalyReviewed(),
             ];
         }
 
@@ -710,6 +990,136 @@ class LogManagementController extends AbstractController
             'days' => $days,
             'max' => $scale,
         ];
+    }
+
+    /**
+     * @param array<string, int> $donationCounts
+     * @param array<string, int> $transferCounts
+     *
+     * @return array<int, array{severity: string, label: string, count: int, percent: int}>
+     */
+    private function mergeSeverityCounts(array $donationCounts, array $transferCounts): array
+    {
+        $rows = [];
+        $total = 0;
+
+        foreach (['critical', 'high', 'medium', 'low'] as $severity) {
+            $count = (int) ($donationCounts[$severity] ?? 0) + (int) ($transferCounts[$severity] ?? 0);
+            $total += $count;
+            $rows[] = [
+                'severity' => $severity,
+                'label' => ucfirst($severity),
+                'count' => $count,
+                'percent' => 0,
+            ];
+        }
+
+        foreach ($rows as &$row) {
+            $row['percent'] = $total > 0 ? (int) round(($row['count'] / $total) * 100) : 0;
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function anomalyFilterChoices(): array
+    {
+        return [
+            'Detected anomalies' => 'detected',
+            'Unreviewed anomalies' => 'unreviewed',
+            'Critical' => 'critical',
+            'High' => 'high',
+            'Medium' => 'medium',
+            'Low' => 'low',
+            'Normal logs' => 'normal',
+        ];
+    }
+
+    private function analyzeDonationLogAndAlert(DonationLog $log): void
+    {
+        $result = $this->anomalyDetector->analyzeDonationLog($log);
+        $this->anomalyDetector->applyDonationResult($log, $result);
+        $this->resetAnomalyReview($log);
+        $this->applyDonationSmsResult($log, $result);
+        $this->entityManager->flush();
+    }
+
+    private function analyzeTransferLogAndAlert(BloodTransferRequestLog $log): void
+    {
+        $result = $this->anomalyDetector->analyzeTransferLog($log);
+        $this->anomalyDetector->applyTransferResult($log, $result);
+        $this->resetAnomalyReview($log);
+        $this->applyTransferSmsResult($log, $result);
+        $this->entityManager->flush();
+    }
+
+    private function resetAnomalyReview(DonationLog|BloodTransferRequestLog $log): void
+    {
+        $log
+            ->setAnomalyReviewed(false)
+            ->setAnomalyReviewedAt(null)
+            ->setAnomalyReviewedBy(null);
+    }
+
+    private function applyDonationSmsResult(DonationLog $log, AuditAnomalyResult $result): void
+    {
+        if (!$this->shouldSendSmsAlert($log->getSmsAlertStatus(), $result)) {
+            if (!$this->isSmsWorthy($result)) {
+                $log
+                    ->setSmsAlertStatus('not_required')
+                    ->setSmsAlertRecipient(null)
+                    ->setSmsAlertError(null)
+                    ->setSmsAlertSentAt(null);
+            }
+
+            return;
+        }
+
+        $smsResult = $this->smsAlertNotifier->notifyDonationLog($log, $result);
+        $this->applySmsResult($log, $smsResult);
+    }
+
+    private function applyTransferSmsResult(BloodTransferRequestLog $log, AuditAnomalyResult $result): void
+    {
+        if (!$this->shouldSendSmsAlert($log->getSmsAlertStatus(), $result)) {
+            if (!$this->isSmsWorthy($result)) {
+                $log
+                    ->setSmsAlertStatus('not_required')
+                    ->setSmsAlertRecipient(null)
+                    ->setSmsAlertError(null)
+                    ->setSmsAlertSentAt(null);
+            }
+
+            return;
+        }
+
+        $smsResult = $this->smsAlertNotifier->notifyTransferLog($log, $result);
+        $this->applySmsResult($log, $smsResult);
+    }
+
+    private function shouldSendSmsAlert(?string $existingStatus, AuditAnomalyResult $result): bool
+    {
+        return $this->isSmsWorthy($result) && $existingStatus !== 'sent';
+    }
+
+    private function isSmsWorthy(AuditAnomalyResult $result): bool
+    {
+        return $result->isAnomalous() && in_array($result->getSeverity(), ['high', 'critical'], true);
+    }
+
+    /**
+     * @param array{status: string, recipient: ?string, error: ?string} $smsResult
+     */
+    private function applySmsResult(DonationLog|BloodTransferRequestLog $log, array $smsResult): void
+    {
+        $log
+            ->setSmsAlertStatus($smsResult['status'])
+            ->setSmsAlertRecipient($smsResult['recipient'])
+            ->setSmsAlertError($smsResult['error'])
+            ->setSmsAlertSentAt($smsResult['status'] === 'sent' ? new DateTimeImmutable() : null);
     }
 
     private function formatUserLabel(?string $firstName, ?string $lastName): string
