@@ -410,6 +410,7 @@
 <script>
     (function () {
         const filtersForm = document.getElementById('usersFiltersForm');
+<<<<<<< HEAD
         const statsContainer = document.getElementById('usersStatsContainer');
         const listContainer = document.getElementById('usersListContainer');
         let typingTimer = null;
@@ -469,18 +470,36 @@
         if (filtersForm) {
             const textInputs = filtersForm.querySelectorAll('input[type="text"]');
             const selects = filtersForm.querySelectorAll('select');
+=======
+        if (filtersForm) {
+            const textInputs = filtersForm.querySelectorAll('input[type="text"]');
+            const selects = filtersForm.querySelectorAll('select');
+            let typingTimer = null;
+
+            const submitFilters = function () {
+                filtersForm.submit();
+            };
+>>>>>>> 29da1f5fd37842e9285c7a3ef9093ef446d1f5cb
 
             textInputs.forEach(function (input) {
                 input.addEventListener('input', function () {
                     if (typingTimer !== null) {
                         window.clearTimeout(typingTimer);
                     }
+<<<<<<< HEAD
                     typingTimer = window.setTimeout(submitFiltersAjax, 300);
+=======
+                    typingTimer = window.setTimeout(submitFilters, 300);
+>>>>>>> 29da1f5fd37842e9285c7a3ef9093ef446d1f5cb
                 });
             });
 
             selects.forEach(function (select) {
+<<<<<<< HEAD
                 select.addEventListener('change', submitFiltersAjax);
+=======
+                select.addEventListener('change', submitFilters);
+>>>>>>> 29da1f5fd37842e9285c7a3ef9093ef446d1f5cb
             });
         }
 
