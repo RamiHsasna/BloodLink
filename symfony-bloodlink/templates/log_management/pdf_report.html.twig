@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ type }}{% if mode is not defined or mode != 'list' %} - {{ entry.logId }}{% endif %}</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12px; color: #333; }
+        .header { border-bottom: 2px solid #e11d48; padding-bottom: 10px; margin-bottom: 20px; }
+        .header h1 { margin: 0; color: #e11d48; font-size: 22px; }
+        .details-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .details-table th, .details-table td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; vertical-align: top; }
+        .details-table th { background-color: #f8fafc; font-weight: bold; width: 30%; }
+        .notes-section { margin-top: 20px; }
+        .notes-box { border: 1px solid #e2e8f0; background-color: #f8fafc; padding: 15px; border-radius: 5px; white-space: pre-wrap; }
+        .footer { margin-top: 40px; font-size: 10px; color: #64748b; text-align: center; }
+        .filters-bar { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; font-size: 11px; color: #475569; }
+        .filters-bar strong { color: #0f172a; }
+        .filters-bar .pill { display: inline-block; background: #fff; border: 1px solid #e2e8f0; border-radius: 999px; padding: 2px 10px; margin: 2px 4px 2px 0; }
+        .list-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        .list-table th, .list-table td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; vertical-align: top; }
+        .list-table th { background-color: #f1f5f9; font-weight: bold; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-size: 9px; }
+        .list-table tbody tr:nth-child(even) { background: #fafafa; }
+        .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: bold; }
+        .badge-anomaly { background: #fee2e2; color: #b91c1c; }
+        .badge-normal { background: #dcfce7; color: #166534; }
+    </style>
+</head>
+<body>
+    <div class="header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+            <h1>BloodLink Audit - {{ type }}</h1>
+            {% if mode is not defined or mode != 'list' %}
+                <p>Log ID: {{ entry.logId }}</p>
+            {% else %}
+                <p>Generated on {{ "now"|date('Y-m-d H:i:s') }} - {{ entries|length }} of {{ total }} record(s){% if total > max_rows %} (capped at {{ max_rows }}){% endif %}</p>
+            {% endif %}
+        </div>
+        {% if qr_code is defined and qr_code %}
+            <div style="text-align: right;">
+                <img src="{{ qr_code }}" alt="Audit QR Code" style="width: 120px; height: 120px;">
+                <p style="font-size: 9px; color: #64748b; margin: 4px 0 0;">Scan for log details</p>
+            </div>
+        {% endif %}
+    </div>
+
+    {% if mode is defined and mode == 'list' %}
+        {% set has_filters = filters.query or filters.start or filters.end or filters.action or filters.status or filters.anomaly %}
+        {% if has_filters %}
+            <div class="filters-bar">
+                <strong>Active filters:</strong>
+                {% if filters.query %}<span class="pill">Search: "{{ filters.query }}"</span>{% endif %}
+                {% if filters.start %}<span class="pill">From: {{ filters.start }}</span>{% endif %}
+                {% if filters.end %}<span class="pill">To: {{ filters.end }}</span>{% endif %}
+                {% if filters.action %}<span class="pill">Action: {{ filters.action }}</span>{% endif %}
+                {% if filters.status %}<span class="pill">Status: {{ filters.status }}</span>{% endif %}
+                {% if filters.anomaly %}<span class="pill">AI: {{ filters.anomaly }}</span>{% endif %}
+            </div>
+        {% else %}
+            <div class="filters-bar"><strong>Active filters:</strong> none (full list)</div>
+        {% endif %}
+
+        <table class="list-table">
+            <thead>
+                <tr>
+                    <th>Created</th>
+                    <th>Action</th>
+                    {% if list_kind == 'donation' %}
+                        <th>Donation</th>
+                        <th>Donor</th>
+                        <th>Hospital</th>
+                    {% else %}
+                        <th>Transfer</th>
+                        <th>Requesting</th>
+                        <th>Approving</th>
+                    {% endif %}
+                    <th>Actor</th>
+                    <th>Status shift</th>
+                    <th>AI</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                    <tr>
+                        <td>{{ entry.createdAt ? entry.createdAt|date('Y-m-d H:i') : 'N/A' }}</td>
+                        <td><strong>{{ entry.action }}</strong><br><span style="color:#94a3b8;">#{{ entry.logId|slice(0, 8) }}</span></td>
+                        {% if list_kind == 'donation' %}
+                            <td>{{ entry.donation ? '#' ~ entry.donation.donationId|slice(0, 8) : 'Missing' }}</td>
+                            <td>{{ entry.donation and entry.donation.donor ? entry.donation.donor.firstName ~ ' ' ~ entry.donation.donor.lastName : 'Unknown' }}</td>
+                            <td>{{ entry.donation and entry.donation.hospital ? entry.donation.hospital.name : 'N/A' }}</td>
+                        {% else %}
+                            <td>{{ entry.bloodTransferRequest ? '#' ~ entry.bloodTransferRequest.transferId|slice(0, 8) : 'Missing' }}</td>
+                            <td>{{ entry.bloodTransferRequest and entry.bloodTransferRequest.requestingHospital ? entry.bloodTransferRequest.requestingHospital.name : 'N/A' }}</td>
+                            <td>{{ entry.bloodTransferRequest and entry.bloodTransferRequest.approvingHospital ? entry.bloodTransferRequest.approvingHospital.name : 'Pending' }}</td>
+                        {% endif %}
+                        <td>
+                            {% if entry.user %}
+                                {{ entry.user.firstName }} {{ entry.user.lastName }}<br>
+                                <span style="color:#94a3b8;">{{ entry.user.userType }}</span>
+                            {% else %}
+                                <span style="color:#94a3b8;">Unknown</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ entry.previousStatus ?: 'N/A' }} &rarr; {{ entry.newStatus ?: 'N/A' }}</td>
+                        <td>
+                            {% if entry.anomalyDetected %}
+                                <span class="badge badge-anomaly">{{ entry.anomalySeverity|default('medium')|capitalize }} {{ entry.anomalyScore|default(0) }}</span>
+                            {% else %}
+                                <span class="badge badge-normal">Normal</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="8" style="text-align:center; padding: 20px; color: #94a3b8;">No logs match the active filters.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if total > max_rows %}
+            <p style="margin-top: 14px; padding: 10px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 6px; font-size: 11px; color: #92400e;">
+                <strong>Note:</strong> The export was capped at {{ max_rows }} rows. Refine the filters to narrow the result set ({{ total }} match the current filters).
+            </p>
+        {% endif %}
+    {% else %}
+        <table class="details-table">
+            <tr>
+                <th>Action</th>
+                <td>{{ entry.action }}</td>
+            </tr>
+            <tr>
+                <th>Created At</th>
+                <td>{{ entry.createdAt ? entry.createdAt|date('Y-m-d H:i') : 'N/A' }}</td>
+            </tr>
+            <tr>
+                <th>Previous Status</th>
+                <td>{{ entry.previousStatus ?: 'N/A' }}</td>
+            </tr>
+            <tr>
+                <th>New Status</th>
+                <td>{{ entry.newStatus ?: 'N/A' }}</td>
+            </tr>
+            <tr>
+                <th>Logged By</th>
+                <td>
+                    {{ entry.user ? entry.user.firstName ~ ' ' ~ entry.user.lastName : 'Missing relation' }}
+                    ({{ entry.user ? entry.user.userType : 'N/A' }})
+                </td>
+            </tr>
+            {% if type == 'Donation Log' %}
+            <tr>
+                <th>Donation ID</th>
+                <td>{{ entry.donation ? entry.donation.donationId : 'Missing relation' }}</td>
+            </tr>
+            {% elseif type == 'Transfer Log' %}
+            <tr>
+                <th>Transfer Request ID</th>
+                <td>{{ entry.bloodTransferRequest ? entry.bloodTransferRequest.transferId : 'Missing relation' }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <th>AI Anomaly Review</th>
+                <td>
+                    {% if entry.anomalyDetected %}
+                        {{ entry.anomalySeverity|default('medium')|capitalize }} risk, score {{ entry.anomalyScore|default(0) }}/100.
+                        {{ entry.anomalyReviewed ? 'Reviewed.' : 'Pending review.' }}
+                    {% else %}
+                        No anomaly detected.
+                    {% endif %}
+                </td>
+            </tr>
+            {% if entry.anomalyDetected %}
+            <tr>
+                <th>Recommended Action</th>
+                <td>{{ entry.anomalyRecommendedAction ?: 'Review the linked record and actor attribution.' }}</td>
+            </tr>
+            {% endif %}
+        </table>
+
+        <div class="notes-section">
+            <h3>Notes</h3>
+            <div class="notes-box">
+                {{ entry.notes ?: 'No notes were stored for this log.' }}
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="footer">
+        Exported on {{ "now"|date('Y-m-d H:i:s') }}. Generated by BloodLink Log Management.
+    </div>
+</body>
+</html>
