@@ -1,5 +1,4 @@
 {% set page_title = 'Donor Dashboard' %}
-{% set page_description = 'Follow your alerts, donation history, and transfer movement context from one donor-facing workspace.' %}
 {% extends 'log_management/layouts/front_office.html.twig' %}
 
 {% block stylesheets %}
@@ -290,6 +289,10 @@
         color: #b91c1c;
         border-color: #ef4444;
     }
+    .cta-secondary.export-btn {
+        border-color: #3b82f6;
+        color: #1d4ed8;
+    }
     .cta-primary:hover,
     .cta-secondary:hover {
         transform: translateY(-1px);
@@ -418,7 +421,6 @@
 {% block module_content %}
 <main class="main">
         <div class="top-strip">
-            <h1>Donor Dashboard</h1>
             <span class="live-pill">Live Global Network</span>
         </div>
 
@@ -442,6 +444,7 @@
                 <div class="hero-actions">
                     <a class="cta-primary" href="{{ path('dashboard_donor_eligibility') }}">Check Eligibility</a>
                     <a class="cta-secondary" href="{{ path('dashboard_donor_eligibility') }}">View My Screening</a>
+                    <a class="cta-secondary export-btn" href="{{ path('dashboard_donor_eligibility_export_pdf') }}">📄 Export Report</a>
                 </div>
 
                 <div class="chips">

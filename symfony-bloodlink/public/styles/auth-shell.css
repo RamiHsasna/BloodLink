@@ -82,6 +82,15 @@ body {
     box-shadow: 0 16px 32px rgba(179, 39, 42, 0.3);
 }
 
+.auth-logo-canvas {
+    width: 52px;
+    height: 52px;
+    border-radius: 18px;
+    display: block;
+    background: linear-gradient(135deg, var(--auth-accent), var(--auth-accent-2));
+    box-shadow: 0 16px 32px rgba(179, 39, 42, 0.3);
+}
+
 .auth-brand-name {
     margin: 0;
     color: #fff;
@@ -129,6 +138,25 @@ body {
     color: #c7d2fe;
     font-size: clamp(16px, 1.35vw, 18px);
     line-height: 1.8;
+}
+
+.auth-illustration-wrap {
+    position: relative;
+    z-index: 1;
+    width: min(460px, 86%);
+    margin: 26px auto 0;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(8px);
+    padding: 10px;
+}
+
+.auth-illustration-canvas {
+    width: 100%;
+    height: clamp(150px, 16vw, 210px);
+    display: block;
+    border-radius: 14px;
 }
 
 .auth-surface-grid {
@@ -412,6 +440,16 @@ body {
 
     .auth-surface-grid {
         grid-template-columns: 1fr;
+    }
+
+    .auth-illustration-wrap {
+        width: min(360px, 100%);
+        margin-top: 22px;
+        z-index: 1;
+    }
+
+    .auth-illustration-canvas {
+        height: clamp(145px, 28vw, 200px);
     }
 }
 
