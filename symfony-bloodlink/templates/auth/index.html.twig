@@ -7,12 +7,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('styles/auth-shell.css') }}">
+    <link rel="stylesheet" href="{{ asset('styles/auth-shell.css') }}?v=20260421-4">
 {% endblock %}
 
 {% block javascripts %}
     {{ parent() }}
-    <script src="{{ asset('scripts/auth-shell.js') }}" defer></script>
+    <script src="{{ asset('scripts/auth-shell.js') }}?v=20260421-3" defer></script>
 {% endblock %}
 
 {% block body %}
@@ -25,31 +25,35 @@
     <div class="auth-shell" data-auth-shell data-initial-tab="{{ initial_tab }}" data-has-step1-errors="{{ has_signup_step1_errors ? 1 : 0 }}">
         <section class="auth-hero">
             <div class="auth-brand">
-                <div class="auth-mark">BL</div>
+                <canvas class="auth-logo-canvas" data-auth-logo-canvas aria-hidden="true"></canvas>
                 <div>
                     <p class="auth-brand-name">BloodLink</p>
-                    <p class="auth-brand-subtitle">PI-DEV Blood Bank Platform</p>
+                    <p class="auth-brand-subtitle">Blood Bank Platform</p>
                 </div>
             </div>
 
             <div class="auth-hero-copy">
-                <p class="auth-kicker">Track every operation</p>
-                <h1>Connect donors, hospitals, and audit activity in one workflow.</h1>
-                <p>Use the same account to sign in as a donor, staff member, or administrator and follow the flow your role allows.</p>
+                <p class="auth-kicker">Join thousands of donors helping hospitals stay ready</p>
+                <h1>Every drop is a lifeline</h1>
+                <h1>Be someone's miracle today</h1>
+            </div>
+
+            <div class="auth-illustration-wrap" aria-hidden="true">
+                <canvas class="auth-illustration-canvas" data-auth-illustration-canvas></canvas>
             </div>
 
             <div class="auth-surface-grid">
                 <div class="auth-surface-card">
-                    <strong>Admin</strong>
-                    <span>Manage users, hospitals, inventory, and operational dashboards.</span>
+                    <strong>12K+</strong>
+                    <span>Active donors</span>
                 </div>
                 <div class="auth-surface-card">
-                    <strong>Hospital Staff</strong>
-                    <span>Work inside a hospital scope with the audit and transfer tools you are assigned.</span>
+                    <strong>200+</strong>
+                    <span>Partner hospitals</span>
                 </div>
                 <div class="auth-surface-card">
-                    <strong>Donor</strong>
-                    <span>Access the donor front office, eligibility checks, and alert timeline.</span>
+                    <strong>98%</strong>
+                    <span>Response rate.</span>
                 </div>
             </div>
         </section>

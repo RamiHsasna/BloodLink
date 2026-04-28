@@ -389,7 +389,6 @@
     <div class="head" style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
         <div>
             <h1>Donor Eligibility</h1>
-            <p>Manage and monitor donor eligibility records in the network.</p>
         </div>
         {% if not donor_mode %}
             <button type="button" class="add-btn" id="openEligibilityAdd">+ Add Eligibility</button>
@@ -436,25 +435,29 @@
                 </div>
                 <div class="note">{{ donor_summary.note }}</div>
 
-                <div class="actions" style="justify-content:flex-start; margin-top: 12px;">
+                <div class="actions" style="justify-content:flex-start; gap: 8px; margin-top: 12px;">
                     <button
                         type="button"
                         class="btn-edit"
                         id="openDonorCheck"
                         data-last-donation="{{ donor_summary.last_donation_date_iso|default('')|e('html_attr') }}"
                     >Check again</button>
+                    <a href="{{ path('dashboard_donor_eligibility_export_pdf') }}" class="btn-edit" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                        <span>📄</span> Export to Doctor
+                    </a>
                 </div>
             </div>
         </section>
     {% else %}
-        <form class="filters" method="get" action="{{ path('dashboard_donor_eligibility') }}">
+        <form class="filters" method="get" action="{{ path('dashboard_donor_eligibility') }}" id="eligibilityFiltersForm">
             <input type="text" name="q" value="{{ q }}" placeholder="Search by donor ID or blood type...">
             <select name="status">
                 <option value="all" {% if status == 'all' %}selected{% endif %}>All Eligibility</option>
                 <option value="eligible" {% if status == 'eligible' %}selected{% endif %}>Eligible</option>
+                <option value="temporarily_not_eligible" {% if status == 'temporarily_not_eligible' %}selected{% endif %}>Temporarily Not Eligible</option>
                 <option value="not_eligible" {% if status == 'not_eligible' %}selected{% endif %}>Not Eligible</option>
             </select>
-            <button type="submit">Apply</button>
+            <noscript><button type="submit">Apply</button></noscript>
         </form>
 
         <div class="stats">
@@ -519,15 +522,30 @@
         {% if donor_mode %}
         <form id="eligibilityModalForm" method="post" action="{{ path('dashboard_donor_eligibility_create') }}">
             <div class="modal-grid">
+                <!-- Basic Details -->
                 <div class="field">
                     <label for="e_age">Age</label>
                     <input id="e_age" type="number" name="age" min="16" max="80" value="18" required>
                     <div id="e_age_error" class="field-error"></div>
                 </div>
                 <div class="field">
+                    <label for="e_date_of_birth">Date of Birth</label>
+                    <input id="e_date_of_birth" type="date" name="date_of_birth" max="{{ "now"|date('Y-m-d') }}" required>
+                    <div id="e_date_of_birth_error" class="field-error"></div>
+                </div>
+                <div class="field">
                     <label for="e_weight">Weight (kg)</label>
                     <input id="e_weight" type="number" step="0.1" min="0.1" name="weight" required>
                     <div id="e_weight_error" class="field-error"></div>
+                </div>
+                <div class="field">
+                    <label for="e_gender">Gender (Optional)</label>
+                    <select id="e_gender" name="gender">
+                        <option value="">-- Select --</option>
+                        <option value="M">Male</option>
+                        <option value="F">Female</option>
+                        <option value="O">Other</option>
+                    </select>
                 </div>
                 <div class="field" style="grid-column: 1 / -1;">
                     <label for="e_last_donation_date">Last Donation Date</label>
@@ -535,14 +553,50 @@
                     <div id="e_last_donation_date_error" class="field-error"></div>
                 </div>
 
-                <div class="checks">
-                    <label class="check-item"><input type="checkbox" name="unwell_today" value="1"> Not feeling well today</label>
-                    <label class="check-item"><input type="checkbox" name="pregnant_recent_birth" value="1"> Pregnant or recent birth</label>
-                    <label class="check-item"><input type="checkbox" name="on_medication" value="1"> Currently on medication</label>
-                    <label class="check-item"><input type="checkbox" name="recent_surgery" value="1"> Recent surgery</label>
-                    <label class="check-item"><input type="checkbox" name="recent_vaccine" value="1"> Recent vaccine</label>
-                    <label class="check-item"><input type="checkbox" name="recent_travel" value="1"> Recent travel abroad</label>
-                    <label class="check-item"><input type="checkbox" name="recent_tattoo" value="1"> Recent tattoo or piercing</label>
+                <!-- Current Health Status -->
+                <div class="field" style="grid-column: 1 / -1;">
+                    <label>Current Health Status</label>
+                    <div class="checks">
+                        <label class="check-item"><input type="checkbox" name="unwell_today" value="1"> Not feeling well</label>
+                        <label class="check-item"><input type="checkbox" name="has_fever" value="1"> Have fever or elevated temperature</label>
+                        <label class="check-item"><input type="checkbox" name="has_illness" value="1"> Currently have acute illness</label>
+                    </div>
+                </div>
+
+                <!-- Pregnancy Status -->
+                <div class="field" style="grid-column: 1 / -1;">
+                    <label class="check-item"><input type="checkbox" name="pregnant_recent_birth" value="1"> Pregnant or recent birth (within 6 weeks)</label>
+                </div>
+
+                <!-- Medical Conditions -->
+                <div class="field" style="grid-column: 1 / -1;">
+                    <label>Medical Conditions (Check any that apply)</label>
+                    <div class="checks">
+                        <label class="check-item"><input type="checkbox" name="heart_disease" value="1"> Heart disease or cardiac condition</label>
+                        <label class="check-item"><input type="checkbox" name="anemia" value="1"> Anemia or iron deficiency</label>
+                        <label class="check-item"><input type="checkbox" name="chronic_illness" value="1"> Chronic illness or disease</label>
+                        <label class="check-item"><input type="checkbox" name="on_medication" value="1"> Currently on medication</label>
+                        <label class="check-item"><input type="checkbox" name="bleeding_disorder" value="1"> Bleeding disorder or clotting issue</label>
+                        <label class="check-item"><input type="checkbox" name="infectious_disease" value="1"> Infectious disease (HIV, Hepatitis, etc)</label>
+                    </div>
+                </div>
+
+                <!-- Recent Events -->
+                <div class="field" style="grid-column: 1 / -1;">
+                    <label>Recent Events (within last 6 months)</label>
+                    <div class="checks">
+                        <label class="check-item"><input type="checkbox" name="recent_surgery" value="1"> Recent surgery or procedures</label>
+                        <label class="check-item"><input type="checkbox" name="recent_vaccine" value="1"> Recent vaccine</label>
+                        <label class="check-item"><input type="checkbox" name="recent_travel" value="1"> Recent travel abroad</label>
+                        <label class="check-item"><input type="checkbox" name="recent_tattoo" value="1"> Recent tattoo or piercing</label>
+                        <label class="check-item"><input type="checkbox" name="recent_blood_transfusion" value="1"> Recent blood transfusion</label>
+                    </div>
+                </div>
+
+                <!-- General Well-being Notes -->
+                <div class="field" style="grid-column: 1 / -1;">
+                    <label for="e_wellbeing_notes">General Well-being Notes (Optional)</label>
+                    <textarea id="e_wellbeing_notes" name="wellbeing_notes" placeholder="Any additional health information or concerns..."></textarea>
                 </div>
             </div>
 
@@ -615,6 +669,32 @@
         const title = document.getElementById('eligibilityModalTitle');
         const submitBtn = document.getElementById('submitEligibilityModal');
 
+        if (!donorMode) {
+            const filtersForm = document.getElementById('eligibilityFiltersForm');
+            if (filtersForm) {
+                const qInput = filtersForm.querySelector('input[name="q"]');
+                const statusSelect = filtersForm.querySelector('select[name="status"]');
+                let typingTimer = null;
+
+                const submitFilters = function () {
+                    filtersForm.submit();
+                };
+
+                if (qInput) {
+                    qInput.addEventListener('input', function () {
+                        if (typingTimer !== null) {
+                            window.clearTimeout(typingTimer);
+                        }
+                        typingTimer = window.setTimeout(submitFilters, 300);
+                    });
+                }
+
+                if (statusSelect) {
+                    statusSelect.addEventListener('change', submitFilters);
+                }
+            }
+        }
+
         function openModal() {
             overlay.classList.add('open');
             overlay.setAttribute('aria-hidden', 'false');
@@ -634,6 +714,7 @@
             const resultDescription = document.getElementById('checkResultDescription');
             const resultReasons = document.getElementById('checkResultReasons');
             const ageInput = document.getElementById('e_age');
+            const dateOfBirthInput = document.getElementById('e_date_of_birth');
             const weightInput = document.getElementById('e_weight');
             const lastDonationInput = document.getElementById('e_last_donation_date');
 
@@ -661,6 +742,7 @@
 
             function clearDonorFormErrors() {
                 clearFieldError(ageInput, 'e_age_error');
+                clearFieldError(dateOfBirthInput, 'e_date_of_birth_error');
                 clearFieldError(weightInput, 'e_weight_error');
                 clearFieldError(lastDonationInput, 'e_last_donation_date_error');
             }
@@ -679,6 +761,7 @@
             function calculate() {
                 clearDonorFormErrors();
                 const age = parseInt((ageInput.value || '').trim(), 10);
+                const dateOfBirthRaw = (dateOfBirthInput.value || '').trim();
                 const weight = parseFloat((weightInput.value || '').trim());
                 const lastDonationRaw = (lastDonationInput.value || '').trim();
                 const today = new Date();
@@ -689,6 +772,21 @@
                     setFieldError(ageInput, 'e_age_error', 'Age is required and must be a valid number.');
                     hasErrors = true;
                 }
+
+                if (dateOfBirthRaw === '') {
+                    setFieldError(dateOfBirthInput, 'e_date_of_birth_error', 'Date of birth is required.');
+                    hasErrors = true;
+                } else {
+                    const dateOfBirth = new Date(dateOfBirthRaw + 'T00:00:00');
+                    if (Number.isNaN(dateOfBirth.getTime())) {
+                        setFieldError(dateOfBirthInput, 'e_date_of_birth_error', 'Date of birth must be a valid date.');
+                        hasErrors = true;
+                    } else if (dateOfBirth > today) {
+                        setFieldError(dateOfBirthInput, 'e_date_of_birth_error', 'Date of birth cannot be in the future.');
+                        hasErrors = true;
+                    }
+                }
+
                 if (Number.isNaN(weight)) {
                     setFieldError(weightInput, 'e_weight_error', 'Weight is required and must be a valid number.');
                     hasErrors = true;
@@ -738,24 +836,48 @@
                 if (form.querySelector('input[name="unwell_today"]').checked) {
                     hardStops.push('You reported not feeling well today.Donating while unwell can affect both your health and the quality of the donated blood. Please wait until you have fully recovered before attempting to donate.');
                 }
+                if (form.querySelector('input[name="has_fever"]').checked) {
+                    hardStops.push('You have fever or elevated temperature. Blood donation is not possible until body temperature returns to normal.');
+                }
+                if (form.querySelector('input[name="has_illness"]').checked) {
+                    hardStops.push('You currently have acute illness. Please wait until fully recovered before donating.');
+                }
                 if (form.querySelector('input[name="pregnant_recent_birth"]').checked) {
                     hardStops.push('Donation is temporarily deferred during pregnancy and for 6 weeks following childbirth.');
+                }
+                if (form.querySelector('input[name="heart_disease"]').checked) {
+                    doctorReview.push('Heart disease or cardiac condition - must be reviewed by a doctor.');
+                }
+                if (form.querySelector('input[name="anemia"]').checked) {
+                    doctorReview.push('Anemia or iron deficiency reported - doctor review required.');
+                }
+                if (form.querySelector('input[name="chronic_illness"]').checked) {
+                    doctorReview.push('Chronic illness or disease reported - must be assessed by doctor.');
+                }
+                if (form.querySelector('input[name="bleeding_disorder"]').checked) {
+                    hardStops.push('Bleeding disorder or clotting issues prevent blood donation.');
+                }
+                if (form.querySelector('input[name="infectious_disease"]').checked) {
+                    hardStops.push('Infectious disease detected - blood donation is not permitted.');
                 }
 
                 if (form.querySelector('input[name="on_medication"]').checked) {
                     doctorReview.push('Currently on medication, a doctor will review the case to determine if the medication affects eligibility.');
                 }
                 if (form.querySelector('input[name="recent_surgery"]').checked) {
-                    doctorReview.push('Recent surgery.');
+                    doctorReview.push('Recent surgery - may affect donation eligibility depending on type and recovery time.');
                 }
                 if (form.querySelector('input[name="recent_vaccine"]').checked) {
-                    doctorReview.push('Recent vaccine.');
+                    doctorReview.push('Recent vaccine - deferral period may apply depending on vaccine type.');
                 }
                 if (form.querySelector('input[name="recent_travel"]').checked) {
-                    doctorReview.push('Recent travel abroad, travel history has been noted and will be reviewed by a doctor before donation day.');
+                    doctorReview.push('Recent travel abroad - travel history has been noted and will be reviewed by a doctor before donation day.');
                 }
                 if (form.querySelector('input[name="recent_tattoo"]').checked) {
-                    doctorReview.push('Recent tattoo');
+                    doctorReview.push('Recent tattoo or piercing - a 6-month waiting period applies.');
+                }
+                if (form.querySelector('input[name="recent_blood_transfusion"]').checked) {
+                    hardStops.push('Recent blood transfusion recorded - must wait minimum deferral period before donating.');
                 }
 
                 resultBox.classList.remove('good', 'bad');
@@ -824,6 +946,7 @@
             });
 
             ageInput.addEventListener('input', function () { clearFieldError(ageInput, 'e_age_error'); });
+            dateOfBirthInput.addEventListener('input', function () { clearFieldError(dateOfBirthInput, 'e_date_of_birth_error'); });
             weightInput.addEventListener('input', function () { clearFieldError(weightInput, 'e_weight_error'); });
             lastDonationInput.addEventListener('input', function () { clearFieldError(lastDonationInput, 'e_last_donation_date_error'); });
         } else {
