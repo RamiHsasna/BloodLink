@@ -89,7 +89,6 @@
       <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/symfony/browser-kit" />
       <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/symfony/messenger" />
       <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/symfony/notifier" />
-      <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/symfony/ux-turbo" />
       <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/symfony/polyfill-intl-icu" />
       <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/symfony/string" />
       <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/symfony/twig-bridge" />
@@ -111,7 +110,6 @@
       <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/doctrine/persistence" />
       <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/doctrine/sql-formatter" />
       <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/doctrine/inflector" />
-      <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/doctrine/migrations" />
       <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/doctrine/doctrine-migrations-bundle" />
       <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/webmozart/assert" />
       <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/composer" />
@@ -145,6 +143,22 @@
       <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/twig/twig" />
       <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/twig/extra-bundle" />
       <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/nikic/php-parser" />
+      <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/symfony/uid" />
+      <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/symfony/polyfill-uuid" />
+      <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/ahmed-bhs/doctrine-doctor" />
+      <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/phpmyadmin/sql-parser" />
+      <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/dompdf/dompdf" />
+      <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/dompdf/php-font-lib" />
+      <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/dompdf/php-svg-lib" />
+      <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/bacon/bacon-qr-code" />
+      <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/sabberworm/php-css-parser" />
+      <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/dasprid/enum" />
+      <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/knplabs/knp-snappy" />
+      <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/knplabs/knp-snappy-bundle" />
+      <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/thecodingmachine/safe" />
+      <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/endroid/qr-code" />
+      <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/doctrine/migrations" />
+      <path value="$PROJECT_DIR$/symfony-bloodlink/vendor/symfony/ux-turbo" />
     </include_path>
   </component>
   <component name="PhpProjectSharedConfiguration" php_language_level="8.1">
