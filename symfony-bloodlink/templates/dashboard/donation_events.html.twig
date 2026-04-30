@@ -430,10 +430,15 @@ function validateDates(startId, endId, errorId) {
         const diff = (new Date(e) - new Date(s)) / 1000;
         if (diff < 43200) {
             document.getElementById(endId).classList.add('error');
-            err.textContent = 'Event must last at least 12 hours.';
+            err.textContent = '⚠ Event must last at least 12 hours. Please choose a later end date.';
             err.style.display = 'block';
             return false;
         }
+    } else if (s && !e) {
+        document.getElementById(endId).classList.add('error');
+        err.textContent = '⚠ Please select an end date and time.';
+        err.style.display = 'block';
+        return false;
     }
     document.getElementById(endId).classList.remove('error');
     err.style.display = 'none';
@@ -441,7 +446,19 @@ function validateDates(startId, endId, errorId) {
 }
 
 // ── Create modal ──────────────────────────────────────────────────────────────
-function openCreate() { document.getElementById('modal-create').classList.add('open'); }
+function openCreate() {
+    // Reset form fields every time modal opens
+    document.getElementById('create-form').reset();
+    document.getElementById('c-start').value = '';
+    document.getElementById('c-end').value = '';
+    document.getElementById('c-start').min = todayStr;
+    document.getElementById('c-end').min = '';
+    document.getElementById('c-end-error').style.display = 'none';
+    document.getElementById('c-end').classList.remove('error');
+    // Uncheck all blood types
+    document.querySelectorAll('[id^="c-bt-"]').forEach(cb => { if(cb.type==='checkbox') cb.checked = false; });
+    document.getElementById('modal-create').classList.add('open');
+}
 function closeCreate() { document.getElementById('modal-create').classList.remove('open'); }
 document.getElementById('c-end').addEventListener('change', () => validateDates('c-start','c-end','c-end-error'));
 document.getElementById('create-form').addEventListener('submit', e => {
@@ -496,9 +513,18 @@ document.addEventListener('keydown', e => {
 });
 
 const todayStr = new Date().toISOString().slice(0, 16);
-document.querySelectorAll('input[name="start_date"]').forEach(i => i.min = todayStr);
-document.getElementById('c-start').addEventListener('change', function() { document.getElementById('c-end').min = this.value; });
-document.getElementById('edit-start').addEventListener('change', function() { document.getElementById('edit-end').min = this.value; });
+document.getElementById('c-start').min = todayStr;
+document.getElementById('c-start').value = '';
+
+document.getElementById('c-start').addEventListener('change', function() {
+    const start = new Date(this.value);
+    // Auto-set end date to start + 1 day
+    const autoEnd = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+    const endStr = autoEnd.toISOString().slice(0, 16);
+    document.getElementById('c-end').min = this.value;
+    document.getElementById('c-end').value = endStr;
+    validateDates('c-start', 'c-end', 'c-end-error');
+});
 
 // ── MAP ───────────────────────────────────────────────────────────────────────
 let leafletMap = null;
