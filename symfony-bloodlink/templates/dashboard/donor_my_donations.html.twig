@@ -1,0 +1,187 @@
+{% set page_title = 'My Donations' %}
+{% set page_description = 'Your personal donation history, certificates and QR codes.' %}
+{% extends 'log_management/layouts/front_office.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+<style>
+    :root { --brand: #8f1d1f; --brand-2: #b3272a; --ok: #10b981; --line: #e2e8f0; --subtle: #64748b; --ink: #0f172a; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit,minmax(140px,1fr)); gap: 12px; margin-bottom: 24px; }
+    .stat { background: white; border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+    .stat-label { font-size: 11px; font-weight: 700; color: var(--subtle); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+    .stat-value { font-size: 26px; font-weight: 800; color: var(--ink); }
+    .list { display: grid; gap: 14px; }
+    .card { background: white; border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+    .card-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; gap: 12px; flex-wrap: wrap; }
+    .donation-num { font-size: 16px; font-weight: 800; color: var(--ink); }
+    .donation-date { font-size: 13px; color: var(--subtle); margin-top: 2px; }
+    .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .badge-completed { background: #dcfce7; color: #166534; }
+    .badge-cancelled { background: #fee2e2; color: #991b1b; }
+    .badge-failed    { background: #fee2e2; color: #991b1b; }
+    .badge-deferred  { background: #fef3c7; color: #92400e; }
+    .badge-first     { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+    .badge-returning { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .meta { display: grid; grid-template-columns: repeat(auto-fit,minmax(120px,1fr)); gap: 10px; font-size: 13px; }
+    .meta-label { font-size: 10px; font-weight: 700; color: var(--subtle); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 2px; }
+    .meta-value { font-size: 14px; font-weight: 600; color: var(--ink); }
+    .actions { display: flex; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #f1f5f9; }
+    .btn-qr  { flex: 1; padding: 9px; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; background: #e0f2fe; color: #0369a1; font-family: inherit; }
+    .btn-qr:hover { background: #bae6fd; }
+    .btn-pdf { flex: 1; padding: 9px; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; background: #dcfce7; color: #166534; font-family: inherit; text-decoration: none; display: flex; align-items: center; justify-content: center; }
+    .btn-pdf:hover { background: #bbf7d0; }
+    .empty { text-align: center; padding: 48px; background: white; border: 2px dashed #d1d5db; border-radius: 14px; color: var(--subtle); }
+
+    /* QR Modal */
+    .modal-bg { position: fixed; inset: 0; background: rgba(15,23,42,.55); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+    .modal-bg.open { display: flex; }
+    .modal { width: min(380px,96vw); background: white; border-radius: 16px; box-shadow: 0 24px 60px rgba(0,0,0,.2); overflow: hidden; }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--line); }
+    .modal-head h3 { margin: 0; font-size: 17px; font-weight: 800; }
+    .modal-close { background: none; border: 1px solid #cbd5e1; border-radius: 8px; width: 32px; height: 32px; cursor: pointer; font-size: 16px; display: grid; place-items: center; }
+    .qr-body { padding: 24px; text-align: center; }
+    .qr-info { background: #f8fafc; border-radius: 10px; padding: 14px; margin-top: 16px; text-align: left; font-size: 13px; }
+    .qr-info div { margin-bottom: 6px; }
+    .qr-info strong { color: var(--subtle); font-size: 10px; text-transform: uppercase; display: block; letter-spacing: .05em; }
+    .modal-foot { display: flex; gap: 10px; padding: 16px 20px; border-top: 1px solid var(--line); background: #f8fafc; }
+    .btn { flex: 1; padding: 10px; border: none; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .btn-ghost { background: #e2e8f0; color: var(--ink); }
+    .btn-blue { background: #0369a1; color: white; }
+</style>
+{% endblock %}
+
+{% block module_content %}
+
+<!-- Stats -->
+<div class="stats">
+    <div class="stat"><div class="stat-label">Total Donations</div><div class="stat-value">{{ stats.total }}</div></div>
+    <div class="stat"><div class="stat-label">Screening Passed</div><div class="stat-value" style="color:var(--ok)">{{ stats.passed }}</div></div>
+    <div class="stat"><div class="stat-label">Total Volume</div><div class="stat-value" style="color:var(--brand)">{{ stats.total_volume|number_format(0) }} mL</div></div>
+</div>
+
+{% if donations %}
+<div class="list">
+    {% for donation in donations %}
+    {% set isFirst = donation.prior_donations == 0 %}
+    {% set daysSince = ('now'|date('U') - donation.donation_date|date('U')) / 86400 %}
+    {% set isExpired = daysSince > 42 %}
+    <div class="card">
+        <div class="card-head">
+            <div>
+                <div class="donation-num">Donation #{{ loop.revindex }}</div>
+                <div class="donation-date">📅 {{ donation.donation_date|date('M d, Y') }}</div>
+            </div>
+            <div class="badges">
+                {% if isFirst %}
+                    <span class="badge badge-first">⭐ First Donation</span>
+                {% else %}
+                    <span class="badge badge-returning">🔄 Returning</span>
+                {% endif %}
+                <span class="badge badge-{{ donation.status|lower }}">{{ donation.status }}</span>
+            </div>
+        </div>
+
+        <div class="meta">
+            <div>
+                <div class="meta-label">🩸 Blood Type</div>
+                <div class="meta-value">{{ donation.blood_code ?? '—' }}</div>
+            </div>
+            <div>
+                <div class="meta-label">💧 Volume</div>
+                <div class="meta-value" style="{{ isExpired ? 'color:#dc2626' : '' }}">
+                    {{ donation.volume_collected ?? '—' }} mL
+                    {% if isExpired %}<span style="font-size:11px;"> ⚠ Expired</span>{% endif %}
+                </div>
+            </div>
+            <div>
+                <div class="meta-label">🏥 Hospital</div>
+                <div class="meta-value">{{ donation.hospital_name ?? '—' }}</div>
+            </div>
+            <div>
+                <div class="meta-label">📅 Event</div>
+                <div class="meta-value">{{ donation.event_name ?? '—' }}</div>
+            </div>
+            <div>
+                <div class="meta-label">🔬 Screening</div>
+                <div class="meta-value">{% if donation.screening_passed %}✓ Passed{% else %}✗ Failed{% endif %}</div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn-qr" type="button" onclick="openQr({{ donation|json_encode }})">◉ QR Code</button>
+            <a href="{{ path('donations_pdf', {id: donation.donation_id}) }}" class="btn-pdf">📄 Export PDF</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty">
+    <div style="font-size:48px;margin-bottom:12px;opacity:.5">🩸</div>
+    <h3 style="font-size:18px;font-weight:700;color:var(--ink);margin-bottom:8px;">No Donations Yet</h3>
+    <p style="font-size:14px;">Your donation history will appear here once you make your first donation.</p>
+</div>
+{% endif %}
+
+<!-- QR Modal -->
+<div class="modal-bg" id="modal-qr">
+    <div class="modal">
+        <div class="modal-head">
+            <h3>◉ Donation QR Code</h3>
+            <button class="modal-close" onclick="closeQr()" type="button">✕</button>
+        </div>
+        <div class="qr-body">
+            <canvas id="qr-canvas"></canvas>
+            <div class="qr-info" id="qr-info"></div>
+        </div>
+        <div class="modal-foot">
+            <button type="button" class="btn btn-ghost" onclick="closeQr()">Close</button>
+            <button type="button" class="btn btn-blue" onclick="saveQr()">💾 Save QR</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+function openQr(d) {
+    const url = window.location.origin + '/donation/' + d.donation_id + '/view';
+    const canvas = document.getElementById('qr-canvas');
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+
+    const container = document.createElement('div');
+    new QRCode(container, { text: url, width: 200, height: 200, colorDark: '#0f172a', colorLight: '#ffffff' });
+
+    setTimeout(() => {
+        const img = container.querySelector('img') || container.querySelector('canvas');
+        canvas.width = 200; canvas.height = 200;
+        const ctx = canvas.getContext('2d');
+        if (img.tagName === 'CANVAS') {
+            ctx.drawImage(img, 0, 0);
+        } else {
+            const i = new Image();
+            i.onload = () => ctx.drawImage(i, 0, 0);
+            i.src = img.src;
+        }
+    }, 100);
+
+    document.getElementById('qr-info').innerHTML = `
+        <div><strong>Donation ID</strong>${d.donation_id}</div>
+        <div><strong>Blood Type</strong>${d.blood_code ?? '—'}</div>
+        <div><strong>Date</strong>${d.donation_date ? d.donation_date.substring(0,10) : '—'}</div>
+        <div><strong>Status</strong>${d.status ?? '—'}</div>
+    `;
+    document.getElementById('modal-qr').classList.add('open');
+}
+function closeQr() { document.getElementById('modal-qr').classList.remove('open'); }
+function saveQr() {
+    const link = document.createElement('a');
+    link.download = 'donation-qr.png';
+    link.href = document.getElementById('qr-canvas').toDataURL();
+    link.click();
+}
+document.getElementById('modal-qr').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal-qr')) closeQr();
+});
+</script>
+
+{% endblock %}

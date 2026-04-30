@@ -498,7 +498,74 @@ HTML;
 
         return $this->json(['donor' => $donor, 'history' => $history]);
     }
+    #[Route('/dashboard/donor/events', name: 'dashboard_donor_events', methods: ['GET'])]
+public function donorEvents(Request $request, Connection $connection): Response
+{
+    $sessionUser = $request->getSession()->get('auth_user');
+    if (!$sessionUser) return $this->redirectToRoute('auth_index');
 
+    $userType = strtoupper((string) ($sessionUser['user_type'] ?? ''));
+    if ($userType !== 'DONOR') return $this->redirectToRoute('donations_index');
+
+    $events = $connection->fetchAllAssociative("
+        SELECT de.*,
+               h.name AS hospital_name,
+               COUNT(d.donation_id) AS total_donations
+        FROM donation_events de
+        LEFT JOIN hospital h ON h.hospital_id = de.hospital_id
+        LEFT JOIN donations d ON d.donation_event_id = de.event_id
+        WHERE de.status IN ('PLANNED', 'ACTIVE')
+        GROUP BY de.event_id, h.name
+        ORDER BY de.start_date ASC
+    ");
+
+    return $this->render('dashboard/donor_events.html.twig', [
+        'session_user' => $sessionUser,
+        'events'       => $events,
+    ]);
+}
+
+   #[Route('/dashboard/donor/my-donations', name: 'donor_my_donations', methods: ['GET'])]
+    public function myDonations(Request $request, Connection $connection): Response
+    {
+    $sessionUser = $request->getSession()->get('auth_user');
+    if (!$sessionUser) return $this->redirectToRoute('auth_index');
+
+    $userType = strtoupper((string) ($sessionUser['user_type'] ?? ''));
+    if ($userType !== 'DONOR') return $this->redirectToRoute('donations_index');
+
+    $userId = (string) ($sessionUser['id'] ?? '');
+
+    $donations = $connection->fetchAllAssociative("
+        SELECT d.*,
+               h.name          AS hospital_name,
+               de.name         AS event_name,
+               d.blood_type_id AS blood_code,
+               (SELECT COUNT(*) FROM donations d2
+                WHERE d2.user_id = d.user_id
+                AND d2.donation_date < d.donation_date) AS prior_donations
+        FROM donations d
+        LEFT JOIN hospital h ON h.hospital_id = d.hospital_id
+        LEFT JOIN donation_events de ON de.event_id = d.donation_event_id
+        WHERE d.user_id = :uid
+        ORDER BY d.donation_date DESC
+    ", ['uid' => $userId]);
+
+    $stats = $connection->fetchAssociative("
+        SELECT
+            COUNT(*)                                         AS total,
+            COUNT(*) FILTER (WHERE screening_passed = true)  AS passed,
+            COALESCE(SUM(volume_collected), 0)               AS total_volume
+        FROM donations
+        WHERE user_id = :uid
+    ", ['uid' => $userId]);
+
+    return $this->render('dashboard/donor_my_donations.html.twig', [
+        'session_user' => $sessionUser,
+        'donations'    => $donations,
+        'stats'        => $stats,
+    ]);
+    }
     private function generateUuidV4(): string
     {
         $bytes = random_bytes(16);
