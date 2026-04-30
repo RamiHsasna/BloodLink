@@ -7,4 +7,88 @@
 
 {% block extra_body_assets %}
     <script src="{{ asset('scripts/log-management-confirm.js') }}"></script>
+    <div class="audit-chatbot" data-audit-chatbot data-endpoint="{{ path('dashboard_logs_chatbot') }}">
+        <button type="button" class="audit-chatbot-toggle" data-audit-chatbot-toggle title="Audit assistant" aria-label="Audit assistant">
+            <svg class="audit-chatbot-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M21 12a8.5 8.5 0 0 1-8.5 8.5 8.9 8.9 0 0 1-3.7-.8L4 21l1.3-4.4A8.4 8.4 0 0 1 4 12a8.5 8.5 0 1 1 17 0Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M8.5 11h7M8.5 14h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </button>
+        <section class="audit-chatbot-window" data-audit-chatbot-window hidden>
+            <header class="audit-chatbot-header">
+                <div>
+                    <p class="audit-chatbot-kicker">Audit assistant</p>
+                    <h2 class="audit-chatbot-title">Ask about recent logs</h2>
+                </div>
+                <button type="button" class="audit-chatbot-close" data-audit-chatbot-close aria-label="Close audit assistant">x</button>
+            </header>
+            <div class="audit-chatbot-messages" data-audit-chatbot-messages>
+                <div class="audit-chatbot-message audit-chatbot-message--assistant">
+                    Ask about recent audit activity, anomalies, review status, or SMS alert state.
+                </div>
+            </div>
+            <form class="audit-chatbot-form" data-audit-chatbot-form>
+                <input class="audit-chatbot-input" data-audit-chatbot-input type="text" placeholder="Ask about anomalies..." autocomplete="off">
+                <button class="audit-chatbot-send" type="submit">Send</button>
+            </form>
+        </section>
+    </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const root = document.querySelector('[data-audit-chatbot]');
+        if (!root) return;
+
+        const endpoint = root.dataset.endpoint;
+        const toggle = root.querySelector('[data-audit-chatbot-toggle]');
+        const close = root.querySelector('[data-audit-chatbot-close]');
+        const windowEl = root.querySelector('[data-audit-chatbot-window]');
+        const form = root.querySelector('[data-audit-chatbot-form]');
+        const input = root.querySelector('[data-audit-chatbot-input]');
+        const messages = root.querySelector('[data-audit-chatbot-messages]');
+
+        const appendMessage = (text, type) => {
+            const node = document.createElement('div');
+            node.className = `audit-chatbot-message audit-chatbot-message--${type}`;
+            node.textContent = text;
+            messages.appendChild(node);
+            messages.scrollTop = messages.scrollHeight;
+            return node;
+        };
+
+        toggle.addEventListener('click', () => {
+            windowEl.hidden = !windowEl.hidden;
+            if (!windowEl.hidden) input.focus();
+        });
+
+        close.addEventListener('click', () => {
+            windowEl.hidden = true;
+        });
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const message = input.value.trim();
+            if (!message) return;
+
+            appendMessage(message, 'user');
+            input.value = '';
+            input.disabled = true;
+            const loading = appendMessage('Reading audit context...', 'assistant');
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message})
+                });
+                const data = await response.json();
+                loading.textContent = data.reply || 'No response returned.';
+            } catch (error) {
+                loading.textContent = 'Unable to reach the audit assistant.';
+            }
+
+            input.disabled = false;
+            input.focus();
+        });
+    });
+    </script>
 {% endblock %}

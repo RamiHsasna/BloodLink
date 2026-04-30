@@ -52,7 +52,7 @@
 
     .add-btn { border: 0; border-radius: 10px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 700; padding: 10px 16px; }
 
-    .filters { display: grid; grid-template-columns: 1fr 180px 120px; gap: 12px; margin-bottom: 14px; }
+    .filters { display: grid; grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(140px, 1fr)) 120px; gap: 12px; margin-bottom: 14px; }
     .filters input, .filters select { width: 100%; height: 42px; border: 1px solid #d6deea; border-radius: 10px; padding: 0 12px; background: #fff; }
     .filters button { border: 0; border-radius: 10px; background: #0f172a; color: #fff; font-weight: 700; }
 
@@ -64,6 +64,9 @@
 
     .list { display: grid; gap: 12px; }
     .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05); }
+    .card.clickable-user { cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+    .card.clickable-user:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08); border-color: #cfd9ea; }
+    .card.clickable-user:focus-visible { outline: 3px solid #bfdbfe; outline-offset: 2px; }
     .card-head { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
     .user-name { margin: 0; font-size: 18px; font-weight: 700; }
     .email { margin: 2px 0 0; color: var(--subtle); font-size: 13px; }
@@ -155,6 +158,34 @@
     .btn-secondary { border: 1px solid #cbd5e1; background: #fff; color: #334155; border-radius: 9px; padding: 8px 12px; }
     .btn-primary { border: 0; border-radius: 9px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 700; padding: 8px 12px; }
 
+    .details-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+    .detail-item {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #f8fafc;
+        padding: 10px;
+    }
+    .detail-item.full { grid-column: 1 / -1; }
+    .detail-item .k {
+        margin: 0;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #64748b;
+        font-weight: 700;
+    }
+    .detail-item .v {
+        margin: 6px 0 0;
+        color: #0f172a;
+        font-size: 14px;
+        font-weight: 700;
+        word-break: break-word;
+    }
+
     .empty { border: 1px dashed #cbd5e1; border-radius: 12px; padding: 28px; text-align: center; color: var(--subtle); background: #fff; }
 
     @media (max-width: 1100px) {
@@ -183,71 +214,29 @@
             <div class="flash error">{{ message }}</div>
         {% endfor %}
 
-        <form class="filters" method="get" action="{{ path('dashboard_users') }}">
+        <form class="filters" method="get" action="{{ path('dashboard_users') }}" id="usersFiltersForm">
             <input type="text" name="q" value="{{ q }}" placeholder="Search users by name, email, or phone...">
             <select name="type">
                 <option value="ALL" {% if type == 'ALL' %}selected{% endif %}>All User Types</option>
                 <option value="DONOR" {% if type == 'DONOR' %}selected{% endif %}>DONOR</option>
                 <option value="HOSPITAL_STAFF" {% if type == 'HOSPITAL_STAFF' %}selected{% endif %}>HOSPITAL_STAFF</option>
             </select>
-            <button type="submit">Apply</button>
+            <select name="blood_type">
+                <option value="" {% if blood_type == '' %}selected{% endif %}>All Blood Types</option>
+                {% for bt in blood_types %}
+                    <option value="{{ bt|e('html_attr') }}" {% if blood_type == bt %}selected{% endif %}>{{ bt }}</option>
+                {% endfor %}
+            </select>
+            <input type="text" name="city" value="{{ city }}" placeholder="Filter donor city...">
+            <noscript><button type="submit">Apply</button></noscript>
         </form>
 
-        <div class="stats">
-            <div class="stat">Total: <strong>{{ stats.total }}</strong></div>
-            <div class="stat"><span class="dot green">•</span>Donors: <strong>{{ stats.donors }}</strong></div>
-            <div class="stat"><span class="dot orange">•</span>Hospital Staff: <strong>{{ stats.staff }}</strong></div>
+        <div id="usersStatsContainer">
+            {% include 'dashboard/partials/users/_stats.html.twig' with { stats: stats } %}
         </div>
 
-        <div class="list">
-            {% if users is empty %}
-                <div class="empty">No users found.</div>
-            {% else %}
-                {% for u in users %}
-                    <div class="card">
-                        <div class="card-head">
-                            <div>
-                                <p class="user-name">{{ u.first_name|default('') }} {{ u.last_name|default('') }}</p>
-                                <p class="email">{{ u.email|default('N/A') }}</p>
-                            </div>
-                            {% if u.user_type == 'DONOR' %}
-                                <span class="badge badge-donor">Donor</span>
-                            {% else %}
-                                <span class="badge badge-staff">Hospital Staff</span>
-                            {% endif %}
-                        </div>
-                        <div class="meta">
-                            <div>Phone: {{ u.phone ?: 'N/A' }}</div>
-                            <div>ID: {{ (u.user_id|default('')|slice(0, 8)) ~ '...' }}</div>
-                            <div>Added: {{ u.created_at ? u.created_at|date('Y-m-d H:i') : 'N/A' }}</div>
-                        </div>
-
-                        <div class="crud-bar">
-                            <button
-                                type="button"
-                                class="btn-edit open-edit-user"
-                                data-user-id="{{ u.user_id|e('html_attr') }}"
-                                data-first-name="{{ (u.first_name|default(''))|e('html_attr') }}"
-                                data-last-name="{{ (u.last_name|default(''))|e('html_attr') }}"
-                                data-email="{{ (u.email|default(''))|e('html_attr') }}"
-                                data-phone="{{ (u.phone|default(''))|e('html_attr') }}"
-                                data-user-type="{{ (u.user_type|default('DONOR'))|e('html_attr') }}"
-                                data-donor-blood-type-id="{{ (u.donor_blood_type_id|default(''))|e('html_attr') }}"
-                                data-donor-last-donation-date="{{ u.last_donation_date ? u.last_donation_date|date('Y-m-d') : '' }}"
-                                data-donor-city="{{ (u.donor_city|default(''))|e('html_attr') }}"
-                                data-donor-total-donations="{{ (u.total_donations is not null ? u.total_donations : 0)|e('html_attr') }}"
-                                data-staff-role="{{ (u.staff_role|default(''))|e('html_attr') }}"
-                                data-staff-hospital-id="{{ (u.staff_hospital_id|default(''))|e('html_attr') }}"
-                                data-staff-department="{{ (u.staff_department|default(''))|e('html_attr') }}"
-                            >Modify</button>
-
-                            <form method="post" action="{{ path('dashboard_users_delete', { userId: u.user_id }) }}" onsubmit="return confirm('Delete this user?');">
-                                <button class="btn-delete" type="submit">Delete</button>
-                            </form>
-                        </div>
-                    </div>
-                {% endfor %}
-            {% endif %}
+        <div id="usersListContainer">
+            {% include 'dashboard/partials/users/_list.html.twig' with { users: users } %}
         </div>
 
 <div id="userModal" class="modal-overlay" aria-hidden="true">
@@ -350,18 +339,180 @@
     </div>
 </div>
 
+<div id="userDetailsModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="userDetailsTitle">
+        <div class="modal-head">
+            <h3 id="userDetailsTitle">User Details</h3>
+            <button type="button" class="modal-close" id="closeUserDetailsModal">×</button>
+        </div>
+
+        <div class="details-grid">
+            <div class="detail-item">
+                <p class="k">Name</p>
+                <p class="v" id="d_name">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">User Type</p>
+                <p class="v" id="d_user_type">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">Email</p>
+                <p class="v" id="d_email">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">Phone</p>
+                <p class="v" id="d_phone">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">User ID</p>
+                <p class="v" id="d_user_id">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">Created At</p>
+                <p class="v" id="d_created_at">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">Blood Type</p>
+                <p class="v" id="d_blood_type">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">Last Donation Date</p>
+                <p class="v" id="d_last_donation">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">Donor City</p>
+                <p class="v" id="d_city">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">Total Donations</p>
+                <p class="v" id="d_total_donations">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">Staff Role</p>
+                <p class="v" id="d_staff_role">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">Staff Hospital ID</p>
+                <p class="v" id="d_staff_hospital">N/A</p>
+            </div>
+            <div class="detail-item full">
+                <p class="k">Staff Department</p>
+                <p class="v" id="d_staff_department">N/A</p>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" id="closeUserDetailsFooter">Close</button>
+        </div>
+    </div>
+</div>
+
 <script>
     (function () {
+        const filtersForm = document.getElementById('usersFiltersForm');
+        const statsContainer = document.getElementById('usersStatsContainer');
+        const listContainer = document.getElementById('usersListContainer');
+        let typingTimer = null;
+        let currentRequestController = null;
+
+        function submitFiltersAjax() {
+            if (!filtersForm || !window.fetch || !statsContainer || !listContainer) {
+                if (filtersForm) {
+                    filtersForm.submit();
+                }
+                return;
+            }
+
+            const params = new URLSearchParams(new FormData(filtersForm));
+            const url = filtersForm.action + '?' + params.toString();
+
+            if (currentRequestController !== null) {
+                currentRequestController.abort();
+            }
+
+            currentRequestController = new AbortController();
+
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                signal: currentRequestController.signal
+            })
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch filtered users');
+                    }
+                    return response.json();
+                })
+                .then(function (payload) {
+                    if (typeof payload.statsHtml === 'string') {
+                        statsContainer.innerHTML = payload.statsHtml;
+                    }
+                    if (typeof payload.listHtml === 'string') {
+                        listContainer.innerHTML = payload.listHtml;
+                    }
+
+                    bindUserListInteractions();
+                    window.history.replaceState({}, '', url);
+                })
+                .catch(function (error) {
+                    if (error.name === 'AbortError') {
+                        return;
+                    }
+
+                    filtersForm.submit();
+                });
+        }
+
+        if (filtersForm) {
+            const textInputs = filtersForm.querySelectorAll('input[type="text"]');
+            const selects = filtersForm.querySelectorAll('select');
+
+            textInputs.forEach(function (input) {
+                input.addEventListener('input', function () {
+                    if (typingTimer !== null) {
+                        window.clearTimeout(typingTimer);
+                    }
+                    typingTimer = window.setTimeout(submitFiltersAjax, 300);
+                });
+            });
+
+            selects.forEach(function (select) {
+                select.addEventListener('change', submitFiltersAjax);
+            });
+        }
+
         const overlay = document.getElementById('userModal');
+        const detailsOverlay = document.getElementById('userDetailsModal');
         const openAddBtn = document.getElementById('openAddUserModal');
         const closeBtn = document.getElementById('closeUserModal');
         const cancelBtn = document.getElementById('cancelUserModal');
+        const detailsCloseBtn = document.getElementById('closeUserDetailsModal');
+        const detailsCloseFooterBtn = document.getElementById('closeUserDetailsFooter');
         const form = document.getElementById('userModalForm');
         const title = document.getElementById('userModalTitle');
         const submitBtn = document.getElementById('submitUserModal');
         const userType = document.getElementById('m_user_type');
         const donorFields = document.getElementById('donorFields');
         const staffFields = document.getElementById('staffFields');
+
+        const detailFields = {
+            name: document.getElementById('d_name'),
+            userType: document.getElementById('d_user_type'),
+            email: document.getElementById('d_email'),
+            phone: document.getElementById('d_phone'),
+            userId: document.getElementById('d_user_id'),
+            createdAt: document.getElementById('d_created_at'),
+            bloodType: document.getElementById('d_blood_type'),
+            lastDonation: document.getElementById('d_last_donation'),
+            city: document.getElementById('d_city'),
+            totalDonations: document.getElementById('d_total_donations'),
+            staffRole: document.getElementById('d_staff_role'),
+            staffHospital: document.getElementById('d_staff_hospital'),
+            staffDepartment: document.getElementById('d_staff_department')
+        };
 
         function toggleTypeSections() {
             const type = userType.value;
@@ -377,6 +528,34 @@
         function closeModal() {
             overlay.classList.remove('open');
             overlay.setAttribute('aria-hidden', 'true');
+        }
+
+        function safeValue(value) {
+            return value && value.trim() !== '' ? value : 'N/A';
+        }
+
+        function openDetailsModal(card) {
+            detailFields.name.textContent = ((card.dataset.firstName || '') + ' ' + (card.dataset.lastName || '')).trim() || 'N/A';
+            detailFields.userType.textContent = safeValue(card.dataset.userType);
+            detailFields.email.textContent = safeValue(card.dataset.email);
+            detailFields.phone.textContent = safeValue(card.dataset.phone);
+            detailFields.userId.textContent = safeValue(card.dataset.userId);
+            detailFields.createdAt.textContent = safeValue(card.dataset.createdAt);
+            detailFields.bloodType.textContent = safeValue(card.dataset.donorBloodTypeId);
+            detailFields.lastDonation.textContent = safeValue(card.dataset.donorLastDonationDate);
+            detailFields.city.textContent = safeValue(card.dataset.donorCity);
+            detailFields.totalDonations.textContent = safeValue(card.dataset.donorTotalDonations);
+            detailFields.staffRole.textContent = safeValue(card.dataset.staffRole);
+            detailFields.staffHospital.textContent = safeValue(card.dataset.staffHospitalId);
+            detailFields.staffDepartment.textContent = safeValue(card.dataset.staffDepartment);
+
+            detailsOverlay.classList.add('open');
+            detailsOverlay.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeDetailsModal() {
+            detailsOverlay.classList.remove('open');
+            detailsOverlay.setAttribute('aria-hidden', 'true');
         }
 
         function resetForCreate() {
@@ -419,18 +598,67 @@
             openModal();
         });
 
-        document.querySelectorAll('.open-edit-user').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                fillForEdit(btn);
-                openModal();
+        function bindUserListInteractions() {
+            document.querySelectorAll('.open-edit-user').forEach(function (btn) {
+                if (btn.dataset.boundEdit === '1') {
+                    return;
+                }
+
+                btn.dataset.boundEdit = '1';
+                btn.addEventListener('click', function () {
+                    fillForEdit(btn);
+                    openModal();
+                });
             });
-        });
+
+            document.querySelectorAll('.open-user-details').forEach(function (card) {
+                if (card.dataset.boundDetails === '1') {
+                    return;
+                }
+
+                card.dataset.boundDetails = '1';
+                card.addEventListener('click', function (e) {
+                    if (e.target.closest('.crud-bar')) {
+                        return;
+                    }
+                    openDetailsModal(card);
+                });
+
+                card.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openDetailsModal(card);
+                    }
+                });
+            });
+
+            document.querySelectorAll('.crud-bar').forEach(function (bar) {
+                if (bar.dataset.boundCrud === '1') {
+                    return;
+                }
+
+                bar.dataset.boundCrud = '1';
+                bar.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                });
+            });
+        }
+
+        bindUserListInteractions();
 
         closeBtn.addEventListener('click', closeModal);
         cancelBtn.addEventListener('click', closeModal);
         overlay.addEventListener('click', function (e) {
             if (e.target === overlay) {
                 closeModal();
+            }
+        });
+
+        detailsCloseBtn.addEventListener('click', closeDetailsModal);
+        detailsCloseFooterBtn.addEventListener('click', closeDetailsModal);
+        detailsOverlay.addEventListener('click', function (e) {
+            if (e.target === detailsOverlay) {
+                closeDetailsModal();
             }
         });
 

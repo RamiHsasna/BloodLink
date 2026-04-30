@@ -30,6 +30,7 @@ class BloodTransferRequestLogRepository extends ServiceEntityRepository
         ?string $action = null,
         ?string $newStatus = null,
         ?string $hospitalId = null,
+        ?string $anomalyFilter = null,
         int $page = 1,
         int $perPage = 10,
     ): array {
@@ -65,6 +66,7 @@ class BloodTransferRequestLogRepository extends ServiceEntityRepository
                 ->setParameter('newStatus', $newStatus);
         }
 
+        $this->applyAnomalyFilter($qb, $anomalyFilter);
         $this->applyDateWindow($qb, 'log.createdAt', $startDate, $endDate);
 
         return $this->paginate($qb, $page, $perPage);
@@ -94,6 +96,95 @@ class BloodTransferRequestLogRepository extends ServiceEntityRepository
             ->setParameter('since', $since);
 
         $this->applyHospitalScope($qb, $hospitalId);
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
+    public function countAnomalies(?string $hospitalId = null): int
+    {
+        $qb = $this->createQueryBuilder('log')
+            ->leftJoin('log.bloodTransferRequest', 'transfer')
+            ->leftJoin('transfer.requestingHospital', 'requestingHospital')
+            ->leftJoin('transfer.approvingHospital', 'approvingHospital')
+            ->select('COUNT(log.logId)')
+            ->andWhere('log.anomalyDetected = true');
+
+        $this->applyHospitalScope($qb, $hospitalId);
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
+    public function countHighRiskAnomalies(?string $hospitalId = null): int
+    {
+        $qb = $this->createQueryBuilder('log')
+            ->leftJoin('log.bloodTransferRequest', 'transfer')
+            ->leftJoin('transfer.requestingHospital', 'requestingHospital')
+            ->leftJoin('transfer.approvingHospital', 'approvingHospital')
+            ->select('COUNT(log.logId)')
+            ->andWhere('log.anomalyDetected = true')
+            ->andWhere('log.anomalySeverity IN (:severities)')
+            ->setParameter('severities', ['high', 'critical']);
+
+        $this->applyHospitalScope($qb, $hospitalId);
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
+    public function countUnreviewedAnomalies(?string $hospitalId = null): int
+    {
+        $qb = $this->createQueryBuilder('log')
+            ->leftJoin('log.bloodTransferRequest', 'transfer')
+            ->leftJoin('transfer.requestingHospital', 'requestingHospital')
+            ->leftJoin('transfer.approvingHospital', 'approvingHospital')
+            ->select('COUNT(log.logId)')
+            ->andWhere('log.anomalyDetected = true')
+            ->andWhere('log.anomalyReviewed = false');
+
+        $this->applyHospitalScope($qb, $hospitalId);
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function getAnomalySeverityCounts(?string $hospitalId = null): array
+    {
+        $qb = $this->createQueryBuilder('log')
+            ->leftJoin('log.bloodTransferRequest', 'transfer')
+            ->leftJoin('transfer.requestingHospital', 'requestingHospital')
+            ->leftJoin('transfer.approvingHospital', 'approvingHospital')
+            ->select('log.anomalySeverity AS severity, COUNT(log.logId) AS total')
+            ->andWhere('log.anomalyDetected = true')
+            ->groupBy('log.anomalySeverity');
+
+        $this->applyHospitalScope($qb, $hospitalId);
+
+        $counts = [];
+        foreach ($qb->getQuery()->getArrayResult() as $row) {
+            $severity = (string) ($row['severity'] ?? '');
+            if ($severity !== '') {
+                $counts[$severity] = (int) ($row['total'] ?? 0);
+            }
+        }
+
+        return $counts;
+    }
+
+    public function countByActorSince(string $actorId, DateTimeInterface $since, ?string $excludeLogId = null): int
+    {
+        $qb = $this->createQueryBuilder('log')
+            ->leftJoin('log.user', 'actor')
+            ->select('COUNT(log.logId)')
+            ->andWhere('actor.userId = :actorId')
+            ->andWhere('log.createdAt >= :since')
+            ->setParameter('actorId', $actorId)
+            ->setParameter('since', $since);
+
+        if ($excludeLogId !== null && $excludeLogId !== '') {
+            $qb->andWhere('log.logId != :excludeLogId')
+                ->setParameter('excludeLogId', $excludeLogId);
+        }
 
         return (int) $qb->getQuery()->getSingleScalarResult();
     }
@@ -172,6 +263,38 @@ class BloodTransferRequestLogRepository extends ServiceEntityRepository
         if ($endDate !== null) {
             $qb->andWhere(sprintf('%s <= :endDate', $field))
                 ->setParameter('endDate', $endDate->setTime(23, 59, 59));
+        }
+    }
+
+    private function applyAnomalyFilter(QueryBuilder $qb, ?string $anomalyFilter): void
+    {
+        if ($anomalyFilter === null || $anomalyFilter === '') {
+            return;
+        }
+
+        if (in_array($anomalyFilter, ['low', 'medium', 'high', 'critical'], true)) {
+            $qb->andWhere('log.anomalyDetected = true')
+                ->andWhere('log.anomalySeverity = :anomalySeverity')
+                ->setParameter('anomalySeverity', $anomalyFilter);
+
+            return;
+        }
+
+        if ($anomalyFilter === 'detected') {
+            $qb->andWhere('log.anomalyDetected = true');
+
+            return;
+        }
+
+        if ($anomalyFilter === 'unreviewed') {
+            $qb->andWhere('log.anomalyDetected = true')
+                ->andWhere('log.anomalyReviewed = false');
+
+            return;
+        }
+
+        if ($anomalyFilter === 'normal') {
+            $qb->andWhere('log.anomalyDetected = false');
         }
     }
 

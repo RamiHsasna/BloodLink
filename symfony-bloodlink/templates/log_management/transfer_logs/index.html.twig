@@ -55,11 +55,22 @@
                     {% endfor %}
                 </select>
             </label>
+
+            <label class="audit-filter-field">
+                <span class="audit-filter-label">AI review</span>
+                <select name="anomaly" class="audit-filter-input">
+                    <option value="">All AI states</option>
+                    {% for label, value in anomaly_filter_choices %}
+                        <option value="{{ value }}" {{ filters.anomaly == value ? 'selected' : '' }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
         </div>
 
         <div class="audit-filter-actions">
             <button type="submit" class="audit-filter-submit">Apply filters</button>
             <a href="{{ path('dashboard_logs_transfers') }}" class="audit-filter-reset">Reset</a>
+            <a href="{{ path('dashboard_logs_transfers_export_pdf_list', app.request.query.all) }}" class="audit-filter-reset" style="background:#0f172a; color:#ffffff; border-color:#0f172a;">Export PDF</a>
         </div>
     </form>
 
@@ -72,6 +83,7 @@
                         <th class="px-5 py-4">Transfer</th>
                         <th class="px-5 py-4">Actor</th>
                         <th class="px-5 py-4">Status Shift</th>
+                        <th class="px-5 py-4">AI Review</th>
                         <th class="px-5 py-4">Created</th>
                         <th class="px-5 py-4">Actions</th>
                     </tr>
@@ -109,6 +121,18 @@
                                     <span class="rounded-full bg-blood-50 px-3 py-1 text-blood-700">{{ entry.newStatus ?: 'N/A' }}</span>
                                 </div>
                             </td>
+                            <td class="px-5 py-4">
+                                {% if entry.anomalyDetected %}
+                                    <span class="audit-anomaly-badge audit-anomaly-badge--{{ entry.anomalySeverity|default('medium') }}">
+                                        {{ entry.anomalySeverity|default('medium')|capitalize }} · {{ entry.anomalyScore|default(0) }}
+                                    </span>
+                                    <p class="mt-2 text-xs {{ entry.anomalyReviewed ? 'text-emerald-600' : 'text-amber-600' }}">
+                                        {{ entry.anomalyReviewed ? 'Reviewed' : 'Needs review' }}
+                                    </p>
+                                {% else %}
+                                    <span class="audit-anomaly-badge audit-anomaly-badge--none">Normal</span>
+                                {% endif %}
+                            </td>
                             <td class="px-5 py-4 text-sm text-slate-500">
                                 {{ entry.createdAt ? entry.createdAt|date('Y-m-d H:i') : 'N/A' }}
                             </td>
@@ -125,7 +149,7 @@
                         </tr>
                     {% else %}
                         <tr>
-                            <td colspan="6" class="px-5 py-12 text-center text-sm text-slate-500">No transfer logs match the current filters.</td>
+                            <td colspan="7" class="px-5 py-12 text-center text-sm text-slate-500">No transfer logs match the current filters.</td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -133,5 +157,5 @@
         </div>
     </div>
 
-    {% include 'log_management/partials/_pagination.html.twig' with {pagination: result, route_name: 'dashboard_logs_transfers', extra_query: {q: filters.query, start: filters.start, end: filters.end, action: filters.action, status: filters.status}} %}
+    {% include 'log_management/partials/_pagination.html.twig' with {pagination: result, route_name: 'dashboard_logs_transfers', extra_query: {q: filters.query, start: filters.start, end: filters.end, action: filters.action, status: filters.status, anomaly: filters.anomaly}} %}
 {% endblock %}
