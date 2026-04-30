@@ -48,7 +48,10 @@
                         <span>Donation Events</span>
                         {% if is_events_route %}<span class="fo-pill">Live</span>{% endif %}
                     </a>
-
+                    <a href="{{ path('donor_my_donations') }}" class="fo-link {{ route == 'donor_my_donations' ? 'is-active' : '' }}">
+                        <span>My Donations</span>
+                        {% if route == 'donor_my_donations' %}<span class="fo-pill">Live</span>{% endif %}
+                    </a>
                     <a href="{{ path('dashboard_donor_alerts') }}" class="fo-link {{ is_alerts_route ? 'is-active' : '' }}">
                         <span>Alerts</span>
                         {% if is_alerts_route %}<span class="fo-pill">Live</span>{% endif %}

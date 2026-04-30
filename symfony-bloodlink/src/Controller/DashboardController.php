@@ -24,7 +24,7 @@ class DashboardController extends AbstractController
         }
 
         $userType = strtoupper((string) ($sessionUser["user_type"] ?? ""));
-        if ($userType !== "DONOR") {
+        if ($userType == "ADMIN") {
             return $this->redirectToRoute("dashboard_users");
         }
 
@@ -164,22 +164,55 @@ class DashboardController extends AbstractController
             return $this->redirectToRoute("auth_index");
         }
 
+        $bloodTypes = $this->fetchBloodTypes($connection);
+        //récupèrer ce que l’utilisateur a tapé dans la barre de recherche, le type de filtre sélectionné, le groupe sanguin et la ville
         $q = trim((string) $request->query->get("q", ""));
         $type = strtoupper(trim((string) $request->query->get("type", "ALL")));
+        $bloodType = strtoupper(
+            trim((string) $request->query->get("blood_type", "")),
+        );
+        $city = trim((string) $request->query->get("city", ""));
+
         if (!in_array($type, ["ALL", "DONOR", "HOSPITAL_STAFF"], true)) {
             $type = "ALL";
         }
+//vérifier que le groupe sanguin sélectionné est valide
+        if ($bloodType !== "" && !in_array($bloodType, $bloodTypes, true)) {
+            $bloodType = "";
+        }
 
-        $users = $this->fetchUsers($connection, $q, $type);
+        //récupérer la liste des utilisateurs en fonction des critères de recherche et de filtrage
+        $users = $this->fetchUsers(
+            $connection,
+            $q,
+            $type,
+            $bloodType,
+            $city,
+        );
         $stats = $this->fetchUserStats($connection);
+
+        if ($request->isXmlHttpRequest()) {
+            return $this->json([
+                "statsHtml" => $this->renderView(
+                    "dashboard/partials/users/_stats.html.twig",
+                    ["stats" => $stats],
+                ),
+                "listHtml" => $this->renderView(
+                    "dashboard/partials/users/_list.html.twig",
+                    ["users" => $users],
+                ),
+            ]);
+        }
 
         return $this->render("dashboard/users.html.twig", [
             "session_user" => $sessionUser,
             "users" => $users,
             "q" => $q,
             "type" => $type,
+            "blood_type" => $bloodType,
+            "city" => $city,
             "stats" => $stats,
-            "blood_types" => $this->fetchBloodTypes($connection),
+            "blood_types" => $bloodTypes,
             "hospital_options" => $this->fetchHospitalOptions($connection),
         ]);
     }
@@ -208,7 +241,9 @@ class DashboardController extends AbstractController
             return $this->redirectToRoute("dashboard_users");
         }
 
-        $email = trim((string) $request->request->get("email", ""));
+        $email = $this->normalizeEmail(
+            (string) $request->request->get("email", ""),
+        );
         $firstName = trim((string) $request->request->get("first_name", ""));
         $lastName = trim((string) $request->request->get("last_name", ""));
         $phone = trim((string) $request->request->get("phone", ""));
@@ -243,6 +278,15 @@ class DashboardController extends AbstractController
             $this->addFlash(
                 "error",
                 "Email, first name, last name and password are required.",
+            );
+
+            return $this->redirectToRoute("dashboard_users");
+        }
+
+        if (!$this->isValidEmailAddress($email)) {
+            $this->addFlash(
+                "error",
+                "Please enter a valid email address (example: name@example.com).",
             );
 
             return $this->redirectToRoute("dashboard_users");
@@ -349,7 +393,9 @@ class DashboardController extends AbstractController
             return $this->redirectToRoute("dashboard_users");
         }
 
-        $email = trim((string) $request->request->get("email", ""));
+        $email = $this->normalizeEmail(
+            (string) $request->request->get("email", ""),
+        );
         $firstName = trim((string) $request->request->get("first_name", ""));
         $lastName = trim((string) $request->request->get("last_name", ""));
         $phone = trim((string) $request->request->get("phone", ""));
@@ -378,6 +424,15 @@ class DashboardController extends AbstractController
             $this->addFlash(
                 "error",
                 "Email, first name, and last name are required.",
+            );
+
+            return $this->redirectToRoute("dashboard_users");
+        }
+
+        if (!$this->isValidEmailAddress($email)) {
+            $this->addFlash(
+                "error",
+                "Please enter a valid email address (example: name@example.com).",
             );
 
             return $this->redirectToRoute("dashboard_users");
@@ -526,7 +581,6 @@ class DashboardController extends AbstractController
         $hospitals = [];
         $currentHospital = null;
 
-        // For HOSPITAL_STAFF: get their assigned hospital
         if ($userType === "HOSPITAL_STAFF") {
             try {
                 $staffRecord = $connection->fetchAssociative(
@@ -538,7 +592,7 @@ class DashboardController extends AbstractController
                         (string) ($staffRecord["hospital_id"] ?? "");
                 }
             } catch (Throwable) {
-                // Staff has no hospital assignment
+                
             }
         } else {
             // For ADMIN: check query param or use first hospital
@@ -731,7 +785,13 @@ class DashboardController extends AbstractController
         $status = strtolower(
             trim((string) $request->query->get("status", "all")),
         );
-        if (!in_array($status, ["all", "eligible", "not_eligible"], true)) {
+        if (
+            !in_array(
+                $status,
+                ["all", "eligible", "temporarily_not_eligible", "not_eligible"],
+                true,
+            )
+        ) {
             $status = "all";
         }
 
@@ -833,6 +893,7 @@ class DashboardController extends AbstractController
                     (string) ($calculation["city"] ?? ""),
                     (string) ($calculation["eligibility_details"] ?? ""),
                     (new DateTimeImmutable("today"))->format("Y-m-d"),
+                    (string) ($calculation["last_donation_date_formatted"] ?? ""),
                 );
                 $this->addFlash(
                     "success",
@@ -904,11 +965,11 @@ class DashboardController extends AbstractController
 
         try {
             $connection->executeStatement(
-                "INSERT INTO donor_eligibility (user_id, blood_type_cache, is_currently_eligible, days_until_eligible, last_calculated_at, latitude_cache, longitude_cache, eligibility_details) VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO donor_eligibility (user_id, blood_type_cache, is_currently_eligible, days_until_eligible, last_calculated_at, latitude_cache, longitude_cache, eligibility_details) VALUES (?::uuid, ?, ?::boolean, ?, ?, ?, ?, ?)",
                 [
                     $userId,
                     $bloodType !== "" ? $bloodType : null,
-                    $eligible,
+                    $eligible ? "true" : "false",
                     $parsedDaysUntil,
                     $lastCalculated !== "" ? $lastCalculated : null,
                     $lat,
@@ -995,6 +1056,7 @@ class DashboardController extends AbstractController
                     (string) ($calculation["city"] ?? ""),
                     (string) ($calculation["eligibility_details"] ?? ""),
                     (new DateTimeImmutable("today"))->format("Y-m-d"),
+                    (string) ($calculation["last_donation_date_formatted"] ?? ""),
                 );
                 $this->addFlash(
                     "success",
@@ -1078,10 +1140,10 @@ class DashboardController extends AbstractController
 
         try {
             $connection->executeStatement(
-                "UPDATE donor_eligibility SET blood_type_cache = ?, is_currently_eligible = ?, days_until_eligible = ?, last_calculated_at = ?, latitude_cache = ?, longitude_cache = ?, eligibility_details = ? WHERE user_id::text = ?",
+                "UPDATE donor_eligibility SET blood_type_cache = ?, is_currently_eligible = ?::boolean, days_until_eligible = ?, last_calculated_at = ?, latitude_cache = ?, longitude_cache = ?, eligibility_details = ? WHERE user_id::text = ?",
                 [
                     $bloodType !== "" ? $bloodType : null,
-                    $eligible,
+                    $eligible ? "true" : "false",
                     $parsedDaysUntil,
                     $lastCalculated !== "" ? $lastCalculated : null,
                     $lat,
@@ -1157,6 +1219,51 @@ class DashboardController extends AbstractController
         return $this->redirectToRoute("dashboard_donor_eligibility");
     }
 
+    #[
+        Route(
+            "/dashboard/donor-eligibility/export-pdf",
+            name: "dashboard_donor_eligibility_export_pdf",
+            methods: ["GET"],
+        ),
+    ]
+    public function exportEligibilityPdf(
+        Request $request,
+        \App\Repository\UserRepository $userRepository,
+        \App\Service\EligibilityReportService $reportService,
+    ): Response {
+        $sessionUser = $request->getSession()->get("auth_user");
+        if (!$sessionUser) {
+            return $this->redirectToRoute("auth_index");
+        }
+
+        $userType = strtoupper((string) ($sessionUser["user_type"] ?? ""));
+        if ($userType !== "DONOR") {
+            $this->addFlash("error", "Only donors can export their eligibility report.");
+            return $this->redirectToRoute("dashboard_donor_eligibility");
+        }
+
+        $userId = (string) ($sessionUser["id"] ?? "");
+        $user = $userRepository->find($userId);
+
+        if (!$user) {
+            $this->addFlash("error", "User not found.");
+            return $this->redirectToRoute("dashboard_donor_eligibility");
+        }
+
+        try {
+            $pdfContent = $reportService->generateEligibilityReportPdf($user);
+            
+            $response = new Response($pdfContent);
+            $response->headers->set('Content-Type', 'application/pdf');
+            $response->headers->set('Content-Disposition', 'attachment; filename="BloodLink_Eligibility_Report_' . date('Y-m-d_His') . '.pdf"');
+            
+            return $response;
+        } catch (\Exception $e) {
+            $this->addFlash("error", "Unable to generate PDF: " . $e->getMessage());
+            return $this->redirectToRoute("dashboard_donor_eligibility");
+        }
+    }
+
     /**
      * @return array<int, array<string, mixed>>
      */
@@ -1164,15 +1271,30 @@ class DashboardController extends AbstractController
         Connection $connection,
         string $q,
         string $type,
+        string $bloodType,
+        string $city,
     ): array {
         try {
             $sql =
                 "SELECT " .
                 "u.user_id, u.email, u.first_name, u.last_name, u.phone, u.user_type, u.created_at, " .
                 "d.blood_type_id AS donor_blood_type_id, d.last_donation_date, d.city AS donor_city, d.total_donations, " .
+                "de.is_currently_eligible AS donor_is_currently_eligible, de.days_until_eligible AS donor_days_until_eligible, " .
+                "CASE " .
+                "WHEN de.is_currently_eligible = true THEN 'eligible' " .
+                "WHEN COALESCE(de.days_until_eligible, 0) > 0 THEN 'temporarily_not_eligible' " .
+                "ELSE 'not_eligible' " .
+                "END AS donor_eligibility_status, " .
                 "hs.role AS staff_role, hs.hospital_id::text AS staff_hospital_id, hs.department AS staff_department " .
                 "FROM users u " .
                 "LEFT JOIN donors d ON d.user_id = u.user_id " .
+                "LEFT JOIN LATERAL (" .
+                "SELECT e.user_id, e.is_currently_eligible, e.days_until_eligible, e.last_calculated_at " .
+                "FROM donor_eligibility e " .
+                "WHERE e.user_id = u.user_id " .
+                "ORDER BY e.last_calculated_at DESC NULLS LAST " .
+                "LIMIT 1" .
+                ") de ON true " .
                 "LEFT JOIN hospital_staff hs ON hs.user_id = u.user_id " .
                 "WHERE 1=1";
             $params = [];
@@ -1191,6 +1313,18 @@ class DashboardController extends AbstractController
             if ($type !== "ALL") {
                 $sql .= " AND u.user_type = :type";
                 $params["type"] = $type;
+            }
+
+            if ($bloodType !== "") {
+                $sql .=
+                    " AND u.user_type = 'DONOR' AND UPPER(COALESCE(d.blood_type_id, '')) = :bloodType";
+                $params["bloodType"] = $bloodType;
+            }
+
+            if ($city !== "") {
+                $sql .=
+                    " AND u.user_type = 'DONOR' AND LOWER(COALESCE(d.city, '')) LIKE :city";
+                $params["city"] = "%" . mb_strtolower($city) . "%";
             }
 
             $sql .= " ORDER BY u.created_at DESC NULLS LAST";
@@ -1214,7 +1348,7 @@ class DashboardController extends AbstractController
                     "SELECT blood_type_id FROM blood_type ORDER BY blood_type_id ASC",
                 )
                 ->fetchFirstColumn();
-
+            // Ensure all values are strings and filter out nulls
             return array_map(static fn($v): string => (string) $v, $rows);
         } catch (Throwable) {
             return [];
@@ -1241,7 +1375,6 @@ class DashboardController extends AbstractController
                 }, $rows);
             }
         } catch (Throwable) {
-            // Fallback below.
         }
 
         try {
@@ -1419,9 +1552,14 @@ class DashboardController extends AbstractController
                 $sql .= " AND de.is_currently_eligible = true";
             }
 
+            if ($status === "temporarily_not_eligible") {
+                $sql .=
+                    " AND COALESCE(de.is_currently_eligible, false) = false AND COALESCE(de.days_until_eligible, 0) > 0";
+            }
+
             if ($status === "not_eligible") {
                 $sql .=
-                    " AND (de.is_currently_eligible = false OR de.is_currently_eligible IS NULL)";
+                    " AND COALESCE(de.is_currently_eligible, false) = false AND (de.days_until_eligible IS NULL OR de.days_until_eligible <= 0)";
             }
 
             $sql .= " ORDER BY de.last_calculated_at DESC NULLS LAST";
@@ -1689,7 +1827,7 @@ class DashboardController extends AbstractController
     }
 
     /**
-     * @return array{ok: bool, error?: string, blood_type_cache?: string, is_currently_eligible?: bool, days_until_eligible?: int, city?: string, eligibility_details?: string}
+     * @return array{ok: bool, error?: string, blood_type_cache?: string, is_currently_eligible?: bool, days_until_eligible?: int, city?: string, eligibility_details?: string, last_donation_date_formatted?: string}
      */
     private function calculateDonorEligibilityFromRequest(
         Request $request,
@@ -1697,6 +1835,9 @@ class DashboardController extends AbstractController
         string $userId,
     ): array {
         $ageRaw = trim((string) $request->request->get("age", ""));
+        $dateOfBirthRaw = trim(
+            (string) $request->request->get("date_of_birth", ""),
+        );
         $weightRaw = trim((string) $request->request->get("weight", ""));
         $lastDonationRaw = trim(
             (string) $request->request->get("last_donation_date", ""),
@@ -1722,6 +1863,25 @@ class DashboardController extends AbstractController
         }
 
         $today = new DateTimeImmutable("today");
+        $dateOfBirth = null;
+        if ($dateOfBirthRaw !== "") {
+            try {
+                $dateOfBirth = new DateTimeImmutable($dateOfBirthRaw);
+            } catch (Throwable) {
+                return [
+                    "ok" => false,
+                    "error" => "Date of birth must be a valid date.",
+                ];
+            }
+
+            if ($dateOfBirth > $today) {
+                return [
+                    "ok" => false,
+                    "error" => "Date of birth cannot be in the future.",
+                ];
+            }
+        }
+
         $lastDonationDate = null;
         if ($lastDonationRaw !== "") {
             try {
@@ -1742,15 +1902,26 @@ class DashboardController extends AbstractController
         }
 
         $unwellToday = $this->requestBoolean($request, "unwell_today");
+        $hasFever = $this->requestBoolean($request, "has_fever");
+        $hasIllness = $this->requestBoolean($request, "has_illness");
         $pregnantRecentBirth = $this->requestBoolean(
             $request,
             "pregnant_recent_birth",
         );
+        $heartDisease = $this->requestBoolean($request, "heart_disease");
+        $anemia = $this->requestBoolean($request, "anemia");
+        $chronicIllness = $this->requestBoolean($request, "chronic_illness");
         $onMedication = $this->requestBoolean($request, "on_medication");
+        $bleedingDisorder = $this->requestBoolean($request, "bleeding_disorder");
+        $infectiousDisease = $this->requestBoolean($request, "infectious_disease");
         $recentSurgery = $this->requestBoolean($request, "recent_surgery");
         $recentVaccine = $this->requestBoolean($request, "recent_vaccine");
         $recentTravel = $this->requestBoolean($request, "recent_travel");
         $recentTattoo = $this->requestBoolean($request, "recent_tattoo");
+        $recentBloodTransfusion = $this->requestBoolean($request, "recent_blood_transfusion");
+        
+        $gender = trim((string) $request->request->get("gender", ""));
+        $wellbeingNotes = trim((string) $request->request->get("wellbeing_notes", ""));
 
         $hardStops = [];
         $doctorReview = [];
@@ -1785,27 +1956,71 @@ class DashboardController extends AbstractController
                 "You reported not feeling well today.Donating while unwell can affect both your health and the quality of the donated blood. Please wait until you have fully recovered before attempting to donate.";
         }
 
+        if ($hasFever) {
+            $hardStops[] =
+                "You have fever or elevated temperature. Blood donation is not possible until body temperature returns to normal.";
+        }
+
+        if ($hasIllness) {
+            $hardStops[] =
+                "You currently have acute illness. Please wait until fully recovered before donating.";
+        }
+
         if ($pregnantRecentBirth) {
             $hardStops[] =
                 "Donation is temporarily deferred during pregnancy and for 6 weeks following childbirth.";
+        }
+
+        if ($bleedingDisorder) {
+            $hardStops[] =
+                "Bleeding disorder or clotting issues prevent blood donation.";
+        }
+
+        if ($infectiousDisease) {
+            $hardStops[] =
+                "Infectious disease detected - blood donation is not permitted.";
+        }
+
+        if ($recentBloodTransfusion) {
+            $hardStops[] =
+                "Recent blood transfusion recorded - must wait minimum deferral period before donating.";
+        }
+
+        if ($heartDisease) {
+            $doctorReview[] =
+                "Heart disease or cardiac condition - must be reviewed by a doctor.";
+        }
+
+        if ($anemia) {
+            $doctorReview[] =
+                "Anemia or iron deficiency reported - doctor review required.";
+        }
+
+        if ($chronicIllness) {
+            $doctorReview[] =
+                "Chronic illness or disease reported - must be assessed by doctor.";
         }
 
         if ($onMedication) {
             $doctorReview[] =
                 "Currently on medication, a doctor will review the case to determine if the medication affects eligibility.";
         }
+
         if ($recentSurgery) {
-            $doctorReview[] = "Recent surgery.";
+            $doctorReview[] = "Recent surgery - may affect donation eligibility depending on type and recovery time.";
         }
+
         if ($recentVaccine) {
-            $doctorReview[] = "Recent vaccine.";
+            $doctorReview[] = "Recent vaccine - deferral period may apply depending on vaccine type.";
         }
+
         if ($recentTravel) {
             $doctorReview[] =
                 "Recent travel abroad, travel history has been noted and will be reviewed by a doctor before donation day.";
         }
+
         if ($recentTattoo) {
-            $doctorReview[] = "Recent tattoo";
+            $doctorReview[] = "Recent tattoo or piercing - a 6-month waiting period applies.";
         }
 
         $outcome = "Likely Eligible";
@@ -1841,16 +2056,27 @@ class DashboardController extends AbstractController
         $details = $this->buildDonorEligibilityDetails(
             $outcome,
             $age,
+            $dateOfBirth,
+            $gender,
             $weightRaw,
             $lastDonationDate,
             $minDaysBetweenDonations,
             $unwellToday,
+            $hasFever,
+            $hasIllness,
             $pregnantRecentBirth,
+            $heartDisease,
+            $anemia,
+            $chronicIllness,
             $onMedication,
+            $bleedingDisorder,
+            $infectiousDisease,
             $recentSurgery,
             $recentVaccine,
             $recentTravel,
             $recentTattoo,
+            $recentBloodTransfusion,
+            $wellbeingNotes,
             $reasons,
             $today,
         );
@@ -1862,6 +2088,7 @@ class DashboardController extends AbstractController
             "days_until_eligible" => $daysUntilEligible,
             "city" => trim((string) ($donor["city"] ?? "")),
             "eligibility_details" => $details,
+            "last_donation_date_formatted" => $lastDonationDate !== null ? $lastDonationDate->format("Y-m-d") : null,
         ];
     }
 
@@ -1872,30 +2099,83 @@ class DashboardController extends AbstractController
         return in_array($value, ["1", "true", "yes", "on"], true);
     }
 
+    private function normalizeEmail(string $email): string
+    {
+        $normalized = trim($email);
+
+        if ($normalized === "") {
+            return "";
+        }
+
+        // Remove whitespace copied from rich text and optional mailto prefix.
+        $normalized = preg_replace('/\s+/u', '', $normalized) ?? $normalized;
+        if (str_starts_with(strtolower($normalized), 'mailto:')) {
+            $normalized = substr($normalized, 7);
+        }
+
+        return $normalized;
+    }
+
+    private function isValidEmailAddress(string $email): bool
+    {
+        if ($email === "") {
+            return false;
+        }
+
+        // Keep validation aligned with DB constraint chk_email_format.
+        return preg_match(
+            '/^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/',
+            $email,
+        ) === 1;
+    }
+
     /**
      * @param array<int, string> $reasons
      */
     private function buildDonorEligibilityDetails(
         string $outcome,
         int $age,
+        ?DateTimeImmutable $dateOfBirth,
+        string $gender,
         string $weight,
         ?DateTimeImmutable $lastDonationDate,
         int $threshold,
         bool $unwellToday,
+        bool $hasFever,
+        bool $hasIllness,
         bool $pregnantRecentBirth,
+        bool $heartDisease,
+        bool $anemia,
+        bool $chronicIllness,
         bool $onMedication,
+        bool $bleedingDisorder,
+        bool $infectiousDisease,
         bool $recentSurgery,
         bool $recentVaccine,
         bool $recentTravel,
         bool $recentTattoo,
+        bool $recentBloodTransfusion,
+        string $wellbeingNotes,
         array $reasons,
         DateTimeImmutable $today,
     ): string {
         $lines = [];
         $lines[] = "Outcome: " . $outcome;
+        $lines[] = "";
+        
+        // Basic Details
+        $lines[] = "=== BASIC DETAILS ===";
         $lines[] = "Age: " . $age;
+        $lines[] = "Date of birth: " .
+            ($dateOfBirth !== null
+                ? $dateOfBirth->format("Y-m-d")
+                : "Not provided");
+        $lines[] = "Gender: " . ($gender ?: "Not specified");
         $lines[] = "Weight: " . $weight . " kg";
-
+        $lines[] = "";
+        
+        // Donation History
+        $lines[] = "=== DONATION HISTORY ===";
         if ($lastDonationDate !== null) {
             $elapsed = (int) $lastDonationDate->diff($today)->days;
             $lines[] =
@@ -1909,18 +2189,49 @@ class DashboardController extends AbstractController
         } else {
             $lines[] = "Last donation: Not provided";
         }
-
-        $lines[] = "Not feeling well today: " . ($unwellToday ? "Yes" : "No");
-        $lines[] =
-            "Pregnant/recent birth: " . ($pregnantRecentBirth ? "Yes" : "No");
+        $lines[] = "";
+        
+        // Current Health Status
+        $lines[] = "=== CURRENT HEALTH STATUS ===";
+        $lines[] = "Not feeling well: " . ($unwellToday ? "Yes" : "No");
+        $lines[] = "Have fever/elevated temperature: " . ($hasFever ? "Yes" : "No");
+        $lines[] = "Have acute illness: " . ($hasIllness ? "Yes" : "No");
+        $lines[] = "";
+        
+        // Pregnancy Status
+        $lines[] = "=== PREGNANCY STATUS ===";
+        $lines[] = "Pregnant or recent birth: " . ($pregnantRecentBirth ? "Yes" : "No");
+        $lines[] = "";
+        
+        // Medical Conditions
+        $lines[] = "=== MEDICAL CONDITIONS ===";
+        $lines[] = "Heart disease/cardiac condition: " . ($heartDisease ? "Yes" : "No");
+        $lines[] = "Anemia/iron deficiency: " . ($anemia ? "Yes" : "No");
+        $lines[] = "Chronic illness or disease: " . ($chronicIllness ? "Yes" : "No");
         $lines[] = "On medication: " . ($onMedication ? "Yes" : "No");
-        $lines[] = "Recent surgery: " . ($recentSurgery ? "Yes" : "No");
+        $lines[] = "Bleeding disorder/clotting issue: " . ($bleedingDisorder ? "Yes" : "No");
+        $lines[] = "Infectious disease: " . ($infectiousDisease ? "Yes" : "No");
+        $lines[] = "";
+        
+        // Recent Events
+        $lines[] = "=== RECENT EVENTS (within last 6 months) ===";
+        $lines[] = "Recent surgery/procedures: " . ($recentSurgery ? "Yes" : "No");
         $lines[] = "Recent vaccine: " . ($recentVaccine ? "Yes" : "No");
         $lines[] = "Recent travel abroad: " . ($recentTravel ? "Yes" : "No");
         $lines[] = "Recent tattoo/piercing: " . ($recentTattoo ? "Yes" : "No");
-
+        $lines[] = "Recent blood transfusion: " . ($recentBloodTransfusion ? "Yes" : "No");
+        $lines[] = "";
+        
+        // General Well-being Notes
+        if ($wellbeingNotes !== "") {
+            $lines[] = "=== GENERAL WELL-BEING NOTES ===";
+            $lines[] = $wellbeingNotes;
+            $lines[] = "";
+        }
+        
+        // Reasons
         if ($reasons !== []) {
-            $lines[] = "Reasons:";
+            $lines[] = "=== ASSESSMENT REASONS ===";
             foreach ($reasons as $reason) {
                 $lines[] = "- " . $reason;
             }
@@ -1939,6 +2250,7 @@ class DashboardController extends AbstractController
         string $city,
         string $details,
         string $lastCalculated,
+        string $lastDonationDate = "",
     ): void {
         $existing =
             $connection->fetchAssociative(
@@ -1968,10 +2280,10 @@ class DashboardController extends AbstractController
         $hasExisting = !empty($existing["user_id"]);
         if ($hasExisting) {
             $connection->executeStatement(
-                "UPDATE donor_eligibility SET blood_type_cache = ?, is_currently_eligible = ?, days_until_eligible = ?, last_calculated_at = ?, latitude_cache = ?, longitude_cache = ?, eligibility_details = ? WHERE user_id::text = ?",
+                "UPDATE donor_eligibility SET blood_type_cache = ?, is_currently_eligible = ?::boolean, days_until_eligible = ?, last_calculated_at = ?, latitude_cache = ?, longitude_cache = ?, eligibility_details = ? WHERE user_id::text = ?",
                 [
                     $bloodType !== "" ? $bloodType : null,
-                    $eligible,
+                    $eligible ? 'true' : 'false',
                     $daysUntil,
                     $lastCalculated,
                     $lat,
@@ -1982,12 +2294,11 @@ class DashboardController extends AbstractController
             );
         } else {
             $connection->executeStatement(
-                "INSERT INTO donor_eligibility (user_id, blood_type_cache, is_currently_eligible, days_until_eligible, last_calculated_at, latitude_cache, longitude_cache, eligibility_details) VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO donor_eligibility (user_id, blood_type_cache, is_currently_eligible, days_until_eligible, last_calculated_at, latitude_cache, longitude_cache, eligibility_details) VALUES (?::uuid, ?, ?::boolean, ?, ?, ?, ?, ?)",
                 [
                     $userId,
                     $bloodType !== "" ? $bloodType : null,
-                    $eligible,
-                    $daysUntil,
+                    $eligible ? 'true' : 'false',
                     $lastCalculated,
                     $lat,
                     $lng,
@@ -1997,5 +2308,12 @@ class DashboardController extends AbstractController
         }
 
         $this->syncDonorCity($connection, $userId, $city !== "" ? $city : null);
+
+        if ($lastDonationDate !== "") {
+            $connection->executeStatement(
+                "UPDATE donors SET last_donation_date = ? WHERE user_id::text = ?",
+                [$lastDonationDate, $userId],
+            );
+        }
     }
 }
