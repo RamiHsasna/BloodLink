@@ -67,10 +67,18 @@
     .btn-edit:hover { background: #ddd6fe; }
     .btn-map    { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
     .btn-map:hover { background: #bae6fd; }
+    .btn-view   { background: #ecfeff; color: #0f766e; border: 1px solid #99f6e4; }
+    .btn-view:hover { background: #ccfbf1; }
     .btn-cancel { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
     .btn-cancel:hover { background: #ffedd5; }
     .btn-delete { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
     .btn-delete:hover { background: #fecaca; }
+
+    .participants-meta { margin-top: 8px; font-size: 12px; color: var(--gray-600); }
+    .participants-table { width: 100%; border-collapse: collapse; }
+    .participants-table th, .participants-table td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--gray-200); font-size: 13px; }
+    .participants-table th { font-size: 11px; color: var(--gray-600); text-transform: uppercase; letter-spacing: .05em; }
+    .participants-empty { padding: 20px 0; color: var(--gray-600); font-size: 14px; text-align: center; }
 
     .empty-state { text-align: center; padding: 60px 20px; background: white; border: 2px dashed var(--gray-300); border-radius: 12px; }
     .empty-state-icon { font-size: 48px; margin-bottom: 16px; opacity: .5; }
@@ -200,6 +208,10 @@
                 <div class="detail-value">{{ event.total_donations }}</div>
             </div>
             <div>
+                <div class="detail-label">👥 Participants</div>
+                <div class="detail-value">{{ event.participants_count }}</div>
+            </div>
+            <div>
                 <div class="detail-label">🎯 Target Types</div>
                 <div class="detail-value">{{ event.target_blood_types ?? 'All types' }}</div>
             </div>
@@ -226,6 +238,10 @@
             <button class="btn-action btn-map" type="button"
                 onclick="openMap('{{ event.event_id }}', '{{ event.name|e('js') }}', '{{ (event.location ?? '')|e('js') }}')">
                 📍 Map
+            </button>
+            <button class="btn-action btn-view" type="button"
+                onclick="openParticipants('{{ event.event_id }}', '{{ event.name|e('js') }}')">
+                👥 Participants
             </button>
             {% if event.status != 'CANCELLED' and event.status != 'COMPLETED' %}
             <button class="btn-action btn-cancel" type="button"
@@ -258,6 +274,92 @@
         <div id="map-container"></div>
         <div id="map-not-found">⚠️ Location not found.</div>
         <div id="map-location-label"></div>
+    </div>
+</div>
+
+<!-- PARTICIPANTS MODAL -->
+<div class="modal-overlay" id="modal-participants">
+    <div class="modal" style="width:min(900px,96vw)">
+        <div class="modal-header">
+            <h2>👥 Participants - <span id="participants-event-name"></span></h2>
+            <button class="modal-close" onclick="closeParticipants()" type="button">✕</button>
+        </div>
+        <div class="modal-body" style="grid-template-columns:1fr;">
+            <p class="participants-meta" id="participants-count">Loading...</p>
+            <div style="overflow:auto;">
+                <table class="participants-table" id="participants-table" style="display:none;">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Blood Type</th>
+                            <th>Eligibility Status</th>
+                            <th>Valid Until</th>
+                            <th>Joined At</th>
+                            <th>Report</th>
+                        </tr>
+                    </thead>
+                    <tbody id="participants-body"></tbody>
+                </table>
+                <div class="participants-empty" id="participants-empty" style="display:none;">No participants yet for this event.</div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeParticipants()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ELIGIBILITY REPORT MODAL -->
+<div class="modal-overlay" id="modal-report">
+    <div class="modal" style="width:min(700px,96vw);max-height:90vh;overflow-y:auto;">
+        <div class="modal-header">
+            <h2>📋 Eligibility Report - <span id="report-donor-name"></span></h2>
+            <button class="modal-close" onclick="closeReportModal()" type="button">✕</button>
+        </div>
+        <div class="modal-body" style="grid-template-columns:1fr;">
+            <div style="padding:0;">
+                <div style="background:#f3f4f6;padding:16px;border-radius:8px;margin-bottom:16px;">
+                    <p style="font-size:13px;color:var(--gray-600);margin:0 0 8px;font-weight:700;text-transform:uppercase;">Status</p>
+                    <p style="margin:0;font-size:16px;font-weight:700;"><span id="report-status" style="padding:4px 8px;border-radius:4px;color:white;"></span></p>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                    <div>
+                        <p style="font-size:13px;color:var(--gray-600);margin:0 0 6px;font-weight:700;text-transform:uppercase;">Blood Type</p>
+                        <p style="margin:0;font-size:14px;" id="report-blood-type">N/A</p>
+                    </div>
+                    <div>
+                        <p style="font-size:13px;color:var(--gray-600);margin:0 0 6px;font-weight:700;text-transform:uppercase;">Valid Until</p>
+                        <p style="margin:0;font-size:14px;" id="report-valid-until">N/A</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <p style="font-size:13px;color:var(--gray-600);margin:0 0 6px;font-weight:700;text-transform:uppercase;">Questionnaire</p>
+                    <div id="report-questionnaire" style="background:#f9fafb;padding:12px;border-radius:6px;font-size:13px;min-height:40px;border-left:3px solid #d1d5db;">No questionnaire data</div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <p style="font-size:13px;color:var(--gray-600);margin:0 0 6px;font-weight:700;text-transform:uppercase;">Doctor Notes</p>
+                    <div id="report-doctor-notes" style="background:#f9fafb;padding:12px;border-radius:6px;font-size:13px;min-height:40px;border-left:3px solid #d1d5db;">No doctor notes</div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <p style="font-size:13px;color:var(--gray-600);margin:0 0 6px;font-weight:700;text-transform:uppercase;">Disqualifying Reasons</p>
+                    <div id="report-disqualifying" style="background:#f9fafb;padding:12px;border-radius:6px;font-size:13px;min-height:40px;border-left:3px solid #d1d5db;">None</div>
+                </div>
+
+                <div>
+                    <p style="font-size:13px;color:var(--gray-600);margin:0 0 6px;font-weight:700;text-transform:uppercase;">QR Token</p>
+                    <div style="background:#f9fafb;padding:12px;border-radius:6px;font-size:12px;word-break:break-all;font-family:monospace;" id="report-qr-token">-</div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeReportModal()">Close</button>
+        </div>
     </div>
 </div>
 
@@ -500,6 +602,167 @@ function openCancel(eventId, eventName) {
     document.getElementById('modal-cancel').classList.add('open');
 }
 function closeCancel() { document.getElementById('modal-cancel').classList.remove('open'); }
+
+// ── Participants modal ───────────────────────────────────────────────────────
+async function openParticipants(eventId, eventName) {
+    document.getElementById('participants-event-name').textContent = eventName;
+    document.getElementById('participants-count').textContent = 'Loading participants...';
+    document.getElementById('participants-table').style.display = 'none';
+    document.getElementById('participants-empty').style.display = 'none';
+    document.getElementById('participants-body').innerHTML = '';
+    document.getElementById('modal-participants').classList.add('open');
+
+    try {
+        const response = await fetch('/dashboard/donation-events/' + eventId + '/participants', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+
+        if (!response.ok) {
+            let errorText = 'Could not load participants.';
+            try {
+                const err = await response.json();
+                if (err && err.error) {
+                    errorText = 'Could not load participants: ' + err.error;
+                }
+            } catch (_) {
+                // Keep default fallback message
+            }
+            document.getElementById('participants-count').textContent = errorText;
+            return;
+        }
+
+        const payload = await response.json();
+        const rows = payload.participants || [];
+        document.getElementById('participants-count').textContent = rows.length + ' participant(s)';
+
+        if (rows.length === 0) {
+            document.getElementById('participants-empty').style.display = 'block';
+            return;
+        }
+
+        const body = document.getElementById('participants-body');
+        rows.forEach((p) => {
+            const tr = document.createElement('tr');
+            const name = (p.first_name || '') + ' ' + (p.last_name || '');
+            const joinedAt = p.joined_at ? new Date(p.joined_at).toLocaleString() : 'N/A';
+            const eligStatus = p.eligibility_status || 'N/A';
+            const validUntil = p.valid_until ? new Date(p.valid_until).toLocaleDateString() : 'N/A';
+            const statusColor = eligStatus === 'PENDING' ? '#f59e0b' : eligStatus === 'APPROVED' ? '#10b981' : '#ef4444';
+            tr.innerHTML = `
+                <td>${name.trim() || 'N/A'}</td>
+                <td>${p.email || 'N/A'}</td>
+                <td>${p.phone || 'N/A'}</td>
+                <td>${p.blood_type || 'N/A'}</td>
+                <td><span style="background:${statusColor};color:white;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:700;">${eligStatus}</span></td>
+                <td>${validUntil}</td>
+                <td>${joinedAt}</td>
+                <td><button style="padding:4px 8px;background:#3b82f6;color:white;border:none;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;" onclick="openReportModal('${payload.event.id}', '${p.user_id}', '${name.trim()}')">View</button></td>
+            `;
+            body.appendChild(tr);
+        });
+
+        document.getElementById('participants-table').style.display = 'table';
+    } catch (_) {
+        document.getElementById('participants-count').textContent = 'Network error while loading participants.';
+    }
+}
+
+function closeParticipants() {
+    document.getElementById('modal-participants').classList.remove('open');
+}
+
+// ── Eligibility Report modal ─────────────────────────────────────────────────
+async function openReportModal(eventId, userId, donorName) {
+    document.getElementById('report-donor-name').textContent = donorName;
+    document.getElementById('modal-report').classList.add('open');
+
+    try {
+        const url = '/dashboard/eligibility-report/' + eventId + '/' + userId;
+        console.log('🔍 Fetching report from:', url);
+        
+        const response = await fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+
+        console.log('📊 Response status:', response.status);
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+            const msg = 'Error: ' + (err.error || 'Status ' + response.status);
+            document.getElementById('report-questionnaire').textContent = msg;
+            console.error('❌ Failed to fetch report:', msg);
+            return;
+        }
+
+        const report = await response.json();
+        console.log('✅ Full report data:', JSON.stringify(report, null, 2));
+        console.log('📋 Eligibility details:', report.eligibility_details);
+        console.log('📋 Questionnaire:', report.questionnaire);
+        console.log('📝 Doctor Notes:', report.doctor_notes);
+        console.log('🔖 Status:', report.status);
+
+        const status = report.status || 'N/A';
+        const statusColor = status === 'PENDING' ? '#f59e0b' : status === 'APPROVED' ? '#10b981' : '#ef4444';
+
+        document.getElementById('report-status').textContent = status;
+        document.getElementById('report-status').style.background = statusColor;
+        document.getElementById('report-blood-type').textContent = report.blood_type || 'N/A';
+        document.getElementById('report-valid-until').textContent = report.valid_until ? new Date(report.valid_until).toLocaleDateString() : 'N/A';
+
+        // Display the real eligibility details text from donor_eligibility
+        const eligibilityDetails = report.eligibility_details;
+        if (eligibilityDetails && typeof eligibilityDetails === 'string' && eligibilityDetails.trim()) {
+            console.log('📝 Eligibility details length:', eligibilityDetails.length);
+            document.getElementById('report-questionnaire').innerHTML = '<pre style="white-space:pre-wrap;margin:0;font-family:inherit;">' + eligibilityDetails.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>';
+        } else {
+            const questionnaire = report.questionnaire;
+            if (questionnaire && typeof questionnaire === 'object' && Object.keys(questionnaire).length > 0) {
+                console.log('📊 Questionnaire is object with', Object.keys(questionnaire).length, 'keys');
+                const q = Object.entries(questionnaire)
+                    .map(([k, v]) => `<strong>${k}:</strong> ${v}`)
+                    .join('<br>');
+                document.getElementById('report-questionnaire').innerHTML = q;
+            } else if (questionnaire && typeof questionnaire === 'string' && questionnaire.trim()) {
+                console.log('📝 Questionnaire is string:', questionnaire);
+                document.getElementById('report-questionnaire').textContent = questionnaire;
+            } else {
+                console.log('⚠️ No questionnaire data found');
+                document.getElementById('report-questionnaire').textContent = 'No questionnaire data available';
+            }
+        }
+
+        // Display doctor notes
+        const doctorNotes = report.doctor_notes;
+        if (doctorNotes && typeof doctorNotes === 'string' && doctorNotes.trim()) {
+            console.log('🔍 Doctor notes found, length:', doctorNotes.length);
+            document.getElementById('report-doctor-notes').textContent = doctorNotes;
+        } else {
+            console.log('⚠️ No doctor notes found');
+            document.getElementById('report-doctor-notes').textContent = 'No assessment reasons available';
+        }
+
+        // Display disqualifying reasons
+        const disqualifying = report.disqualifying_reasons;
+        if (disqualifying && Array.isArray(disqualifying)) {
+            document.getElementById('report-disqualifying').innerHTML = disqualifying.length > 0 ? disqualifying.join('<br>') : 'None';
+        } else if (disqualifying && typeof disqualifying === 'object') {
+            const d = Object.values(disqualifying).filter(v => v).join(', ');
+            document.getElementById('report-disqualifying').textContent = d || 'None';
+        } else {
+            document.getElementById('report-disqualifying').textContent = 'None';
+        }
+
+        document.getElementById('report-qr-token').textContent = report.qr_token ? report.qr_token.substring(0, 64) + '...' : '-';
+    } catch (err) {
+        const msg = 'Network error: ' + (err.message || 'Unknown');
+        document.getElementById('report-questionnaire').textContent = msg;
+        console.error('❌ Exception loading report:', err);
+    }
+}
+
+function closeReportModal() {
+    document.getElementById('modal-report').classList.remove('open');
+}
 
 // ── Backdrop & Escape ─────────────────────────────────────────────────────────
 document.querySelectorAll('.modal-overlay').forEach(o => {
