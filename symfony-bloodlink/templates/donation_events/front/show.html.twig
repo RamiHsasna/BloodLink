@@ -53,6 +53,17 @@
                     <p class="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">{{ entry.description ?: 'No extra donor-facing description was provided for this event.' }}</p>
                 </div>
             </div>
+
+                {# PARTICIPATE BUTTON: Only show if not already participating #}
+                {% if not already_participating and session_user and session_user.user_type == 'DONOR' %}
+                <div class="md:col-span-2 flex justify-center mt-6">
+                    <form method="post" action="{{ path('donation_events_participate', {'id': entry.eventId}) }}">
+                        <button type="submit" class="px-6 py-3 rounded-2xl bg-blood-600 text-white font-bold text-lg shadow hover:bg-blood-700 transition">
+                            Participate
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
         </section>
 
         <aside class="event-front-aside">

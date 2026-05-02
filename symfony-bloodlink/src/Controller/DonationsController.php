@@ -507,17 +507,28 @@ public function donorEvents(Request $request, Connection $connection): Response
     $userType = strtoupper((string) ($sessionUser['user_type'] ?? ''));
     if ($userType !== 'DONOR') return $this->redirectToRoute('donations_index');
 
+    $userId = (string) ($sessionUser['id'] ?? '');
+
     $events = $connection->fetchAllAssociative("
         SELECT de.*,
                h.name AS hospital_name,
-               COUNT(d.donation_id) AS total_donations
+               COUNT(d.donation_id) AS total_donations,
+               CASE
+                   WHEN EXISTS (
+                       SELECT 1
+                       FROM donation_event_donor ded
+                       WHERE ded.event_id = de.event_id
+                         AND ded.user_id = :user_id
+                   ) THEN true
+                   ELSE false
+               END AS has_joined
         FROM donation_events de
         LEFT JOIN hospital h ON h.hospital_id = de.hospital_id
         LEFT JOIN donations d ON d.donation_event_id = de.event_id
         WHERE de.status IN ('PLANNED', 'ACTIVE')
         GROUP BY de.event_id, h.name
         ORDER BY de.start_date ASC
-    ");
+    ", ['user_id' => $userId]);
 
     return $this->render('dashboard/donor_events.html.twig', [
         'session_user' => $sessionUser,
