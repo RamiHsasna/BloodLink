@@ -83,6 +83,17 @@ class DonationEventController extends AbstractController
         ";
         $params = [];
 
+        // Hospital staff can only see donation events for their hospital
+        if ($userType === 'HOSPITAL_STAFF') {
+            $hospitalId = $sessionUser['hospital_id'] ?? null;
+            if (!$hospitalId) {
+                $this->addFlash('error', 'Your hospital assignment is missing.');
+                return $this->redirectToRoute('dashboard_donor_home');
+            }
+            $sql .= " AND de.hospital_id = :hospital_id";
+            $params['hospital_id'] = $hospitalId;
+        }
+
         if ($search !== '') {
             $sql .= " AND (de.name ILIKE :q OR de.description ILIKE :q OR de.location ILIKE :q)";
             $params['q'] = '%' . $search . '%';
@@ -97,7 +108,7 @@ class DonationEventController extends AbstractController
 
         $events = $connection->fetchAllAssociative($sql, $params);
 
-        $stats = $connection->fetchAssociative(" 
+        $statsSql = " 
             SELECT
                 COUNT(DISTINCT de.event_id)                                         AS total_events,
                 COUNT(DISTINCT CASE WHEN de.status = 'PLANNED'   THEN de.event_id END) AS planned,
@@ -107,7 +118,16 @@ class DonationEventController extends AbstractController
                 COALESCE(SUM(d.volume_collected), 0)                                AS total_litres
             FROM donation_events de
             LEFT JOIN donations d ON d.donation_event_id = de.event_id
-        ");
+            WHERE 1=1
+        ";
+        
+        $statsParams = [];
+        if ($userType === 'HOSPITAL_STAFF') {
+            $statsSql .= " AND de.hospital_id = :hospital_id";
+            $statsParams['hospital_id'] = $hospitalId;
+        }
+        
+        $stats = $connection->fetchAssociative($statsSql, $statsParams);
 
         return $this->render('dashboard/donation_events.html.twig', [
             'session_user'  => $sessionUser,
