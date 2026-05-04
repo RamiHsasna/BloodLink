@@ -11,8 +11,74 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
-class DashboardController extends AbstractController
-{
+class DashboardController extends AbstractController { 
+    #[Route("/dashboard/users", name: "dashboard_users", methods: ["GET"])]
+    public function users(Request $request, Connection $connection): Response
+    {
+        $sessionUser = $request->getSession()->get("auth_user");
+        if (!$sessionUser) {
+            return $this->redirectToRoute("auth_index");
+        }
+
+        $userType = strtoupper((string) ($sessionUser['user_type'] ?? ''));
+        if ($userType !== 'ADMIN') {
+            $this->addFlash('error', 'Only admins can manage users.');
+            return $this->redirectToRoute('dashboard_donor_home');
+        }
+
+        $bloodTypes = $this->fetchBloodTypes($connection);
+        //récupèrer ce que l’utilisateur a tapé dans la barre de recherche, le type de filtre sélectionné, le groupe sanguin et la ville
+        $q = trim((string) $request->query->get("q", ""));
+        $type = strtoupper(trim((string) $request->query->get("type", "ALL")));
+        $bloodType = strtoupper(
+            trim((string) $request->query->get("blood_type", "")),
+        );
+        $city = trim((string) $request->query->get("city", ""));
+
+        if (!in_array($type, ["ALL", "DONOR", "HOSPITAL_STAFF"], true)) {
+            $type = "ALL";
+        }
+        //vérifier que le groupe sanguin sélectionné est valide
+        if ($bloodType !== "" && !in_array($bloodType, $bloodTypes, true)) {
+            $bloodType = "";
+        }
+
+        //récupérer la liste des utilisateurs en fonction des critères de recherche et de filtrage
+        $users = $this->fetchUsers(
+            $connection,
+            $q,
+            $type,
+            $bloodType,
+            $city,
+        );
+        $stats = $this->fetchUserStats($connection);
+
+        if ($request->isXmlHttpRequest()) {
+            return $this->json([
+                "statsHtml" => $this->renderView(
+                    "dashboard/partials/users/_stats.html.twig",
+                    ["stats" => $stats],
+                ),
+                "listHtml" => $this->renderView(
+                    "dashboard/partials/users/_list.html.twig",
+                    ["users" => $users],
+                ),
+            ]);
+        }
+
+        return $this->render("dashboard/users.html.twig", [
+            "session_user" => $sessionUser,
+            "users" => $users,
+            "q" => $q,
+            "type" => $type,
+            "blood_type" => $bloodType,
+            "city" => $city,
+            "stats" => $stats,
+            "blood_types" => $bloodTypes,
+            "hospital_options" => $this->fetchHospitalOptions($connection),
+        ]);
+    }
+
     #[Route("/dashboard/donor", name: "dashboard_donor_home", methods: ["GET"])]
     public function donorHome(
         Request $request,
@@ -156,66 +222,7 @@ class DashboardController extends AbstractController
         ]);
     }
 
-    #[Route("/dashboard/users", name: "dashboard_users", methods: ["GET"])]
-    public function users(Request $request, Connection $connection): Response
-    {
-        $sessionUser = $request->getSession()->get("auth_user");
-        if (!$sessionUser) {
-            return $this->redirectToRoute("auth_index");
-        }
-
-        $bloodTypes = $this->fetchBloodTypes($connection);
-        //récupèrer ce que l’utilisateur a tapé dans la barre de recherche, le type de filtre sélectionné, le groupe sanguin et la ville
-        $q = trim((string) $request->query->get("q", ""));
-        $type = strtoupper(trim((string) $request->query->get("type", "ALL")));
-        $bloodType = strtoupper(
-            trim((string) $request->query->get("blood_type", "")),
-        );
-        $city = trim((string) $request->query->get("city", ""));
-
-        if (!in_array($type, ["ALL", "DONOR", "HOSPITAL_STAFF"], true)) {
-            $type = "ALL";
-        }
-//vérifier que le groupe sanguin sélectionné est valide
-        if ($bloodType !== "" && !in_array($bloodType, $bloodTypes, true)) {
-            $bloodType = "";
-        }
-
-        //récupérer la liste des utilisateurs en fonction des critères de recherche et de filtrage
-        $users = $this->fetchUsers(
-            $connection,
-            $q,
-            $type,
-            $bloodType,
-            $city,
-        );
-        $stats = $this->fetchUserStats($connection);
-
-        if ($request->isXmlHttpRequest()) {
-            return $this->json([
-                "statsHtml" => $this->renderView(
-                    "dashboard/partials/users/_stats.html.twig",
-                    ["stats" => $stats],
-                ),
-                "listHtml" => $this->renderView(
-                    "dashboard/partials/users/_list.html.twig",
-                    ["users" => $users],
-                ),
-            ]);
-        }
-
-        return $this->render("dashboard/users.html.twig", [
-            "session_user" => $sessionUser,
-            "users" => $users,
-            "q" => $q,
-            "type" => $type,
-            "blood_type" => $bloodType,
-            "city" => $city,
-            "stats" => $stats,
-            "blood_types" => $bloodTypes,
-            "hospital_options" => $this->fetchHospitalOptions($connection),
-        ]);
-    }
+    // The users dashboard is only accessible to admins. Hospital staff cannot access it.
 
     #[
         Route(
