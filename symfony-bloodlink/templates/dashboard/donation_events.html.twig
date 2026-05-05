@@ -363,6 +363,58 @@
     </div>
 </div>
 
+<!-- ELIGIBILITY EDIT MODAL -->
+<div class="modal-overlay" id="modal-eligibility-edit">
+    <div class="modal" style="width:min(600px,96vw)">
+        <div class="modal-header">
+            <h2>📋 Modify Eligibility - <span id="edit-elig-donor-name"></span></h2>
+            <button class="modal-close" onclick="closeEligibilityEdit()" type="button">✕</button>
+        </div>
+        <form method="POST" id="eligibility-edit-form" action="" onsubmit="return prepareEligibilitySubmit(event)">
+            <div class="modal-body" style="grid-template-columns:1fr;">
+                <div class="form-group full-width" style="display:none;">
+                    <label class="form-label">User ID</label>
+                    <input type="text" class="form-input" id="edit-elig-user-id" readonly>
+                </div>
+                <input type="hidden" id="edit-elig-is-currently-eligible" name="is_currently_eligible">
+                <div class="form-group">
+                    <label class="form-label">Blood Type</label>
+                    <input type="text" class="form-input" id="edit-elig-blood-type" name="blood_type_cache" placeholder="e.g. O+">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Eligibility Status</label>
+                    <select class="form-select" id="edit-elig-status" onchange="toggleDaysField()">
+                        <option value="eligible">✓ Eligible</option>
+                        <option value="temporarily_ineligible">⏳ Temporarily Not Eligible</option>
+                        <option value="ineligible">✕ Not Eligible</option>
+                    </select>
+                </div>
+                <div class="form-group" id="days-field" style="display:none;">
+                    <label class="form-label">Days Until Eligible *</label>
+                    <input type="number" class="form-input" id="edit-elig-days" name="days_until_eligible" placeholder="Number of days" min="0">
+                    <span class="form-hint">Required for temporary ineligibility</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Last Calculated Date</label>
+                    <input type="date" class="form-input" id="edit-elig-date" name="last_calculated_at">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">City</label>
+                    <input type="text" class="form-input" id="edit-elig-city" name="city" placeholder="e.g. Tunis">
+                </div>
+                <div class="form-group full-width">
+                    <label class="form-label">Eligibility Details</label>
+                    <textarea class="form-textarea" id="edit-elig-details" name="eligibility_details" placeholder="Medical notes..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEligibilityEdit()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- CANCEL MODAL -->
 <div class="modal-overlay" id="modal-cancel">
     <div class="modal" style="width:min(500px,96vw)">
@@ -647,7 +699,17 @@ async function openParticipants(eventId, eventName) {
             const joinedAt = p.joined_at ? new Date(p.joined_at).toLocaleString() : 'N/A';
             const eligStatus = p.eligibility_status || 'N/A';
             const validUntil = p.valid_until ? new Date(p.valid_until).toLocaleDateString() : 'N/A';
-            const statusColor = eligStatus === 'PENDING' ? '#f59e0b' : eligStatus === 'APPROVED' ? '#10b981' : '#ef4444';
+            const statusColor = (eligStatus === 'PENDING') ? '#f59e0b' : (eligStatus === 'ELIGIBLE' || eligStatus === 'APPROVED') ? '#10b981' : '#ef4444';
+            
+            // Add data attributes for eligibility data
+            tr.setAttribute('data-user-id', p.user_id || '');
+            tr.setAttribute('data-blood-type-cache', p.blood_type_cache || '');
+            tr.setAttribute('data-is-currently-eligible', p.is_currently_eligible ? '1' : '0');
+            tr.setAttribute('data-days-until-eligible', p.days_until_eligible || '');
+            tr.setAttribute('data-last-calculated-at', p.last_calculated_at ? new Date(p.last_calculated_at).toISOString().split('T')[0] : '');
+            tr.setAttribute('data-city', p.donor_city || '');
+            tr.setAttribute('data-eligibility-details', p.eligibility_details || '');
+            
             tr.innerHTML = `
                 <td>${name.trim() || 'N/A'}</td>
                 <td>${p.email || 'N/A'}</td>
@@ -656,7 +718,10 @@ async function openParticipants(eventId, eventName) {
                 <td><span style="background:${statusColor};color:white;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:700;">${eligStatus}</span></td>
                 <td>${validUntil}</td>
                 <td>${joinedAt}</td>
-                <td><button style="padding:4px 8px;background:#3b82f6;color:white;border:none;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;" onclick="openReportModal('${payload.event.id}', '${p.user_id}', '${name.trim()}')">View</button></td>
+                <td style="display:flex;gap:4px;flex-wrap:wrap;">
+                    <button style="padding:4px 8px;background:#3b82f6;color:white;border:none;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;" onclick="openReportModal('${payload.event.id}', '${p.user_id}', '${name.trim()}')">View</button>
+                    <button style="padding:4px 8px;background:#8b5cf6;color:white;border:none;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;" onclick="openEligibilityEditModal(this)">Modify</button>
+                </td>
             `;
             body.appendChild(tr);
         });
@@ -702,7 +767,7 @@ async function openReportModal(eventId, userId, donorName) {
         console.log('🔖 Status:', report.status);
 
         const status = report.status || 'N/A';
-        const statusColor = status === 'PENDING' ? '#f59e0b' : status === 'APPROVED' ? '#10b981' : '#ef4444';
+        const statusColor = (status === 'PENDING') ? '#f59e0b' : (status === 'ELIGIBLE' || status === 'APPROVED') ? '#10b981' : '#ef4444';
 
         document.getElementById('report-status').textContent = status;
         document.getElementById('report-status').style.background = statusColor;
@@ -764,7 +829,98 @@ function closeReportModal() {
     document.getElementById('modal-report').classList.remove('open');
 }
 
-// ── Backdrop & Escape ─────────────────────────────────────────────────────────
+// ── Eligibility Edit modal ────────────────────────────────────────────────────
+// ── Eligibility Edit modal ────────────────────────────────────────────────────
+function prepareEligibilitySubmit(event) {
+    const status = document.getElementById('edit-elig-status').value;
+    const daysInput = document.getElementById('edit-elig-days');
+    const isCurrentlyEligibleField = document.getElementById('edit-elig-is-currently-eligible');
+    
+    // Validate temporary ineligibility has days
+    if (status === 'temporarily_ineligible' && (!daysInput.value || parseInt(daysInput.value) <= 0)) {
+        alert('Please enter the number of days until eligible');
+        return false;
+    }
+    
+    // Set is_currently_eligible based on status
+    if (status === 'eligible') {
+        isCurrentlyEligibleField.value = '1';
+        daysInput.value = '0';
+    } else if (status === 'temporarily_ineligible') {
+        isCurrentlyEligibleField.value = '0';
+        // days_until_eligible keeps its value
+    } else if (status === 'ineligible') {
+        isCurrentlyEligibleField.value = '0';
+        daysInput.value = '0';
+    }
+    
+    return true; // Allow form submission
+}
+
+function toggleDaysField() {
+    const status = document.getElementById('edit-elig-status').value;
+    const daysField = document.getElementById('days-field');
+    const daysInput = document.getElementById('edit-elig-days');
+    
+    if (status === 'temporarily_ineligible') {
+        daysField.style.display = 'block';
+        daysInput.required = true;
+    } else {
+        daysField.style.display = 'none';
+        daysInput.required = false;
+        daysInput.value = '';
+    }
+}
+
+function openEligibilityEditModal(button) {
+    // Get the table row element
+    const row = button.closest('tr');
+    if (!row) {
+        alert('Error: Could not find participant row');
+        return;
+    }
+
+    // Extract data from row attributes
+    const userId = row.getAttribute('data-user-id');
+    const bloodType = row.getAttribute('data-blood-type-cache') || '';
+    const isEligible = row.getAttribute('data-is-currently-eligible') === '1';
+    const daysUntil = row.getAttribute('data-days-until-eligible') || '';
+    const lastDate = row.getAttribute('data-last-calculated-at') || '';
+    const city = row.getAttribute('data-city') || '';
+    const details = row.getAttribute('data-eligibility-details') || '';
+    const donorName = row.querySelector('td').textContent.trim();
+
+    if (!userId) {
+        alert('Error: Could not find user ID');
+        return;
+    }
+
+    // Determine eligibility status value
+    let statusValue = 'eligible';
+    if (!isEligible) {
+        statusValue = daysUntil && parseInt(daysUntil) > 0 ? 'temporarily_ineligible' : 'ineligible';
+    }
+
+    // Set form action and populate fields
+    document.getElementById('eligibility-edit-form').action = '/dashboard/donor-eligibility/' + userId + '/update';
+    document.getElementById('edit-elig-user-id').value = userId;
+    document.getElementById('edit-elig-blood-type').value = bloodType;
+    document.getElementById('edit-elig-status').value = statusValue;
+    document.getElementById('edit-elig-days').value = daysUntil || '';
+    document.getElementById('edit-elig-date').value = lastDate;
+    document.getElementById('edit-elig-city').value = city;
+    document.getElementById('edit-elig-details').value = details;
+    document.getElementById('edit-elig-donor-name').textContent = donorName;
+
+    // Toggle days field visibility based on status
+    toggleDaysField();
+
+    document.getElementById('modal-eligibility-edit').classList.add('open');
+}
+
+function closeEligibilityEdit() {
+    document.getElementById('modal-eligibility-edit').classList.remove('open');
+}
 document.querySelectorAll('.modal-overlay').forEach(o => {
     o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
 });

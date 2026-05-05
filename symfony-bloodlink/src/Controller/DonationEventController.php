@@ -54,6 +54,7 @@ class DonationEventController extends AbstractController
         }
 
         $userType = strtoupper((string) ($sessionUser['user_type'] ?? ''));
+        $isAjax = $request->isXmlHttpRequest() || str_contains((string) $request->headers->get('Accept', ''), 'application/json');
         if ($userType === 'DONOR') {
             $this->addFlash('error', 'Donors cannot manage donation events.');
             return $this->redirectToRoute('dashboard_users');
@@ -90,7 +91,7 @@ class DonationEventController extends AbstractController
                 $this->addFlash('error', 'Your hospital assignment is missing.');
                 return $this->redirectToRoute('dashboard_donor_home');
             }
-            $sql .= " AND de.hospital_id = :hospital_id";
+            $sql .= " AND de.hospital_id::text = :hospital_id";
             $params['hospital_id'] = $hospitalId;
         }
 
@@ -123,7 +124,7 @@ class DonationEventController extends AbstractController
         
         $statsParams = [];
         if ($userType === 'HOSPITAL_STAFF') {
-            $statsSql .= " AND de.hospital_id = :hospital_id";
+            $statsSql .= " AND de.hospital_id::text = :hospital_id";
             $statsParams['hospital_id'] = $hospitalId;
         }
         
@@ -175,11 +176,18 @@ class DonationEventController extends AbstractController
                 er.status AS eligibility_status,
                 er.qr_token,
                 er.valid_until,
-                er.doctor_signed_at
+                er.doctor_signed_at,
+                de.blood_type_cache,
+                de.is_currently_eligible,
+                de.days_until_eligible,
+                de.last_calculated_at,
+                de.eligibility_details,
+                COALESCE(dr.city, '') AS donor_city
             FROM donation_event_donor ded
             INNER JOIN users u ON u.user_id = ded.user_id
             LEFT JOIN donors dr ON dr.user_id = ded.user_id
             LEFT JOIN eligibility_report er ON er.user_id = ded.user_id AND er.event_id = ded.event_id
+            LEFT JOIN donor_eligibility de ON de.user_id = ded.user_id
             WHERE ded.event_id = :event_id
             ORDER BY ded.created_at DESC
             ",
@@ -240,7 +248,7 @@ class DonationEventController extends AbstractController
             $disqualifyingReasons = json_last_error() === JSON_ERROR_NONE ? $decodedReasons : $disqualifyingReasons;
         }
 
-        $status = $reportRow['status'] ?? (($reportRow['is_currently_eligible'] ?? false) ? 'APPROVED' : 'PENDING');
+        $status = $reportRow['status'] ?? (($reportRow['is_currently_eligible'] ?? false) ? 'ELIGIBLE' : 'PENDING');
 
         return $this->json([
             'id' => $userId,
@@ -271,6 +279,8 @@ class DonationEventController extends AbstractController
     {
         $sessionUser = $request->getSession()->get('auth_user');
         if (!$sessionUser) return $this->redirectToRoute('auth_index');
+
+        $isAjax = $request->isXmlHttpRequest() || str_contains((string) $request->headers->get('Accept', ''), 'application/json');
 
         $userType = strtoupper((string) ($sessionUser['user_type'] ?? ''));
         if ($userType === 'DONOR') {
@@ -418,6 +428,8 @@ class DonationEventController extends AbstractController
         $sessionUser = $request->getSession()->get('auth_user');
         if (!$sessionUser) return $this->redirectToRoute('auth_index');
 
+        $isAjax = $request->isXmlHttpRequest() || str_contains((string) $request->headers->get('Accept', ''), 'application/json');
+
         $userType = strtoupper((string) ($sessionUser['user_type'] ?? ''));
         if ($userType !== 'DONOR') {
             $this->addFlash('error', 'Only donors can participate in donation events.');
@@ -430,41 +442,117 @@ class DonationEventController extends AbstractController
             return $this->redirectToRoute('auth_index');
         }
 
+        // Load event, donor blood type and eligibility to validate participation rules
+        $eventRow = $connection->fetchAssociative(
+            'SELECT event_id, name, target_blood_types, status FROM donation_events WHERE event_id = :id LIMIT 1',
+            ['id' => $id]
+        );
+        if (!$eventRow) {
+            if ($isAjax) return $this->json(['ok' => false, 'message' => 'Event not found.'], 404);
+            $this->addFlash('error', 'Event not found.');
+            return $this->redirectToRoute('dashboard_donor_events');
+        }
+
+        // Check event status
+        if (!in_array($eventRow['status'], ['PLANNED', 'ACTIVE'])) {
+            $msg = sprintf('Registration is closed. This event is currently %s.', strtolower($eventRow['status']));
+            if ($isAjax) return $this->json(['ok' => false, 'message' => $msg], 400);
+            $this->addFlash('error', $msg);
+            return $this->redirectToRoute('dashboard_donor_events');
+        }
+
+        $donorRow = $connection->fetchAssociative(
+            'SELECT blood_type_id FROM donors WHERE user_id = :user_id LIMIT 1',
+            ['user_id' => $userId]
+        );
+        $donorBloodType = trim((string) ($donorRow['blood_type_id'] ?? ''));
+
+        // Validate blood type match
+        $targetTypesRaw = trim((string) ($eventRow['target_blood_types'] ?? ''));
+        if ($targetTypesRaw !== '' && strtolower($targetTypesRaw) !== 'all' && strtolower($targetTypesRaw) !== 'any') {
+            $targets = array_map('trim', explode(',', $targetTypesRaw));
+            $normalizedTargets = array_map(function ($t) { return strtoupper($t); }, $targets);
+            $normalizedDonor = strtoupper($donorBloodType);
+
+            if ($normalizedDonor === '' || $normalizedDonor === 'N/A') {
+                $msg = 'Your blood type is not on file. Please update your profile to participate.';
+                if ($isAjax) return $this->json(['ok' => false, 'message' => $msg], 400);
+                $this->addFlash('error', $msg);
+                return $this->redirectToRoute('dashboard_donor_events');
+            }
+
+            if (!in_array($normalizedDonor, $normalizedTargets, true)) {
+                $msg = sprintf('Event requires %s (your type: %s).', $targetTypesRaw, $donorBloodType);
+                if ($isAjax) return $this->json(['ok' => false, 'message' => $msg], 400);
+                $this->addFlash('error', $msg);
+                return $this->redirectToRoute('dashboard_donor_events');
+            }
+        }
+
+        $eligibilityData = $connection->fetchAssociative(
+            'SELECT is_currently_eligible, days_until_eligible, eligibility_details FROM donor_eligibility WHERE user_id = :user_id LIMIT 1',
+            ['user_id' => $userId]
+        );
+
+        if (!$eligibilityData) {
+            $msg = 'Please complete the eligibility check on your dashboard before joining events.';
+            if ($isAjax) return $this->json(['ok' => false, 'message' => $msg], 400);
+            $this->addFlash('error', $msg);
+            return $this->redirectToRoute('dashboard_donor_eligibility');
+        }
+
+        // Validate donor eligibility status
+        $isCurrentlyEligible = (bool) ($eligibilityData['is_currently_eligible'] ?? false);
+        if (!$isCurrentlyEligible) {
+            $reasons = $this->extractAssessmentReasons($eligibilityData['eligibility_details'] ?? '');
+            $daysUntil = (int) ($eligibilityData['days_until_eligible'] ?? 0);
+            
+            if ($daysUntil > 0) {
+                $msg = sprintf('Temporarily not eligible for %d day(s).', $daysUntil);
+            } else {
+                $msg = 'You are currently not eligible to donate.';
+            }
+
+            if ($reasons !== '') {
+                $reasonList = explode("\n", $reasons);
+                $briefReason = trim($reasonList[0]);
+                $msg .= ' Reason: ' . $briefReason;
+            }
+
+            if ($isAjax) return $this->json(['ok' => false, 'message' => $msg], 400);
+            $this->addFlash('error', $msg);
+            return $this->redirectToRoute('dashboard_donor_events');
+        }
+
+        $isEligible = 'ELIGIBLE';
+
         $alreadyJoined = $connection->fetchOne(
             'SELECT 1 FROM donation_event_donor WHERE event_id = :event_id AND user_id = :user_id LIMIT 1',
             ['event_id' => $id, 'user_id' => $userId]
         );
 
         if ($alreadyJoined) {
+            if ($isAjax) return $this->json(['ok' => false, 'message' => 'You have already joined this event.'], 409);
             $this->addFlash('error', 'You have already joined this event.');
             return $this->redirectToRoute('dashboard_donor_events');
         }
 
         $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
-        $participationId = $this->generateUuidV4();
-        $reportId = $this->generateUuidV4();
-        $qrToken = bin2hex(random_bytes(32));
-
-        // Fetch donor's eligibility data
-        $eligibilityData = $connection->fetchAssociative(
-            'SELECT is_currently_eligible, eligibility_details FROM donor_eligibility WHERE user_id = :user_id LIMIT 1',
-            ['user_id' => $userId]
-        );
-
-        $isEligible = $eligibilityData ? ($eligibilityData['is_currently_eligible'] ? 'APPROVED' : 'PENDING') : 'PENDING';
-        $questionnaire = null;
-        $doctorNotes = null;
-
-        if ($eligibilityData && $eligibilityData['eligibility_details']) {
-            $parsed = $this->parseEligibilityDetails($eligibilityData['eligibility_details']);
-            $questionnaire = !empty($parsed) ? json_encode($parsed) : null;
-            
-            $reasons = $this->extractAssessmentReasons($eligibilityData['eligibility_details']);
-            $doctorNotes = !empty($reasons) ? $reasons : null;
-        }
-
         $connection->beginTransaction();
         try {
+            $participationId = $this->generateUuidV4();
+            $reportId = $this->generateUuidV4();
+            $qrToken = bin2hex(random_bytes(16));
+
+            $questionnaire = null;
+            $doctorNotes = null;
+            if ($eligibilityData && !empty($eligibilityData['eligibility_details'])) {
+                $parsed = $this->parseEligibilityDetails($eligibilityData['eligibility_details']);
+                $questionnaire = !empty($parsed) ? json_encode($parsed) : null;
+                $reasons = $this->extractAssessmentReasons($eligibilityData['eligibility_details']);
+                $doctorNotes = !empty($reasons) ? $reasons : null;
+            }
+
             $connection->executeStatement(
                 'INSERT INTO donation_event_donor (id, event_id, user_id, created_at) VALUES (:id, :event_id, :user_id, :created_at)',
                 [
@@ -491,13 +579,31 @@ class DonationEventController extends AbstractController
             );
 
             $connection->commit();
-            $this->addFlash('success', 'You are registered for this donation event.');
+            if ($isAjax) return $this->json(['ok' => true, 'message' => 'Successfully joined the event!']);
+            $this->addFlash('success', 'You have successfully joined the event!');
         } catch (UniqueConstraintViolationException) {
             $connection->rollBack();
+            if ($isAjax) return $this->json(['ok' => false, 'message' => 'You have already joined this event.'], 409);
             $this->addFlash('error', 'You have already joined this event.');
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
             $connection->rollBack();
-            $this->addFlash('error', 'Could not complete your registration. Please try again.');
+            
+            // Log the detailed error for debugging
+            try {
+                $logDir = __DIR__ . '/../../var/log';
+                $errorLine = sprintf(
+                    "%s | participate error | eventId=%s | userId=%s | message=%s | trace=%s\n",
+                    (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
+                    $id,
+                    $userId,
+                    $e->getMessage(),
+                    $e->getTraceAsString()
+                );
+                @file_put_contents($logDir . '/participate_debug.log', $errorLine, FILE_APPEND | LOCK_EX);
+            } catch (\Throwable) {}
+
+            if ($isAjax) return $this->json(['ok' => false, 'message' => 'Could not complete your registration. ' . $e->getMessage()], 500);
+            $this->addFlash('error', 'Could not complete your registration: ' . $e->getMessage());
         }
 
         return $this->redirectToRoute('dashboard_donor_events');

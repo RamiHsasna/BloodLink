@@ -93,6 +93,9 @@ class DashboardController extends AbstractController {
         if ($userType == "ADMIN") {
             return $this->redirectToRoute("dashboard_users");
         }
+        if ($userType == "HOSPITAL_STAFF") {
+            return $this->redirectToRoute("dashboard_hospital_staff_home");
+        }
 
         $userId = (string) ($sessionUser["id"] ?? "");
         $records = $this->fetchDonorOwnRecord($connection, $userId);
@@ -107,6 +110,49 @@ class DashboardController extends AbstractController {
             "session_user" => $sessionUser,
             "own_record" => $ownRecord,
             "donor_summary" => $donorSummary,
+        ]);
+    }
+
+    #[Route('/dashboard/hospital-staff', name: 'dashboard_hospital_staff_home', methods: ['GET'])]
+    public function hospitalStaffHome(Request $request, Connection $connection): Response
+    {
+        $sessionUser = $request->getSession()->get('auth_user');
+        if (!$sessionUser) {
+            return $this->redirectToRoute('auth_index');
+        }
+
+        $userType = strtoupper((string) ($sessionUser['user_type'] ?? ''));
+        if ($userType !== 'HOSPITAL_STAFF') {
+            return $this->redirectToRoute('dashboard_donor_home');
+        }
+
+        // Fetch hospital info
+        $hospitalId = $sessionUser['hospital_id'] ?? null;
+        $hospital = null;
+        if ($hospitalId) {
+            $hospital = $connection->fetchAssociative('SELECT * FROM hospital WHERE hospital_id::text = ? LIMIT 1', [$hospitalId]);
+        }
+
+        // Fetch summary stats (events, inventory, etc.)
+        $eventCount = $connection->fetchOne('SELECT COUNT(*) FROM donation_events WHERE hospital_id::text = ?', [$hospitalId]);
+        $inventoryCount = $connection->fetchOne('SELECT COUNT(*) FROM blood_inventory WHERE hospital_id::text = ?', [$hospitalId]);
+
+        // Fetch recent events for this hospital
+        $recentEvents = $connection->fetchAllAssociative("
+            SELECT de.*, 
+                   (SELECT COUNT(*) FROM donation_event_donor ded WHERE ded.event_id = de.event_id) as participants_count
+            FROM donation_events de
+            WHERE de.hospital_id::text = ?
+            ORDER BY de.start_date DESC
+            LIMIT 5
+        ", [$hospitalId]);
+
+        return $this->render('dashboard/hospital_staff_home.html.twig', [
+            'session_user' => $sessionUser,
+            'hospital' => $hospital,
+            'event_count' => $eventCount,
+            'inventory_count' => $inventoryCount,
+            'recent_events' => $recentEvents,
         ]);
     }
 
@@ -2306,6 +2352,7 @@ class DashboardController extends AbstractController {
                     $userId,
                     $bloodType !== "" ? $bloodType : null,
                     $eligible ? 'true' : 'false',
+                    $daysUntil,
                     $lastCalculated,
                     $lat,
                     $lng,

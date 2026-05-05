@@ -499,42 +499,55 @@ HTML;
         return $this->json(['donor' => $donor, 'history' => $history]);
     }
     #[Route('/dashboard/donor/events', name: 'dashboard_donor_events', methods: ['GET'])]
-public function donorEvents(Request $request, Connection $connection): Response
-{
-    $sessionUser = $request->getSession()->get('auth_user');
-    if (!$sessionUser) return $this->redirectToRoute('auth_index');
+    public function donorEvents(Request $request, Connection $connection): Response
+    {
+        $sessionUser = $request->getSession()->get('auth_user');
+        if (!$sessionUser) return $this->redirectToRoute('auth_index');
 
-    $userType = strtoupper((string) ($sessionUser['user_type'] ?? ''));
-    if ($userType !== 'DONOR') return $this->redirectToRoute('donations_index');
+        $userType = strtoupper((string) ($sessionUser['user_type'] ?? ''));
+        if ($userType !== 'DONOR') return $this->redirectToRoute('donations_index');
 
-    $userId = (string) ($sessionUser['id'] ?? '');
+        // Auto-sync statuses
+        $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
+        $connection->executeStatement("
+            UPDATE donation_events
+            SET status = 'ACTIVE', updated_at = :now
+            WHERE status = 'PLANNED' AND start_date <= :now AND end_date >= :now
+        ", ['now' => $now]);
+        $connection->executeStatement("
+            UPDATE donation_events
+            SET status = 'COMPLETED', updated_at = :now
+            WHERE status IN ('PLANNED', 'ACTIVE') AND end_date < :now
+        ", ['now' => $now]);
 
-    $events = $connection->fetchAllAssociative("
-        SELECT de.*,
-               h.name AS hospital_name,
-               COUNT(d.donation_id) AS total_donations,
-               CASE
-                   WHEN EXISTS (
-                       SELECT 1
-                       FROM donation_event_donor ded
-                       WHERE ded.event_id = de.event_id
-                         AND ded.user_id = :user_id
-                   ) THEN true
-                   ELSE false
-               END AS has_joined
-        FROM donation_events de
-        LEFT JOIN hospital h ON h.hospital_id = de.hospital_id
-        LEFT JOIN donations d ON d.donation_event_id = de.event_id
-        WHERE de.status IN ('PLANNED', 'ACTIVE')
-        GROUP BY de.event_id, h.name
-        ORDER BY de.start_date ASC
-    ", ['user_id' => $userId]);
+        $userId = (string) ($sessionUser['id'] ?? '');
 
-    return $this->render('dashboard/donor_events.html.twig', [
-        'session_user' => $sessionUser,
-        'events'       => $events,
-    ]);
-}
+        $events = $connection->fetchAllAssociative("
+            SELECT de.*,
+                   h.name AS hospital_name,
+                   COUNT(d.donation_id) AS total_donations,
+                   CASE
+                       WHEN EXISTS (
+                           SELECT 1
+                           FROM donation_event_donor ded
+                           WHERE ded.event_id = de.event_id
+                             AND ded.user_id = :user_id
+                       ) THEN true
+                       ELSE false
+                   END AS has_joined
+            FROM donation_events de
+            LEFT JOIN hospital h ON h.hospital_id = de.hospital_id
+            LEFT JOIN donations d ON d.donation_event_id = de.event_id
+            WHERE de.status IN ('PLANNED', 'ACTIVE')
+            GROUP BY de.event_id, h.name
+            ORDER BY de.start_date ASC
+        ", ['user_id' => $userId]);
+
+        return $this->render('dashboard/donor_events.html.twig', [
+            'session_user' => $sessionUser,
+            'events'       => $events,
+        ]);
+    }
 
    #[Route('/dashboard/donor/my-donations', name: 'donor_my_donations', methods: ['GET'])]
     public function myDonations(Request $request, Connection $connection): Response

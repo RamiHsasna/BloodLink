@@ -271,6 +271,82 @@ body {
     margin-bottom: 16px;
 }
 
+.shared-flash {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 14px;
+    border-radius: 16px;
+    border: 1px solid transparent;
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.6;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.07);
+    animation: authFlashIn 220ms ease-out;
+}
+
+.shared-flash::before {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 900;
+    flex-shrink: 0;
+}
+
+.shared-flash--success {
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border-color: #86efac;
+    color: #166534;
+}
+
+.shared-flash--success::before {
+    content: "OK";
+    background: #16a34a;
+    color: #fff;
+}
+
+.shared-flash--error {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border-color: #fca5a5;
+    color: #991b1b;
+}
+
+.shared-flash--error::before {
+    content: "!";
+    background: #dc2626;
+    color: #fff;
+}
+
+.shared-flash--warning {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border-color: #fcd34d;
+    color: #92400e;
+}
+
+.shared-flash--warning::before {
+    content: "!";
+    background: #d97706;
+    color: #fff;
+}
+
+.shared-flash--info {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border-color: #93c5fd;
+    color: #1d4ed8;
+}
+
+.shared-flash--info::before {
+    content: "i";
+    background: #2563eb;
+    color: #fff;
+}
+
 .global-error,
 .flash {
     margin: 0 0 14px;
@@ -357,6 +433,18 @@ body {
     border-radius: 999px;
     background: #cbd5e1;
     transition: width 0.18s ease, background 0.18s ease;
+}
+
+@keyframes authFlashIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .step-dot.active {
