@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('styles/auth-shell.css') }}?v=20260421-4">
+    <link rel="stylesheet" href="{{ asset('styles/auth-shell.css') }}?v=20260505-1">
 {% endblock %}
 
 {% block javascripts %}
@@ -71,7 +71,7 @@
                     <h2 class="auth-title">Sign in</h2>
                     <p class="auth-sub">Continue to your BloodLink workspace with the account assigned to you.</p>
 
-                    <form method="post" action="{{ path('auth_sign_in') }}">
+                    <form method="post" action="{{ path('auth_sign_in') }}" data-turbo="false">
                         <div class="auth-field">
                             <label for="sign_in_email">Email address</label>
                             <input
@@ -121,7 +121,7 @@
                         <span id="signup-dot-1" class="step-dot {{ signup_step1_active ? 'active' : '' }}"></span>
                     </div>
 
-                    <form method="post" action="{{ path('auth_sign_up') }}">
+                    <form method="post" action="{{ path('auth_sign_up') }}" data-turbo="false">
                         {% if sign_up_errors.global is defined %}
                             <div class="global-error">{{ sign_up_errors.global }}</div>
                         {% endif %}
@@ -179,6 +179,7 @@
                                         autocomplete="tel"
                                         placeholder="+216 00 000 000"
                                     >
+                                    <div class="error" id="err-phone">{{ sign_up_errors.phone|default('') }}</div>
                                 </div>
 
                                 <div class="auth-field">

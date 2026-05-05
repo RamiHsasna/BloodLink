@@ -1,0 +1,405 @@
+{% set page_title = 'Hospital Staff Dashboard' %}
+{% extends 'dashboard/layouts/back_office.html.twig' %}
+
+{% block module_content %}
+<style>
+    :root {
+        --hospital-primary: #0066cc;
+        --hospital-primary-dark: #004c99;
+        --hospital-secondary: #00a8cc;
+        --hospital-accent: #ff6b6b;
+        --hospital-success: #00c896;
+        --hospital-bg: #f8fafc;
+        --hospital-card-bg: #ffffff;
+        --hospital-text-primary: #1e293b;
+        --hospital-text-secondary: #64748b;
+        --hospital-border: #e2e8f0;
+        --hospital-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+        --hospital-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+        --hospital-shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .dashboard-container {
+        padding: 2rem;
+        background: var(--hospital-bg);
+        min-height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    }
+
+    .dashboard-header {
+        margin-bottom: 2rem;
+        animation: fadeInDown 0.5s ease-out;
+    }
+
+    .dashboard-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--hospital-text-primary);
+        margin: 0 0 0.5rem 0;
+        letter-spacing: -0.02em;
+    }
+
+    .dashboard-subtitle {
+        font-size: 1rem;
+        color: var(--hospital-text-secondary);
+        margin: 0;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+        animation: fadeIn 0.6s ease-out 0.1s backwards;
+    }
+
+    .stat-card {
+        background: var(--hospital-card-bg);
+        border-radius: 12px;
+        padding: 1.75rem;
+        box-shadow: var(--hospital-shadow-sm);
+        border: 1px solid var(--hospital-border);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--hospital-primary), var(--hospital-secondary));
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--hospital-shadow-lg);
+    }
+
+    .stat-card:hover::before {
+        transform: scaleX(1);
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        background: linear-gradient(135deg, var(--stat-color, var(--hospital-primary)) 0%, var(--stat-color-dark, var(--hospital-primary-dark)) 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(0, 102, 204, 0.2);
+    }
+
+    .stat-card:nth-child(1) {
+        --stat-color: #0066cc;
+        --stat-color-dark: #004c99;
+    }
+
+    .stat-card:nth-child(2) {
+        --stat-color: #00a8cc;
+        --stat-color-dark: #0088aa;
+    }
+
+    .stat-card:nth-child(3) {
+        --stat-color: #ff6b6b;
+        --stat-color-dark: #ee5555;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--hospital-text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--hospital-text-primary);
+        line-height: 1.2;
+    }
+
+    .stat-change {
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+        color: var(--hospital-success);
+        font-weight: 500;
+    }
+
+    /* Main Content Grid */
+    .content-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+        animation: fadeIn 0.6s ease-out 0.2s backwards;
+    }
+
+    .card {
+        background: var(--hospital-card-bg);
+        border-radius: 12px;
+        box-shadow: var(--hospital-shadow-sm);
+        border: 1px solid var(--hospital-border);
+        overflow: hidden;
+        transition: box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+        box-shadow: var(--hospital-shadow-md);
+    }
+
+    .card-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--hospital-border);
+        background: linear-gradient(to bottom, #ffffff, #f8fafc);
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--hospital-text-primary);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .card-title-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--hospital-primary), var(--hospital-secondary));
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    /* Action Buttons */
+    .action-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1rem;
+    }
+
+    .action-button {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1.5rem 1rem;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        border: 2px solid var(--hospital-border);
+        border-radius: 10px;
+        text-decoration: none;
+        color: var(--hospital-text-primary);
+        font-weight: 600;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .action-button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, var(--hospital-primary), var(--hospital-secondary));
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .action-button:hover {
+        transform: translateY(-2px);
+        border-color: var(--hospital-primary);
+        box-shadow: var(--hospital-shadow-md);
+    }
+
+    .action-button:hover::before {
+        opacity: 0.05;
+    }
+
+    .action-icon {
+        font-size: 2.5rem;
+        line-height: 1;
+        transition: transform 0.3s ease;
+    }
+
+    .action-button:hover .action-icon {
+        transform: scale(1.1);
+    }
+
+    .action-label {
+        font-size: 0.938rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Responsive */
+    @media (min-width: 768px) {
+        .content-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (min-width: 1200px) {
+        .stats-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    @media (max-width: 640px) {
+        .dashboard-container {
+            padding: 1rem;
+        }
+
+        .stat-card {
+            padding: 1.25rem;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+        }
+
+        .action-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">Hospital Staff Dashboard</h1>
+        <p class="dashboard-subtitle">Manage your hospital operations efficiently</p>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Hospital</div>
+            <div class="stat-value">{{ hospital ? hospital.name : 'N/A' }}</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-label">Donation Events</div>
+            <div class="stat-value">{{ event_count ?? 0 }}</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-label">Blood Inventory</div>
+            <div class="stat-value">{{ inventory_count ?? 0 }}</div>
+        </div>
+    </div>
+
+    <div class="content-grid">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <div class="card-title-icon">📅</div>
+                    Recent Donation Events
+                </h2>
+            </div>
+            <div class="card-body">
+                {% if recent_events is empty %}
+                    <p class="dashboard-subtitle">No events found for your hospital.</p>
+                {% else %}
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        {% for event in recent_events %}
+                            <div style="padding: 1rem; border: 1px solid var(--hospital-border); border-radius: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                    <h3 style="margin: 0; font-size: 1.1rem;">{{ event.name }}</h3>
+                                    <span style="padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; background: {% if event.status == 'ACTIVE' %}#e6fffa; color: #047481;{% elseif event.status == 'PLANNED' %}#ebf8ff; color: #2b6cb0;{% else %}#f7fafc; color: #4a5568;{% endif %}">
+                                        {{ event.status }}
+                                    </span>
+                                </div>
+                                <p style="margin: 0 0 0.5rem 0; color: var(--hospital-text-secondary); font-size: 0.875rem;">
+                                    {{ event.start_date|date('M d, Y') }} - {{ event.participants_count }} Participants
+                                </p>
+                                <a href="{{ path('dashboard_events_index', {q: event.name}) }}" style="color: var(--hospital-primary); font-size: 0.875rem; font-weight: 600; text-decoration: none;">View Details →</a>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <div style="margin-top: 1.5rem;">
+                    <a href="{{ path('dashboard_events_index') }}" class="action-button" style="padding: 0.75rem; flex-direction: row; justify-content: center;">
+                        <span class="action-label">View All Events</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <div class="card-title-icon">🚀</div>
+                    Quick Actions
+                </h2>
+            </div>
+            <div class="card-body">
+                <div class="action-grid">
+                    <a href="{{ path('dashboard_events_index') }}" class="action-button">
+                        <span class="action-icon">📅</span>
+                        <span class="action-label">Manage Events</span>
+                    </a>
+                    <a href="{{ path('dashboard_blood_inventory') }}" class="action-button">
+                        <span class="action-icon">🩸</span>
+                        <span class="action-label">Inventory</span>
+                    </a>
+                    <a href="{{ path('dashboard_transfers') }}" class="action-button">
+                        <span class="action-icon">🔄</span>
+                        <span class="action-label">Transfers</span>
+                    </a>
+                    <a href="{{ path('donations_index') }}" class="action-button">
+                        <span class="action-icon">💉</span>
+                        <span class="action-label">Record Donation</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+{% endblock %}

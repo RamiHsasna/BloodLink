@@ -32,9 +32,13 @@ class AuthController extends AbstractController
         ]);
     }
 
-    #[Route('/auth/sign-in', name: 'auth_sign_in', methods: ['POST'])]
+    #[Route('/auth/sign-in', name: 'auth_sign_in', methods: ['GET', 'POST'])]
     public function signIn(Request $request, AuthService $authService): Response
     {
+        if ($request->isMethod('GET')) {
+            return $this->redirectToRoute('auth_index', ['tab' => 'signin']);
+        }
+
         $email = trim((string) $request->request->get('sign_in_email', ''));
         $password = (string) $request->request->get('sign_in_password', '');
 
@@ -67,9 +71,14 @@ class AuthController extends AbstractController
 
                 $this->addFlash('success', 'Signed in successfully.');
 
-                $isDonor = strtoupper((string) ($user['user_type'] ?? '')) === 'DONOR';
-
-                return $this->redirectToRoute($isDonor ? 'dashboard_donor_home' : 'dashboard_users');
+                $userType = strtoupper((string) ($user['user_type'] ?? ''));
+                if ($userType === 'HOSPITAL_STAFF') {
+                    return $this->redirectToRoute('dashboard_hospital_staff_home');
+                } elseif ($userType === 'ADMIN') {
+                    return $this->redirectToRoute('dashboard_users');
+                } else {
+                    return $this->redirectToRoute('dashboard_donor_home');
+                }
             }
         }
 
@@ -84,9 +93,13 @@ class AuthController extends AbstractController
         ]);
     }
 
-    #[Route('/auth/sign-up', name: 'auth_sign_up', methods: ['POST'])]
+    #[Route('/auth/sign-up', name: 'auth_sign_up', methods: ['GET', 'POST'])]
     public function signUp(Request $request, AuthService $authService): Response
     {
+        if ($request->isMethod('GET')) {
+            return $this->redirectToRoute('auth_index', ['tab' => 'signup']);
+        }
+
         $data = [
             'first_name' => (string) $request->request->get('first_name', ''),
             'last_name' => (string) $request->request->get('last_name', ''),
