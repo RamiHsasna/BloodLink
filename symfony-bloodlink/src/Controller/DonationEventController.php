@@ -554,27 +554,27 @@ class DonationEventController extends AbstractController
             }
 
             $connection->executeStatement(
-                'INSERT INTO donation_event_donor (id, event_id, user_id, created_at) VALUES (:id, :event_id, :user_id, :created_at)',
+                'INSERT INTO donation_event_donor (id, event_id, user_id, created_at) VALUES (?::uuid, ?::uuid, ?::uuid, ?)',
                 [
-                    'id' => $participationId,
-                    'event_id' => $id,
-                    'user_id' => $userId,
-                    'created_at' => $now,
+                    $participationId,
+                    $id,
+                    $userId,
+                    $now,
                 ]
             );
 
             $connection->executeStatement(
-                'INSERT INTO eligibility_report (id, user_id, event_id, status, qr_token, questionnaire, doctor_notes, created_at, updated_at) VALUES (:id, :user_id, :event_id, :status, :qr_token, :questionnaire, :doctor_notes, :created_at, :updated_at)',
+                'INSERT INTO eligibility_report (id, user_id, event_id, status, qr_token, questionnaire, doctor_notes, created_at, updated_at) VALUES (?::uuid, ?::uuid, ?::uuid, ?, ?, ?, ?, ?, ?)',
                 [
-                    'id' => $reportId,
-                    'user_id' => $userId,
-                    'event_id' => $id,
-                    'status' => $isEligible,
-                    'qr_token' => $qrToken,
-                    'questionnaire' => $questionnaire,
-                    'doctor_notes' => $doctorNotes,
-                    'created_at' => $now,
-                    'updated_at' => $now,
+                    $reportId,
+                    $userId,
+                    $id,
+                    $isEligible,
+                    $qrToken,
+                    $questionnaire,
+                    $doctorNotes,
+                    $now,
+                    $now,
                 ]
             );
 
@@ -624,8 +624,8 @@ class DonationEventController extends AbstractController
         $hospitalId = $this->generateUuidV4();
         $connection->executeStatement("
             INSERT INTO hospital (hospital_id, name, address, city, created_at, updated_at)
-            VALUES (:id, :name, '', '', :now, :now)
-        ", ['id' => $hospitalId, 'name' => $input, 'now' => $now]);
+            VALUES (?::uuid, ?, '', '', ?, ?)
+        ", [$hospitalId, $input, $now, $now]);
 
         return $hospitalId;
     }
