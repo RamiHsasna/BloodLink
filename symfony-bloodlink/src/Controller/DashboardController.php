@@ -10,6 +10,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Email;
 
 class DashboardController extends AbstractController { 
     #[Route("/dashboard/users", name: "dashboard_users", methods: ["GET"])]
@@ -432,6 +434,7 @@ class DashboardController extends AbstractController {
         string $userId,
         Request $request,
         Connection $connection,
+        MailerInterface $mailer,
     ): Response {
         $sessionUser = $request->getSession()->get("auth_user");
         if (!$sessionUser) {
@@ -509,6 +512,21 @@ class DashboardController extends AbstractController {
             return $this->redirectToRoute("dashboard_users");
         }
 
+        // Fetch current user data for change reporting
+        $oldUser = $connection->fetchAssociative(
+            "SELECT email, first_name, last_name, phone, user_type FROM users WHERE user_id::text = ?",
+            [$userId],
+        );
+
+        $changes = [];
+        if ($oldUser) {
+            if ($oldUser['email'] !== $email) $changes['Email'] = ['old' => $oldUser['email'], 'new' => $email];
+            if ($oldUser['first_name'] !== $firstName) $changes['First Name'] = ['old' => $oldUser['first_name'], 'new' => $firstName];
+            if ($oldUser['last_name'] !== $lastName) $changes['Last Name'] = ['old' => $oldUser['last_name'], 'new' => $lastName];
+            if ($oldUser['phone'] !== ($phone !== "" ? $phone : null)) $changes['Phone'] = ['old' => $oldUser['phone'] ?? 'N/A', 'new' => $phone ?: 'N/A'];
+            if ($oldUser['user_type'] !== $userType) $changes['Account Type'] = ['old' => $oldUser['user_type'], 'new' => $userType];
+        }
+
         try {
             $connection->beginTransaction();
 
@@ -550,6 +568,30 @@ class DashboardController extends AbstractController {
             }
 
             $connection->commit();
+
+            // Send notification email
+            try {
+                $changesReport = "";
+                if (!empty($changes)) {
+                    $changesReport = "<h3>Summary of Changes:</h3><table border='1' cellpadding='5' style='border-collapse: collapse;'><thead><tr style='background-color: #f2f2f2;'><th>Field</th><th>Previous Value</th><th>New Value</th></tr></thead><tbody>";
+                    foreach ($changes as $field => $values) {
+                        $changesReport .= "<tr><td><strong>$field</strong></td><td>" . htmlspecialchars($values['old']) . "</td><td>" . htmlspecialchars($values['new']) . "</td></tr>";
+                    }
+                    $changesReport .= "</tbody></table>";
+                }
+
+                $notificationEmail = (new Email())
+                    ->from('bloodlink.app.noreply@gmail.com')
+                    ->to($email)
+                    ->subject('Your BloodLink Account Has Been Updated')
+                    ->html("<p>Hello $firstName,</p><p>An administrator has updated your account information on the BloodLink platform.</p>$changesReport<p>If you have any questions or did not expect this change, please contact support.</p><p>Regards,<br>The BloodLink Team</p>");
+                
+                $mailer->send($notificationEmail);
+            } catch (Throwable $e) {
+                // Log error but don't fail the request
+                @file_put_contents($this->getParameter('kernel.logs_dir') . '/mailer_errors.log', sprintf("[%s] Error notifying updated user %s: %s\n", date('Y-m-d H:i:s'), $email, $e->getMessage()), FILE_APPEND);
+            }
+
             $this->addFlash("success", "User updated successfully.");
         } catch (Throwable $e) {
             if ($connection->isTransactionActive()) {
@@ -575,6 +617,7 @@ class DashboardController extends AbstractController {
         string $userId,
         Request $request,
         Connection $connection,
+        MailerInterface $mailer,
     ): Response {
         $sessionUser = $request->getSession()->get("auth_user");
         if (!$sessionUser) {
@@ -589,11 +632,36 @@ class DashboardController extends AbstractController {
             return $this->redirectToRoute("dashboard_users");
         }
 
+        // Fetch user info before deletion for notification
+        $user = $connection->fetchAssociative(
+            "SELECT email, first_name FROM users WHERE user_id::text = ?",
+            [$userId],
+        );
+
         try {
             $connection->executeStatement(
                 "DELETE FROM users WHERE user_id::text = ?",
                 [$userId],
             );
+
+            // Send notification email if user was found
+            if ($user) {
+                try {
+                    $email = (string) $user['email'];
+                    $firstName = (string) $user['first_name'];
+                    
+                    $notificationEmail = (new Email())
+                        ->from('bloodlink.app.noreply@gmail.com')
+                        ->to($email)
+                        ->subject('Your BloodLink Account Has Been Deleted')
+                        ->html("<p>Hello $firstName,</p><p>An administrator has deleted your account on the BloodLink platform.</p><p>If you have any questions, please contact support.</p><p>Regards,<br>The BloodLink Team</p>");
+                    
+                    $mailer->send($notificationEmail);
+                } catch (Throwable $e) {
+                    @file_put_contents($this->getParameter('kernel.logs_dir') . '/mailer_errors.log', sprintf("[%s] Error notifying deleted user %s: %s\n", date('Y-m-d H:i:s'), $user['email'] ?? 'unknown', $e->getMessage()), FILE_APPEND);
+                }
+            }
+
             $this->addFlash("success", "User deleted successfully.");
         } catch (Throwable $e) {
             $this->addFlash(
