@@ -200,7 +200,7 @@ class AuthService
             );
 
             $this->connection->executeStatement(
-                'INSERT INTO donors (user_id, first_name, last_name, city, blood_type_id, is_currently_eligible, total_donations, created_at) VALUES (?::uuid, ?, ?, ?, ?, true, 0, ?)',
+                'INSERT INTO donors (user_id, first_name, last_name, city, blood_type_id, is_currently_eligible, total_donations, created_at) VALUES (?::uuid, ?, ?, ?, ?, TRUE, 0, ?)',
                 [
                     $userId,
                     $firstName,
@@ -263,6 +263,92 @@ class AuthService
                 'user_type' => 'DONOR',
             ],
         ];
+    }
+
+    /**
+     * @return string|null The token if user exists
+     */
+    public function createPasswordResetToken(string $email): ?string
+    {
+        $user = $this->findUserByEmailInsensitive($email);
+        if ($user === null) {
+            return null;
+        }
+
+        $token = bin2hex(random_bytes(32));
+        $expiresAt = (new DateTimeImmutable())->modify('+1 hour')->format('Y-m-d H:i:s');
+        $now = (new DateTimeImmutable())->format('Y-m-d H:i:s');
+        $requestId = $this->generateUuidV4();
+
+        // Invalidate old tokens for this user first
+        $this->connection->executeStatement(
+            'UPDATE password_reset_requests SET used = TRUE WHERE user_id = ?::uuid',
+            [$user['user_id']]
+        );
+
+        $this->connection->executeStatement(
+            'INSERT INTO password_reset_requests (id, user_id, token, expires_at, used, created_at) VALUES (?::uuid, ?::uuid, ?, ?, FALSE, ?)',
+            [$requestId, $user['user_id'], $token, $expiresAt, $now]
+        );
+
+        return $token;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function getUserByResetToken(string $token): ?array
+    {
+        $request = $this->connection->fetchAssociative(
+            'SELECT user_id, expires_at FROM password_reset_requests WHERE token = ? AND used = false LIMIT 1',
+            [$token]
+        );
+
+        if ($request === false) {
+            return null;
+        }
+
+        $expiresAt = new DateTimeImmutable($request['expires_at']);
+        if ($expiresAt < new DateTimeImmutable()) {
+            return null;
+        }
+
+        // Return user info associated with this request
+        return $this->connection->fetchAssociative(
+            'SELECT user_id, email FROM users WHERE user_id = ?',
+            [$request['user_id']]
+        );
+    }
+
+    public function resetPassword(string $token, string $newPassword): bool
+    {
+        $user = $this->getUserByResetToken($token);
+        if ($user === null) {
+            return false;
+        }
+
+        $hash = password_hash($newPassword, PASSWORD_DEFAULT);
+
+        $this->connection->beginTransaction();
+        try {
+            // Update password
+            $this->connection->executeStatement(
+                'UPDATE users SET password_hash = ? WHERE user_id = ?',
+                [$hash, $user['user_id']]
+            );
+
+            // Mark token as used
+            $this->connection->executeStatement(
+                'UPDATE password_reset_requests SET used = TRUE WHERE token = ?',
+                [$token]
+            );
+
+            $this->connection->commit();
+            return true;
+        } catch (Throwable $e) {
+            $this->connection->rollBack();
+            return false;
+        }
     }
 
     private function normalizeEmail(string $email): string

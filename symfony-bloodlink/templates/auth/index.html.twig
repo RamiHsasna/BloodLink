@@ -95,6 +95,9 @@
                                 placeholder="Your password"
                             >
                             {% if sign_in_errors.password is defined %}<div class="error">{{ sign_in_errors.password }}</div>{% endif %}
+                            <div style="margin-top: 0.5rem; text-align: right;">
+                                <a href="{{ path('auth_forgot_password') }}" class="switch-link" style="font-size: 0.875rem;">Forgot password?</a>
+                            </div>
                         </div>
 
                         {% if sign_in_errors.global is defined %}
