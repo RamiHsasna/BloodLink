@@ -468,10 +468,15 @@
                     <input type="datetime-local" class="form-input" name="end_date" id="c-end" required>
                     <span class="form-error" id="c-end-error">End date must be on or after start date.</span>
                 </div>
-                <div class="form-group full-width">
+                <div class="form-group full-width" {% if user_type == 'HOSPITAL_STAFF' %}style="display:none;"{% endif %}>
                     <label class="form-label">Hospital *</label>
-                    <input type="text" class="form-input" name="hospital_name" required placeholder="e.g. Hôpital Charles Nicolle">
-                    <span class="form-hint">New hospitals are created automatically.</span>
+                    <select class="form-select" name="hospital_id" id="c-hospital" required>
+                        <option value="">-- Select Hospital --</option>
+                        {% for h in hospitals %}
+                            <option value="{{ h.hospital_id }}">{{ h.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="form-hint">Assign this event to a specific hospital.</span>
                 </div>
                 <div class="form-group full-width">
                     <label class="form-label">Location * (for map)</label>
@@ -530,9 +535,14 @@
                     <input type="datetime-local" class="form-input" id="edit-end" name="end_date" required>
                     <span class="form-error" id="e-end-error">End date must be on or after start date.</span>
                 </div>
-                <div class="form-group full-width">
+                <div class="form-group full-width" {% if user_type == 'HOSPITAL_STAFF' %}style="display:none;"{% endif %}>
                     <label class="form-label">Hospital *</label>
-                    <input type="text" class="form-input" id="edit-hospital" name="hospital_name" required>
+                    <select class="form-select" id="edit-hospital" name="hospital_id" required>
+                        <option value="">-- Select Hospital --</option>
+                        {% for h in hospitals %}
+                            <option value="{{ h.hospital_id }}">{{ h.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="form-group full-width">
                     <label class="form-label">Location * (for map)</label>
@@ -627,7 +637,7 @@ function openEdit(ev) {
     document.getElementById('edit-description').value = ev.description ?? '';
     document.getElementById('edit-location').value    = ev.location ?? '';
     document.getElementById('edit-target').value      = ev.target_collection_units ?? '';
-    document.getElementById('edit-hospital').value    = ev.hospital_name ?? '';
+    document.getElementById('edit-hospital').value    = ev.hospital_id ?? '';
     if (ev.start_date) document.getElementById('edit-start').value = ev.start_date.replace(' ','T').substring(0,16);
     if (ev.end_date)   document.getElementById('edit-end').value   = ev.end_date.replace(' ','T').substring(0,16);
 
