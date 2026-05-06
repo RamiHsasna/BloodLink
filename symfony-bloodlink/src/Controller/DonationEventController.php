@@ -95,6 +95,20 @@ class DonationEventController extends AbstractController
             $params['hospital_id'] = $hospitalId;
         }
 
+        // DONORs can only see events for their own blood type (if restricted) or all events
+        if ($userType === 'DONOR') {
+            $donorId = (string) ($sessionUser['id'] ?? '');
+            $donorBloodType = $connection->fetchOne(
+                "SELECT blood_type_id FROM donors WHERE user_id::text = ?",
+                [$donorId]
+            );
+
+            if ($donorBloodType && $donorBloodType !== 'N/A') {
+                $sql .= " AND (de.target_blood_types IS NULL OR de.target_blood_types = '' OR de.target_blood_types ILIKE 'ALL' OR de.target_blood_types ILIKE :donor_bt)";
+                $params['donor_bt'] = '%' . $donorBloodType . '%';
+            }
+        }
+
         if ($search !== '') {
             $sql .= " AND (de.name ILIKE :q OR de.description ILIKE :q OR de.location ILIKE :q)";
             $params['q'] = '%' . $search . '%';
@@ -130,10 +144,13 @@ class DonationEventController extends AbstractController
         
         $stats = $connection->fetchAssociative($statsSql, $statsParams);
 
+        $hospitals = $connection->fetchAllAssociative("SELECT hospital_id, name FROM hospital ORDER BY name ASC");
+
         return $this->render('dashboard/donation_events.html.twig', [
             'session_user'  => $sessionUser,
             'events'        => $events,
             'stats'         => $stats,
+            'hospitals'     => $hospitals,
             'search'        => $search,
             'status_filter' => $status,
             'user_type'     => $userType,
@@ -311,7 +328,23 @@ class DonationEventController extends AbstractController
         }
 
         $id         = $this->generateUuidV4();
-        $hospitalId = $this->resolveHospital($connection, $request->request->get('hospital_name'), $now);
+        
+        // If hospital staff, use their own hospital
+        if ($userType === 'HOSPITAL_STAFF') {
+            $hospitalId = $sessionUser['hospital_id'] ?? null;
+            if (!$hospitalId) {
+                $this->addFlash('error', 'Your hospital assignment is missing. Please contact an admin.');
+                return $this->redirectToRoute('donation_events_index');
+            }
+        } else {
+            // Admins choose from the dropdown
+            $hospitalId = $request->request->get('hospital_id');
+        }
+
+        if (!$hospitalId) {
+            $this->addFlash('error', 'Hospital selection is required.');
+            return $this->redirectToRoute('donation_events_index');
+        }
 
         $connection->executeStatement("
             INSERT INTO donation_events
@@ -362,7 +395,27 @@ class DonationEventController extends AbstractController
         }
 
         $now        = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
-        $hospitalId = $this->resolveHospital($connection, $request->request->get('hospital_name'), $now);
+        
+        // Security check: staff can only edit their own hospital's events
+        if ($userType === 'HOSPITAL_STAFF') {
+            $hospitalId = $sessionUser['hospital_id'] ?? null;
+            $eventHospital = $connection->fetchOne(
+                "SELECT hospital_id FROM donation_events WHERE event_id::text = ?",
+                [$id]
+            );
+            if ($hospitalId !== $eventHospital) {
+                $this->addFlash('error', 'You are not authorized to edit this event.');
+                return $this->redirectToRoute('donation_events_index');
+            }
+        } else {
+            // Admins choose from the dropdown
+            $hospitalId = $request->request->get('hospital_id');
+        }
+
+        if (!$hospitalId) {
+            $this->addFlash('error', 'Hospital selection is required.');
+            return $this->redirectToRoute('donation_events_index');
+        }
 
         $status = $request->request->get('status', 'PLANNED');
         if (!in_array($status, ['PLANNED', 'ACTIVE', 'COMPLETED', 'CANCELLED'])) {
@@ -411,6 +464,19 @@ class DonationEventController extends AbstractController
         if ($userType === 'DONOR') {
             $this->addFlash('error', 'Donors cannot delete donation events.');
             return $this->redirectToRoute('donation_events_index');
+        }
+
+        // Security check for staff
+        if ($userType === 'HOSPITAL_STAFF') {
+            $hospitalId = $sessionUser['hospital_id'] ?? null;
+            $eventHospital = $connection->fetchOne(
+                "SELECT hospital_id FROM donation_events WHERE event_id::text = ?",
+                [$id]
+            );
+            if ($hospitalId !== $eventHospital) {
+                $this->addFlash('error', 'You are not authorized to delete this event.');
+                return $this->redirectToRoute('donation_events_index');
+            }
         }
 
         $connection->executeStatement(
