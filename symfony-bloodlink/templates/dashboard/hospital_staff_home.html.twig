@@ -400,7 +400,7 @@
         <p class="dashboard-subtitle">Manage your hospital operations efficiently</p>
     </div>
 
-    {% if hospital and not (hospital.isActive and (not hospital.deactivationEndDate or hospital.deactivationEndDate|date('Y-m-d H:i:s') <= 'now'|date('Y-m-d H:i:s'))) %}
+    {% if hospital and not (hospital.is_active and (not hospital.deactivation_end_date or hospital.deactivation_end_date|date('Y-m-d H:i:s') <= 'now'|date('Y-m-d H:i:s'))) %}
     <div class="inactive-hospital-banner">
         <div class="banner-header">
             <div class="banner-icon">⚠️</div>
@@ -410,26 +410,28 @@
             </div>
         </div>
         <div class="banner-details">
-            {% if hospital.deactivationReason %}
+            {% if hospital.deactivation_reason %}
             <div class="detail-item">
                 <span class="detail-label">Reason</span>
-                <span class="detail-value">{{ hospital.deactivationReason }}</span>
+                <span class="detail-value">{{ hospital.deactivation_reason }}</span>
             </div>
             {% endif %}
-            {% if hospital.deactivationEndDate %}
+            {% if hospital.deactivation_end_date %}
             <div class="detail-item">
                 <span class="detail-label">Inactive Until</span>
-                <span class="detail-value">{{ hospital.deactivationEndDate|date('M d, Y H:i') }}</span>
+                <span class="detail-value">{{ hospital.deactivation_end_date|date('M d, Y H:i') }}</span>
             </div>
             <div class="detail-item">
                 <span class="detail-label">Duration</span>
                 <span class="detail-value">
-                    {% set now_date = now %}
-                    {% set interval = now_date.diff(hospital.deactivationEndDate) %}
-                    {% if interval.invert %}
+                    {% set now = 'now'|date('U') %}
+                    {% set endDate = hospital.deactivation_end_date|date('U') %}
+                    {% set secondsRemaining = endDate - now %}
+                    {% if secondsRemaining <= 0 %}
                         Expired
                     {% else %}
-                        {{ interval.days }} days remaining
+                        {% set daysRemaining = (secondsRemaining / 86400)|round(0, 'ceil') %}
+                        {{ daysRemaining }} day{{ daysRemaining != 1 ? 's' : '' }} remaining
                     {% endif %}
                 </span>
             </div>

@@ -104,6 +104,13 @@
                             <div class="global-error">{{ sign_in_errors.global }}</div>
                         {% endif %}
 
+                        {% if sign_in_errors.login is defined %}
+                            <div class="global-error" style="background-color: #fef2f2; border-color: #fca5a5; color: #dc2626;">
+                                <strong>Hospital Deactivated</strong><br>
+                                {{ sign_in_errors.login }}
+                            </div>
+                        {% endif %}
+
                         <div class="actions">
                             <button type="submit" class="btn">Sign in</button>
                         </div>
