@@ -63,25 +63,64 @@ class AuthService
         $confirmPassword = (string) ($data['confirm_password'] ?? '');
         $acceptedTerms = (bool) ($data['terms'] ?? false);
 
+        // Lightweight debug log for signup attempts. Does not include raw passwords.
+        try {
+            $logDir = __DIR__ . '/../../var/log';
+            if (!is_dir($logDir)) {
+                @mkdir($logDir, 0755, true);
+            }
+            $debugLine = sprintf(
+                "%s | signUp attempt | email=%s | first=%s | last=%s | phone=%s | city=%s | blood_type=%s | terms=%s\n",
+                (new DateTimeImmutable())->format('Y-m-d H:i:s'),
+                $email ?: '(none)',
+                $firstName ?: '(none)',
+                $lastName ?: '(none)',
+                $phone ?: '(none)',
+                $city ?: '(none)',
+                $bloodTypeId ?: '(none)',
+                $acceptedTerms ? '1' : '0'
+            );
+            @file_put_contents($logDir . '/signup_debug.log', $debugLine, FILE_APPEND | LOCK_EX);
+        } catch (\Throwable) {
+            // Swallow logging failures
+        }
+
         $errors = [];
 
         if ($firstName == '') {
             $errors['first_name'] = 'First name is required.';
+        } elseif (mb_strlen($firstName) > 100) {
+            $errors['first_name'] = 'First name must be less than 100 characters.';
         } elseif (!$this->isValidPersonName($firstName)) {
-            $errors['first_name'] = 'First name may only contain letters, spaces, and hyphens.';
+            $errors['first_name'] = 'First name may only contain letters, spaces, hyphens, and apostrophes.';
         }
+
         if ($lastName == '') {
             $errors['last_name'] = 'Last name is required.';
+        } elseif (mb_strlen($lastName) > 100) {
+            $errors['last_name'] = 'Last name must be less than 100 characters.';
         } elseif (!$this->isValidPersonName($lastName)) {
-            $errors['last_name'] = 'Last name may only contain letters, spaces, and hyphens.';
+            $errors['last_name'] = 'Last name may only contain letters, spaces, hyphens, and apostrophes.';
         }
+
         if ($email == '') {
             $errors['email'] = 'Email is required.';
+        } elseif (mb_strlen($email) > 255) {
+            $errors['email'] = 'Email must be less than 255 characters.';
         } elseif (!$this->isValidEmailAddress($email)) {
             $errors['email'] = 'Please enter a valid email address.';
         }
-        if ($phone !== '' && !$this->isValidPhoneNumber($phone)) {
-            $errors['phone'] = 'Phone number must contain 8 to 15 digits.';
+
+        if ($phone !== '') {
+            if (mb_strlen($phone) > 20) {
+                $errors['phone'] = 'Phone number must be less than 20 characters.';
+            } elseif (!$this->isValidPhoneNumber($phone)) {
+                $errors['phone'] = 'Phone number must contain 8 to 15 digits.';
+            }
+        }
+
+        if ($city !== '' && mb_strlen($city) > 100) {
+            $errors['city'] = 'City name is too long.';
         }
         if ($bloodTypeId == '') {
             $errors['blood_type_id'] = 'Please select a blood type.';
@@ -113,6 +152,17 @@ class AuthService
         }
 
         if ($errors !== []) {
+            try {
+                $logDir = __DIR__ . '/../../var/log';
+                $errorLine = sprintf(
+                    "%s | signUp validation failed | email=%s | errors=%s\n",
+                    (new DateTimeImmutable())->format('Y-m-d H:i:s'),
+                    $email,
+                    json_encode($errors)
+                );
+                @file_put_contents($logDir . '/signup_debug.log', $errorLine, FILE_APPEND | LOCK_EX);
+            } catch (\Throwable) {}
+
             return [
                 'success' => false,
                 'errors' => $errors,
@@ -150,7 +200,7 @@ class AuthService
             );
 
             $this->connection->executeStatement(
-                'INSERT INTO donors (user_id, first_name, last_name, city, blood_type_id, is_currently_eligible, total_donations, created_at) VALUES (?::uuid, ?, ?, ?, ?, true, 0, ?)',
+                'INSERT INTO donors (user_id, first_name, last_name, city, blood_type_id, is_currently_eligible, total_donations, created_at) VALUES (?::uuid, ?, ?, ?, ?, TRUE, 0, ?)',
                 [
                     $userId,
                     $firstName,
@@ -162,10 +212,33 @@ class AuthService
             );
 
             $this->connection->commit();
+
+            try {
+                $logDir = __DIR__ . '/../../var/log';
+                $successLine = sprintf(
+                    "%s | signUp success | email=%s | userId=%s\n",
+                    (new DateTimeImmutable())->format('Y-m-d H:i:s'),
+                    $email,
+                    $userId
+                );
+                @file_put_contents($logDir . '/signup_debug.log', $successLine, FILE_APPEND | LOCK_EX);
+            } catch (\Throwable) {}
         } catch (Throwable $e) {
             if ($this->connection->isTransactionActive()) {
                 $this->connection->rollBack();
             }
+
+            try {
+                $logDir = __DIR__ . '/../../var/log';
+                $dbErrorLine = sprintf(
+                    "%s | signUp database error | email=%s | message=%s | code=%s\n",
+                    (new DateTimeImmutable())->format('Y-m-d H:i:s'),
+                    $email,
+                    $e->getMessage(),
+                    $e->getCode()
+                );
+                @file_put_contents($logDir . '/signup_debug.log', $dbErrorLine, FILE_APPEND | LOCK_EX);
+            } catch (\Throwable) {}
 
             $message = 'Unable to create account right now. Please try again.';
             if (($e->getCode() !== 0 || $e->getMessage() !== '')) {
@@ -192,6 +265,92 @@ class AuthService
         ];
     }
 
+    /**
+     * @return string|null The token if user exists
+     */
+    public function createPasswordResetToken(string $email): ?string
+    {
+        $user = $this->findUserByEmailInsensitive($email);
+        if ($user === null) {
+            return null;
+        }
+
+        $token = bin2hex(random_bytes(32));
+        $expiresAt = (new DateTimeImmutable())->modify('+1 hour')->format('Y-m-d H:i:s');
+        $now = (new DateTimeImmutable())->format('Y-m-d H:i:s');
+        $requestId = $this->generateUuidV4();
+
+        // Invalidate old tokens for this user first
+        $this->connection->executeStatement(
+            'UPDATE password_reset_requests SET used = TRUE WHERE user_id = ?::uuid',
+            [$user['user_id']]
+        );
+
+        $this->connection->executeStatement(
+            'INSERT INTO password_reset_requests (id, user_id, token, expires_at, used, created_at) VALUES (?::uuid, ?::uuid, ?, ?, FALSE, ?)',
+            [$requestId, $user['user_id'], $token, $expiresAt, $now]
+        );
+
+        return $token;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function getUserByResetToken(string $token): ?array
+    {
+        $request = $this->connection->fetchAssociative(
+            'SELECT user_id, expires_at FROM password_reset_requests WHERE token = ? AND used = false LIMIT 1',
+            [$token]
+        );
+
+        if ($request === false) {
+            return null;
+        }
+
+        $expiresAt = new DateTimeImmutable($request['expires_at']);
+        if ($expiresAt < new DateTimeImmutable()) {
+            return null;
+        }
+
+        // Return user info associated with this request
+        return $this->connection->fetchAssociative(
+            'SELECT user_id, email FROM users WHERE user_id = ?',
+            [$request['user_id']]
+        );
+    }
+
+    public function resetPassword(string $token, string $newPassword): bool
+    {
+        $user = $this->getUserByResetToken($token);
+        if ($user === null) {
+            return false;
+        }
+
+        $hash = password_hash($newPassword, PASSWORD_DEFAULT);
+
+        $this->connection->beginTransaction();
+        try {
+            // Update password
+            $this->connection->executeStatement(
+                'UPDATE users SET password_hash = ? WHERE user_id = ?',
+                [$hash, $user['user_id']]
+            );
+
+            // Mark token as used
+            $this->connection->executeStatement(
+                'UPDATE password_reset_requests SET used = TRUE WHERE token = ?',
+                [$token]
+            );
+
+            $this->connection->commit();
+            return true;
+        } catch (Throwable $e) {
+            $this->connection->rollBack();
+            return false;
+        }
+    }
+
     private function normalizeEmail(string $email): string
     {
         $normalized = trim($email);
@@ -209,15 +368,13 @@ class AuthService
 
     private function isValidEmailAddress(string $email): bool
     {
-        return preg_match(
-            '/^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/',
-            $email,
-        ) === 1;
+        return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
     }
 
     private function isValidPersonName(string $value): bool
     {
-        return preg_match('/^[A-Za-z -]+$/', $value) === 1;
+        // Allow Unicode letters, spaces, hyphens, and apostrophes
+        return preg_match('/^[\p{L} \-\']+$/u', $value) === 1;
     }
 
     private function isValidPhoneNumber(string $value): bool
