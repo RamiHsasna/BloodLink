@@ -6,6 +6,8 @@ use Doctrine\DBAL\Connection;
 use Dompdf\Dompdf;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
+use App\Service\AccessControlService;
+use App\Service\HospitalService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -13,6 +15,11 @@ use Symfony\Component\Routing\Attribute\Route;
 
 class DonationsController extends AbstractController
 {
+    public function __construct(
+        private readonly AccessControlService $accessControlService,
+        private readonly HospitalService $hospitalService,
+    ) {}
+
     #[Route('/dashboard/donations', name: 'donations_index', methods: ['GET'])]
     public function index(Request $request, Connection $connection): Response
     {
@@ -109,7 +116,7 @@ class DonationsController extends AbstractController
             'donations'      => $donations,
             'stats'          => $stats,
             'events'         => $events,
-            'donation_events'=> $events,
+            'donation_events' => $events,
             'hospitals'      => $hospitals,
             'blood_types'    => $bloodTypes,
             'donors'         => $donors,
@@ -178,6 +185,17 @@ class DonationsController extends AbstractController
     {
         $sessionUser = $request->getSession()->get('auth_user');
         if (!$sessionUser) return $this->redirectToRoute('auth_index');
+
+        // Validate hospital status before allowing donation creation
+        $hospitalId = $request->request->get('hospital_id');
+        if ($hospitalId) {
+            try {
+                $this->accessControlService->validateHospitalActive($hospitalId);
+            } catch (\Exception $e) {
+                $this->addFlash('error', 'Cannot record donation: ' . $e->getMessage());
+                return $this->redirectToRoute('donations_index');
+            }
+        }
 
         $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
         $id  = $this->generateUuidV4();
@@ -298,6 +316,17 @@ class DonationsController extends AbstractController
     {
         $sessionUser = $request->getSession()->get('auth_user');
         if (!$sessionUser) return $this->redirectToRoute('auth_index');
+
+        // Validate hospital status before allowing donation edit
+        $hospitalId = $request->request->get('hospital_id');
+        if ($hospitalId) {
+            try {
+                $this->accessControlService->validateHospitalActive($hospitalId);
+            } catch (\Exception $e) {
+                $this->addFlash('error', 'Cannot edit donation: ' . $e->getMessage());
+                return $this->redirectToRoute('donations_index');
+            }
+        }
 
         $connection->executeStatement("
             UPDATE donations SET
@@ -549,18 +578,18 @@ HTML;
         ]);
     }
 
-   #[Route('/dashboard/donor/my-donations', name: 'donor_my_donations', methods: ['GET'])]
+    #[Route('/dashboard/donor/my-donations', name: 'donor_my_donations', methods: ['GET'])]
     public function myDonations(Request $request, Connection $connection): Response
     {
-    $sessionUser = $request->getSession()->get('auth_user');
-    if (!$sessionUser) return $this->redirectToRoute('auth_index');
+        $sessionUser = $request->getSession()->get('auth_user');
+        if (!$sessionUser) return $this->redirectToRoute('auth_index');
 
-    $userType = strtoupper((string) ($sessionUser['user_type'] ?? ''));
-    if ($userType !== 'DONOR') return $this->redirectToRoute('donations_index');
+        $userType = strtoupper((string) ($sessionUser['user_type'] ?? ''));
+        if ($userType !== 'DONOR') return $this->redirectToRoute('donations_index');
 
-    $userId = (string) ($sessionUser['id'] ?? '');
+        $userId = (string) ($sessionUser['id'] ?? '');
 
-    $donations = $connection->fetchAllAssociative("
+        $donations = $connection->fetchAllAssociative("
         SELECT d.*,
                h.name          AS hospital_name,
                de.name         AS event_name,
@@ -575,7 +604,7 @@ HTML;
         ORDER BY d.donation_date DESC
     ", ['uid' => $userId]);
 
-    $stats = $connection->fetchAssociative("
+        $stats = $connection->fetchAssociative("
         SELECT
             COUNT(*)                                         AS total,
             COUNT(*) FILTER (WHERE screening_passed = true)  AS passed,
@@ -584,11 +613,11 @@ HTML;
         WHERE user_id = :uid
     ", ['uid' => $userId]);
 
-    return $this->render('dashboard/donor_my_donations.html.twig', [
-        'session_user' => $sessionUser,
-        'donations'    => $donations,
-        'stats'        => $stats,
-    ]);
+        return $this->render('dashboard/donor_my_donations.html.twig', [
+            'session_user' => $sessionUser,
+            'donations'    => $donations,
+            'stats'        => $stats,
+        ]);
     }
     private function generateUuidV4(): string
     {
@@ -596,9 +625,12 @@ HTML;
         $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40);
         $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
         $hex = bin2hex($bytes);
-        return sprintf('%s-%s-%s-%s-%s',
-            substr($hex, 0, 8), substr($hex, 8, 4),
-            substr($hex, 12, 4), substr($hex, 16, 4),
+        return sprintf(
+            '%s-%s-%s-%s-%s',
+            substr($hex, 0, 8),
+            substr($hex, 8, 4),
+            substr($hex, 12, 4),
+            substr($hex, 16, 4),
             substr($hex, 20, 12)
         );
     }

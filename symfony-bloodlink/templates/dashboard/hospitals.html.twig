@@ -73,16 +73,26 @@
     .badge { border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 700; }
     .badge-active { background: #dcfce7; color: #166534; }
     .badge-inactive { background: #f3f4f6; color: #6b7280; }
+    .badge-deactivated { background: #fed7aa; color: #92400e; }
     .meta { margin-top: 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; color: #475569; font-size: 13px; }
 
     .crud-bar { margin-top: 12px; display: flex; gap: 8px; justify-content: space-between; align-items: center; }
     .crud-actions { display: flex; gap: 8px; }
     .btn-toggle { border: 1px solid #fbbf24; background: #fffbeb; color: #d97706; border-radius: 9px; padding: 8px 12px; font-weight: 700; cursor: pointer; font-size: 12px; }
     .btn-toggle:hover { opacity: 0.9; }
+    .btn-deactivate { border: 1px solid #fbbf24; background: #fffbeb; color: #d97706; border-radius: 9px; padding: 8px 12px; font-weight: 700; cursor: pointer; font-size: 12px; }
+    .btn-deactivate:hover { opacity: 0.9; }
+    .btn-reactivate { border: 1px solid #86efac; background: #f0fdf4; color: #16a34a; border-radius: 9px; padding: 8px 12px; font-weight: 700; cursor: pointer; font-size: 12px; }
+    .btn-reactivate:hover { opacity: 0.9; }
     .btn-edit { border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; border-radius: 9px; padding: 8px 12px; font-weight: 700; cursor: pointer; }
     .btn-edit:hover { opacity: 0.9; }
     .btn-delete { border: 1px solid #fecaca; background: #fff1f2; color: #b91c1c; border-radius: 9px; padding: 8px 12px; font-weight: 700; cursor: pointer; }
     .btn-delete:hover { opacity: 0.9; }
+    .btn-deactivate { border: 1px solid #fed7aa; background: #fef3c7; color: #b45309; border-radius: 9px; padding: 8px 12px; font-weight: 700; cursor: pointer; }
+    .btn-deactivate:hover { opacity: 0.9; }
+    .btn-reactivate { border: 1px solid #86efac; background: #f0fdf4; color: #166534; border-radius: 9px; padding: 8px 12px; font-weight: 700; cursor: pointer; }
+    .btn-reactivate:hover { opacity: 0.9; }
+    .badge-deactivated { background: #fef3c7; color: #92400e; }
     .checkbox-col { display: flex; align-items: center; }
     .checkbox-col input { cursor: pointer; width: 18px; height: 18px; }
 
@@ -151,6 +161,9 @@
         font-size: 14px;
         font-family: inherit;
     }
+    .field input[type="date"] {
+        padding: 8px 10px;
+    }
     .field textarea {
         height: auto;
         min-height: 80px;
@@ -161,6 +174,11 @@
         height: auto;
         width: auto;
         cursor: pointer;
+    }
+    .field input:disabled {
+        background: #f1f5f9;
+        color: #94a3b8;
+        cursor: not-allowed;
     }
     .modal-actions {
         margin-top: 12px;
@@ -238,8 +256,14 @@
                                 <p class="hospital-city">{{ h.city|default('City not specified') }}</p>
                             </div>
                             <div style="display: flex; gap: 10px; align-items: center;">
-                                {% if h.isActive %}
+                                {% set now = 'now'|date('Y-m-d H:i:s') %}
+                                {% set isExpired = h.deactivationEndDate and h.deactivationEndDate|date('Y-m-d H:i:s') <= now %}
+                                {% if h.isActive and (not h.deactivationEndDate or isExpired) %}
                                     <span class="badge badge-active">Active</span>
+                                {% elseif not h.isActive or (h.deactivationEndDate and not isExpired) %}
+                                    <span class="badge badge-deactivated" title="{% if h.deactivationReason %}Reason: {{ h.deactivationReason }}{% endif %}">
+                                        Inactive{% if h.deactivationEndDate %} until {{ h.deactivationEndDate|date('M d, Y') }}{% endif %}
+                                    </span>
                                 {% else %}
                                     <span class="badge badge-inactive">Inactive</span>
                                 {% endif %}
@@ -256,9 +280,6 @@
                                 <input type="checkbox" class="hospital-checkbox" value="{{ h.hospitalId|e('html_attr') }}" onchange="updateBulkDeleteBar()">
                             </div>
                             <div class="crud-actions">
-                                <button type="button" class="btn-toggle" onclick="toggleStatus('{{ h.hospitalId|e('html_attr') }}')">
-                                    {% if h.isActive %}Toggle Off{% else %}Toggle On{% endif %}
-                                </button>
                                 <button
                                     type="button"
                                     class="btn-edit open-edit-hospital"
@@ -272,6 +293,14 @@
                                     data-longitude="{{ (h.longitude|default(''))|e('html_attr') }}"
                                     data-is-active="{{ h.isActive|e('html_attr') }}"
                                 >Modify</button>
+
+                                {% set now = 'now'|date('Y-m-d H:i:s') %}
+                                {% set isExpired = h.deactivationEndDate and h.deactivationEndDate|date('Y-m-d H:i:s') <= now %}
+                                {% if h.isActive and (not h.deactivationEndDate or isExpired) %}
+                                    <button type="button" class="btn-deactivate" onclick="openDeactivateModal('{{ h.hospitalId|e('html_attr') }}', '{{ h.name|e('html_attr') }}')">Deactivate</button>
+                                {% else %}
+                                    <button type="button" class="btn-reactivate" onclick="submitReactivate('{{ h.hospitalId|e('html_attr') }}')">Reactivate</button>
+                                {% endif %}
 
                                 <form method="post" action="{{ path('dashboard_hospitals_delete', { hospitalId: h.hospitalId }) }}" style="display: inline;" onsubmit="return confirm('Delete this hospital?');">
                                     <button class="btn-delete" type="submit">Delete</button>
@@ -320,10 +349,7 @@
                     <label for="m_longitude">Longitude</label>
                     <input id="m_longitude" type="number" name="longitude" placeholder="-180 to 180" step="0.00000001">
                 </div>
-                <div class="field" style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
-                    <input id="m_isActive" type="checkbox" name="isActive" checked>
-                    <label for="m_isActive" style="margin: 0; text-transform: none; text-decoration: none; font-weight: 600;">Active</label>
-                </div>
+
             </div>
 
             <div class="modal-actions">
@@ -334,10 +360,57 @@
     </div>
 </div>
 
+<div id="deactivateModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deactivateModalTitle">
+        <div class="modal-head">
+            <h3 id="deactivateModalTitle">Deactivate Hospital</h3>
+            <button type="button" class="modal-close" id="closeDeactivateModal">×</button>
+        </div>
+
+        <form id="deactivateModalForm" method="post" action="">
+            <div class="modal-grid">
+                <div class="field full">
+                    <label for="d_reason">Reason for Deactivation *</label>
+                    <select id="d_reason" name="deactivation_reason" required>
+                        <option value="">-- Select a reason --</option>
+                        <option value="construction_work">Construction Work</option>
+                        <option value="relocating">Relocating</option>
+                        <option value="health_issues">Health Issues / Facility Problems</option>
+                        <option value="maintenance">Maintenance & Upgrades</option>
+                        <option value="staffing_issues">Staffing Issues</option>
+                        <option value="equipment_failure">Equipment Failure</option>
+                        <option value="regulatory_compliance">Regulatory Compliance</option>
+                        <option value="temporary_closure">Temporary Closure</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="field full">
+                    <label for="d_endDate">Deactivation End Date *</label>
+                    <input id="d_endDate" type="date" name="deactivation_end_date" required>
+                    <small style="font-size: 12px; color: #64748b; margin-top: 4px;">Select the date when the hospital will be automatically reactivated. Leave empty for indefinite deactivation.</small>
+                </div>
+                <div class="field full" style="display: flex; align-items: center; gap: 8px;">
+                    <input id="d_indefinite" type="checkbox" name="indefinite" value="true">
+                    <label for="d_indefinite" style="margin: 0; text-transform: none; text-decoration: none; font-weight: 600;">Indefinite Deactivation (Manual Reactivation Required)</label>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" id="cancelDeactivateModal">Cancel</button>
+                <button type="submit" class="btn-primary" id="submitDeactivateModal">Deactivate Hospital</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <form id="bulkDeleteForm" method="post" action="{{ path('dashboard_hospitals_bulk_delete') }}" style="display: none;">
 </form>
 
+<form id="reactivateForm" method="post" action="" style="display: none;">
+</form>
+
 <script>
+    // Hospital modal IIFE
     (function () {
         const overlay = document.getElementById('hospitalModal');
         const openAddBtn = document.getElementById('openAddHospitalModal');
@@ -362,7 +435,6 @@
             form.action = '{{ path('dashboard_hospitals_create') }}';
             title.textContent = 'Add Hospital';
             submitBtn.textContent = 'Create Hospital';
-            document.getElementById('m_isActive').checked = true;
         }
 
         function fillForEdit(btn) {
@@ -377,7 +449,6 @@
             document.getElementById('m_email').value = btn.dataset.email || '';
             document.getElementById('m_latitude').value = btn.dataset.latitude || '';
             document.getElementById('m_longitude').value = btn.dataset.longitude || '';
-            document.getElementById('m_isActive').checked = btn.dataset.isActive === '1' || btn.dataset.isActive === 'true';
         }
 
         openAddBtn.addEventListener('click', function () {
@@ -400,6 +471,108 @@
             }
         });
     })();
+
+    // Deactivation modal IIFE
+    (function () {
+        const deactivateOverlay = document.getElementById('deactivateModal');
+        const closeDeactivateBtn = document.getElementById('closeDeactivateModal');
+        const cancelDeactivateBtn = document.getElementById('cancelDeactivateModal');
+        const deactivateForm = document.getElementById('deactivateModalForm');
+        const endDateInput = document.getElementById('d_endDate');
+        const indefiniteCheckbox = document.getElementById('d_indefinite');
+
+        window.openDeactivateModal = function(hospitalId, hospitalName) {
+            deactivateForm.action = '{{ path('dashboard_hospitals_deactivate', { hospitalId: '__ID__' }) }}'.replace('__ID__', hospitalId);
+            document.getElementById('d_reason').value = '';
+            endDateInput.value = '';
+            indefiniteCheckbox.checked = false;
+            endDateInput.disabled = false;
+            deactivateOverlay.classList.add('open');
+            deactivateOverlay.setAttribute('aria-hidden', 'false');
+        };
+
+        function closeDeactivateModal() {
+            deactivateOverlay.classList.remove('open');
+            deactivateOverlay.setAttribute('aria-hidden', 'true');
+        }
+
+        // Handle indefinite checkbox
+        indefiniteCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                endDateInput.disabled = true;
+                endDateInput.value = '';
+            } else {
+                endDateInput.disabled = false;
+            }
+        });
+
+        // Handle form submission to convert date to days
+        deactivateForm.addEventListener('submit', function(e) {
+            const indefinite = indefiniteCheckbox.checked;
+            const endDate = endDateInput.value;
+
+            if (!indefinite && !endDate) {
+                e.preventDefault();
+                alert('Please select either an end date or check "Indefinite Deactivation".');
+                return;
+            }
+
+            // Convert date to deactivation_duration_days for backend
+            if (!indefinite && endDate) {
+                const selectedDate = new Date(endDate);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                selectedDate.setHours(0, 0, 0, 0);
+                
+                const daysCount = Math.ceil((selectedDate - today) / (1000 * 60 * 60 * 24));
+                
+                if (daysCount <= 0) {
+                    e.preventDefault();
+                    alert('Please select a date in the future.');
+                    return;
+                }
+
+                // Create hidden input for duration_days to send to backend
+                let durationInput = deactivateForm.querySelector('input[name="deactivation_duration_days"]');
+                if (!durationInput) {
+                    durationInput = document.createElement('input');
+                    durationInput.type = 'hidden';
+                    durationInput.name = 'deactivation_duration_days';
+                    deactivateForm.appendChild(durationInput);
+                }
+                durationInput.value = daysCount;
+            } else if (indefinite) {
+                let durationInput = deactivateForm.querySelector('input[name="deactivation_duration_days"]');
+                if (!durationInput) {
+                    durationInput = document.createElement('input');
+                    durationInput.type = 'hidden';
+                    durationInput.name = 'deactivation_duration_days';
+                    deactivateForm.appendChild(durationInput);
+                }
+                durationInput.value = '';
+            }
+        });
+
+        closeDeactivateBtn.addEventListener('click', closeDeactivateModal);
+        cancelDeactivateBtn.addEventListener('click', closeDeactivateModal);
+        deactivateOverlay.addEventListener('click', function (e) {
+            if (e.target === deactivateOverlay) {
+                closeDeactivateModal();
+            }
+        });
+    })();
+
+    // Global function for reactivation
+    window.submitReactivate = function(hospitalId) {
+        if (!confirm('Reactivate this hospital? It will immediately regain all functionalities.')) {
+            return;
+        }
+
+        const form = document.getElementById('reactivateForm');
+        form.method = 'post';
+        form.action = '{{ path('dashboard_hospitals_reactivate', { hospitalId: '__ID__' }) }}'.replace('__ID__', hospitalId);
+        form.submit();
+    };
 
     function updateBulkDeleteBar() {
         const checkboxes = document.querySelectorAll('.hospital-checkbox:checked');

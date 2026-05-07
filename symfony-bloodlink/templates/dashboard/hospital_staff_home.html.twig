@@ -309,11 +309,141 @@
     }
 </style>
 
+<style>
+    /* Inactive Hospital Warning Banner */
+    .inactive-hospital-banner {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border: 2px solid #f59e0b;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        animation: slideDown 0.4s ease-out;
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+    }
+
+    .banner-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .banner-icon {
+        font-size: 1.75rem;
+        line-height: 1;
+        flex-shrink: 0;
+    }
+
+    .banner-content {
+        flex: 1;
+    }
+
+    .banner-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: #92400e;
+        margin: 0 0 0.5rem 0;
+    }
+
+    .banner-text {
+        font-size: 0.938rem;
+        color: #b45309;
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    .banner-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #fcd34d;
+    }
+
+    .detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .detail-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #92400e;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .detail-value {
+        font-size: 0.938rem;
+        color: #b45309;
+        font-weight: 600;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<style>
 <div class="dashboard-container">
     <div class="dashboard-header">
         <h1 class="dashboard-title">Hospital Staff Dashboard</h1>
         <p class="dashboard-subtitle">Manage your hospital operations efficiently</p>
     </div>
+
+    {% if hospital and not (hospital.is_active and (not hospital.deactivation_end_date or hospital.deactivation_end_date|date('Y-m-d H:i:s') <= 'now'|date('Y-m-d H:i:s'))) %}
+    <div class="inactive-hospital-banner">
+        <div class="banner-header">
+            <div class="banner-icon">⚠️</div>
+            <div class="banner-content">
+                <h3 class="banner-title">Hospital Currently Inactive</h3>
+                <p class="banner-text">Your hospital is currently inactive and cannot perform any operations. Staff can view information but cannot create new transfers, donations, or manage inventory.</p>
+            </div>
+        </div>
+        <div class="banner-details">
+            {% if hospital.deactivation_reason %}
+            <div class="detail-item">
+                <span class="detail-label">Reason</span>
+                <span class="detail-value">{{ hospital.deactivation_reason }}</span>
+            </div>
+            {% endif %}
+            {% if hospital.deactivation_end_date %}
+            <div class="detail-item">
+                <span class="detail-label">Inactive Until</span>
+                <span class="detail-value">{{ hospital.deactivation_end_date|date('M d, Y H:i') }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Duration</span>
+                <span class="detail-value">
+                    {% set now = 'now'|date('U') %}
+                    {% set endDate = hospital.deactivation_end_date|date('U') %}
+                    {% set secondsRemaining = endDate - now %}
+                    {% if secondsRemaining <= 0 %}
+                        Expired
+                    {% else %}
+                        {% set daysRemaining = (secondsRemaining / 86400)|round(0, 'ceil') %}
+                        {{ daysRemaining }} day{{ daysRemaining != 1 ? 's' : '' }} remaining
+                    {% endif %}
+                </span>
+            </div>
+            {% else %}
+            <div class="detail-item">
+                <span class="detail-label">Duration</span>
+                <span class="detail-value">Indefinite - Manual reactivation required</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Stats Section -->
     <div class="stats-grid">
