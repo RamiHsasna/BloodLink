@@ -282,6 +282,7 @@ class DashboardController extends AbstractController {
     public function createUser(
         Request $request,
         Connection $connection,
+        MailerInterface $mailer,
     ): Response {
         $sessionUser = $request->getSession()->get("auth_user");
         if (!$sessionUser) {
@@ -409,7 +410,49 @@ class DashboardController extends AbstractController {
             }
 
             $connection->commit();
-            $this->addFlash("success", "User created successfully.");
+
+            // Send welcome email with credentials
+            try {
+                $hospitalName = "Your Assigned Hospital";
+                if ($userType === 'HOSPITAL_STAFF' && $hospitalId) {
+                    $hName = $connection->fetchOne("SELECT name FROM hospital WHERE hospital_id::text = ?", [$hospitalId]);
+                    if ($hName) $hospitalName = $hName;
+                }
+
+                $subject = $userType === 'HOSPITAL_STAFF' 
+                    ? 'Welcome to BloodLink - Hospital Staff Access' 
+                    : 'Welcome to BloodLink';
+                
+                $body = "
+                    <p>Hello $firstName,</p>
+                    <p>An administrator has created your account on the BloodLink platform.</p>
+                    <p><strong>Your Login Credentials:</strong></p>
+                    <ul>
+                        <li><strong>Email:</strong> $email</li>
+                        <li><strong>Temporary Password:</strong> $password</li>
+                    </ul>
+                    <p>Please log in at your earliest convenience and change your password for security.</p>
+                ";
+
+                if ($userType === 'HOSPITAL_STAFF') {
+                    $body .= "<p>You have been assigned to: <strong>$hospitalName</strong>.</p>";
+                }
+
+                $body .= "<p>Regards,<br>The BloodLink Team</p>";
+
+                $notificationEmail = (new Email())
+                    ->from('bloodlink.app.noreply@gmail.com')
+                    ->to($email)
+                    ->subject($subject)
+                    ->html($body);
+                
+                $mailer->send($notificationEmail);
+            } catch (Throwable $e) {
+                // Log error but don't fail the request since user is already created
+                @file_put_contents($this->getParameter('kernel.logs_dir') . '/mailer_errors.log', sprintf("[%s] Error welcoming new user %s: %s\n", date('Y-m-d H:i:s'), $email, $e->getMessage()), FILE_APPEND);
+            }
+
+            $this->addFlash("success", "User created successfully and notification email sent.");
         } catch (Throwable $e) {
             if ($connection->isTransactionActive()) {
                 $connection->rollBack();

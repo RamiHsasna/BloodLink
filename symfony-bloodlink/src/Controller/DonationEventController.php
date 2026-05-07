@@ -3,12 +3,15 @@
 namespace App\Controller;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Email;
 
 class DonationEventController extends AbstractController
 {
@@ -292,7 +295,7 @@ class DonationEventController extends AbstractController
 
     // ─── CREATE ───────────────────────────────────────────────────────────────
     #[Route('/dashboard/donation-events/create', name: 'donation_events_create', methods: ['POST'])]
-    public function create(Request $request, Connection $connection): Response
+    public function create(Request $request, Connection $connection, MailerInterface $mailer): Response
     {
         $sessionUser = $request->getSession()->get('auth_user');
         if (!$sessionUser) return $this->redirectToRoute('auth_index');
@@ -305,8 +308,12 @@ class DonationEventController extends AbstractController
             return $this->redirectToRoute('donation_events_index');
         }
 
+        $eventName = (string) $request->request->get('name');
+        $description = (string) $request->request->get('description');
         $startDate = $request->request->get('start_date');
         $endDate   = $request->request->get('end_date');
+        $location  = (string) $request->request->get('location');
+        $targetBloodTypes = (string) $request->request->get('target_blood_types');
         $now       = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
         $today     = (new \DateTimeImmutable())->format('Y-m-d');
 
@@ -357,18 +364,71 @@ class DonationEventController extends AbstractController
                  0, :hospital_id, 'PLANNED', :now, :now)
         ", [
             'event_id'                => $id,
-            'name'                    => $request->request->get('name'),
-            'description'             => $request->request->get('description') ?: null,
+            'name'                    => $eventName,
+            'description'             => $description ?: null,
             'start_date'              => $startDate,
             'end_date'                => $endDate,
-            'location'                => $request->request->get('location') ?: null,
-            'target_blood_types'      => $request->request->get('target_blood_types') ?: null,
+            'location'                => $location ?: null,
+            'target_blood_types'      => $targetBloodTypes ?: null,
             'target_collection_units' => $request->request->get('target_collection_units') ? (int) $request->request->get('target_collection_units') : null,
             'hospital_id'             => $hospitalId,
             'now'                     => $now,
         ]);
 
-        $this->addFlash('success', 'Donation event created successfully.');
+        // ─── NOTIFY MATCHING DONORS ──────────────────────────────────────────
+        try {
+            $hospitalName = $connection->fetchOne("SELECT name FROM hospital WHERE hospital_id::text = ?", [$hospitalId]);
+            
+            $donorSql = "
+                SELECT u.email, u.first_name, d.blood_type_id
+                FROM users u
+                JOIN donors d ON d.user_id = u.user_id
+                WHERE u.user_type = 'DONOR'
+                  AND u.is_verified = TRUE
+            ";
+            $donorParams = [];
+
+            $donorTypes = [];
+            // If event has specific target blood types, filter donors
+            if ($targetBloodTypes && !in_array(strtolower(trim($targetBloodTypes)), ['', 'all', 'any'])) {
+                $types = array_map('trim', explode(',', $targetBloodTypes));
+                $donorSql .= " AND d.blood_type_id IN (?)";
+                $donorParams[] = $types;
+                $donorTypes[] = ArrayParameterType::STRING;
+            }
+
+            $matchingDonors = $connection->fetchAllAssociative($donorSql, $donorParams, $donorTypes);
+
+            foreach ($matchingDonors as $donor) {
+                $donorEmail = (string) $donor['email'];
+                $donorName = (string) $donor['first_name'];
+                $donorBT = (string) $donor['blood_type_id'];
+
+                $email = (new Email())
+                    ->from('bloodlink.app.noreply@gmail.com')
+                    ->to($donorEmail)
+                    ->subject('New Donation Event: ' . $eventName)
+                    ->html("
+                        <p>Hello $donorName,</p>
+                        <p>A new blood donation event has been scheduled that matches your blood type (<strong>$donorBT</strong>)!</p>
+                        <hr>
+                        <p><strong>Event:</strong> $eventName</p>
+                        <p><strong>Hospital:</strong> $hospitalName</p>
+                        <p><strong>Location:</strong> $location</p>
+                        <p><strong>Date:</strong> " . (new \DateTimeImmutable($startDate))->format('M d, Y H:i') . "</p>
+                        <hr>
+                        <p>Log in to your dashboard to participate and help save lives.</p>
+                        <p>Regards,<br>The BloodLink Team</p>
+                    ");
+                
+                $mailer->send($email);
+            }
+        } catch (\Throwable $e) {
+            // Log notification errors but don't stop the flow
+            @file_put_contents($this->getParameter('kernel.logs_dir') . '/mailer_errors.log', sprintf("[%s] Error notifying donors for event %s: %s\n", date('Y-m-d H:i:s'), $id, $e->getMessage()), FILE_APPEND);
+        }
+
+        $this->addFlash('success', 'Donation event created successfully and matching donors have been notified.');
         return $this->redirectToRoute('donation_events_index');
     }
 
