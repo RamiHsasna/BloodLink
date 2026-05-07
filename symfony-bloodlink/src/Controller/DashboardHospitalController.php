@@ -156,6 +156,77 @@ class DashboardHospitalController extends AbstractController
         return $this->redirectToRoute("dashboard_hospitals_index");
     }
 
+    #[Route("/{hospitalId}/deactivate", name: "deactivate", methods: ["POST"])]
+    public function deactivate(Request $request, string $hospitalId): Response
+    {
+        $sessionUser = $request->getSession()->get("auth_user");
+        if (!$sessionUser) {
+            return $this->redirectToRoute("auth_index");
+        }
+
+        // Only ADMIN can deactivate hospitals
+        $userType = strtoupper((string) ($sessionUser["user_type"] ?? ""));
+        if ($userType !== "ADMIN") {
+            $this->addFlash("error", "Only administrators can deactivate hospitals.");
+            return $this->redirectToRoute("dashboard_hospitals_index");
+        }
+
+        try {
+            // Get form data
+            $reason = trim((string) $request->request->get("deactivation_reason", ""));
+            $durationDaysStr = trim((string) $request->request->get("deactivation_duration_days", ""));
+
+            if (empty($reason)) {
+                $this->addFlash("error", "Deactivation reason is required.");
+                return $this->redirectToRoute("dashboard_hospitals_index");
+            }
+
+            // Parse duration
+            $durationDays = null;
+            if ($durationDaysStr !== "" && $durationDaysStr !== "indefinite") {
+                $durationDays = (int) $durationDaysStr;
+                if ($durationDays <= 0) {
+                    $this->addFlash("error", "Duration must be positive.");
+                    return $this->redirectToRoute("dashboard_hospitals_index");
+                }
+            }
+
+            $this->hospitalService->deactivateHospital($hospitalId, $reason, $durationDays);
+
+            $durationText = $durationDays ? "{$durationDays} days" : "indefinitely";
+            $this->addFlash("success", "Hospital deactivated successfully for {$durationText}.");
+        } catch (\Exception $e) {
+            $this->addFlash("error", "Error deactivating hospital: " . $e->getMessage());
+        }
+
+        return $this->redirectToRoute("dashboard_hospitals_index");
+    }
+
+    #[Route("/{hospitalId}/reactivate", name: "reactivate", methods: ["POST"])]
+    public function reactivate(Request $request, string $hospitalId): Response
+    {
+        $sessionUser = $request->getSession()->get("auth_user");
+        if (!$sessionUser) {
+            return $this->redirectToRoute("auth_index");
+        }
+
+        // Only ADMIN can reactivate hospitals
+        $userType = strtoupper((string) ($sessionUser["user_type"] ?? ""));
+        if ($userType !== "ADMIN") {
+            $this->addFlash("error", "Only administrators can reactivate hospitals.");
+            return $this->redirectToRoute("dashboard_hospitals_index");
+        }
+
+        try {
+            $this->hospitalService->reactivateHospital($hospitalId);
+            $this->addFlash("success", "Hospital reactivated successfully.");
+        } catch (\Exception $e) {
+            $this->addFlash("error", "Error reactivating hospital: " . $e->getMessage());
+        }
+
+        return $this->redirectToRoute("dashboard_hospitals_index");
+    }
+
     #[Route("/{hospitalId}/delete", name: "delete", methods: ["POST"])]
     public function delete(Request $request, string $hospitalId): Response
     {
@@ -175,6 +246,64 @@ class DashboardHospitalController extends AbstractController
             $this->addFlash("success", "Hospital deleted successfully.");
         } catch (\Exception $e) {
             $this->addFlash("error", "Error deleting hospital: " . $e->getMessage());
+        }
+
+        return $this->redirectToRoute("dashboard_hospitals_index");
+    }
+
+    #[Route("/bulk-deactivate", name: "bulk_deactivate", methods: ["POST"])]
+    public function bulkDeactivate(Request $request): Response
+    {
+        $sessionUser = $request->getSession()->get("auth_user");
+        if (!$sessionUser) {
+            return $this->redirectToRoute("auth_index");
+        }
+
+        // Only ADMIN can deactivate
+        $userType = strtoupper((string) ($sessionUser["user_type"] ?? ""));
+        if ($userType !== "ADMIN") {
+            $this->addFlash("error", "Only administrators can deactivate hospitals.");
+            return $this->redirectToRoute("dashboard_hospitals_index");
+        }
+
+        try {
+            $hospitalIds = $request->request->all("hospital_ids");
+            $reason = trim((string) $request->request->get("deactivation_reason", ""));
+            $durationDaysStr = trim((string) $request->request->get("deactivation_duration_days", ""));
+
+            if (empty($reason)) {
+                $this->addFlash("error", "Deactivation reason is required.");
+                return $this->redirectToRoute("dashboard_hospitals_index");
+            }
+
+            $durationDays = null;
+            if ($durationDaysStr !== "" && $durationDaysStr !== "indefinite") {
+                $durationDays = (int) $durationDaysStr;
+            }
+
+            $successCount = 0;
+            $errorCount = 0;
+
+            if (is_array($hospitalIds)) {
+                foreach ($hospitalIds as $hospitalId) {
+                    try {
+                        $this->hospitalService->deactivateHospital($hospitalId, $reason, $durationDays);
+                        $successCount++;
+                    } catch (\Exception $e) {
+                        $errorCount++;
+                    }
+                }
+            }
+
+            if ($successCount > 0) {
+                $durationText = $durationDays ? "{$durationDays} days" : "indefinitely";
+                $this->addFlash("success", "$successCount hospital(s) deactivated successfully for {$durationText}.");
+            }
+            if ($errorCount > 0) {
+                $this->addFlash("error", "$errorCount hospital(s) could not be deactivated.");
+            }
+        } catch (\Exception $e) {
+            $this->addFlash("error", "Error during bulk deactivation: " . $e->getMessage());
         }
 
         return $this->redirectToRoute("dashboard_hospitals_index");

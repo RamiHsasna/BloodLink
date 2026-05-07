@@ -162,7 +162,154 @@ class HospitalService
     }
 
     /**
-     * Delete a hospital.
+     * Deactivate a hospital for a specified duration with a reason.
+     *
+     * @param string $hospitalId Hospital UUID
+     * @param string $reason Reason for deactivation
+     * @param int|null $durationDays Duration in days (null for indefinite)
+     *
+     * @return Hospital
+     *
+     * @throws \InvalidArgumentException If hospital not found or validation fails
+     */
+    public function deactivateHospital(
+        string $hospitalId,
+        string $reason,
+        ?int $durationDays = null,
+    ): Hospital {
+        $hospital = $this->hospitalRepository->find($hospitalId);
+        if (!$hospital) {
+            throw new \InvalidArgumentException(
+                "Hospital not found with ID: {$hospitalId}",
+            );
+        }
+
+        if (empty(trim($reason))) {
+            throw new \InvalidArgumentException(
+                "Deactivation reason cannot be empty",
+            );
+        }
+
+        if ($durationDays !== null && $durationDays <= 0) {
+            throw new \InvalidArgumentException(
+                "Duration days must be positive or null",
+            );
+        }
+
+        // Set deactivation fields
+        $hospital->setIsActive(false);
+        $hospital->setDeactivationReason($reason);
+
+        $now = new \DateTime();
+        $hospital->setDeactivationStartDate($now);
+        $hospital->setDeactivationDurationDays($durationDays);
+
+        // Calculate end date
+        if ($durationDays !== null) {
+            $endDate = (clone $now)->modify("+{$durationDays} days");
+            $hospital->setDeactivationEndDate($endDate);
+        } else {
+            // Indefinite deactivation
+            $hospital->setDeactivationEndDate(null);
+        }
+
+        $hospital->setUpdatedAt($now);
+
+        $this->entityManager->flush();
+
+        return $hospital;
+    }
+
+    /**
+     * Reactivate a deactivated hospital.
+     *
+     * @param string $hospitalId Hospital UUID
+     *
+     * @return Hospital
+     *
+     * @throws \InvalidArgumentException If hospital not found
+     */
+    public function reactivateHospital(string $hospitalId): Hospital
+    {
+        $hospital = $this->hospitalRepository->find($hospitalId);
+        if (!$hospital) {
+            throw new \InvalidArgumentException(
+                "Hospital not found with ID: {$hospitalId}",
+            );
+        }
+
+        $hospital->setIsActive(true);
+        $hospital->setDeactivationReason(null);
+        $hospital->setDeactivationStartDate(null);
+        $hospital->setDeactivationDurationDays(null);
+        $hospital->setDeactivationEndDate(null);
+        $hospital->setUpdatedAt(new \DateTime());
+
+        $this->entityManager->flush();
+
+        return $hospital;
+    }
+
+    /**
+     * Check if deactivation period has expired and auto-reactivate if needed.
+     *
+     * @param string $hospitalId Hospital UUID
+     *
+     * @return Hospital
+     *
+     * @throws \InvalidArgumentException If hospital not found
+     */
+    public function checkAndAutoReactivateIfExpired(
+        string $hospitalId,
+    ): Hospital {
+        $hospital = $this->hospitalRepository->find($hospitalId);
+        if (!$hospital) {
+            throw new \InvalidArgumentException(
+                "Hospital not found with ID: {$hospitalId}",
+            );
+        }
+
+        // If hospital is active, nothing to do
+        if ($hospital->getIsActive()) {
+            return $hospital;
+        }
+
+        // Check if deactivation has expired
+        $endDate = $hospital->getDeactivationEndDate();
+        if ($endDate !== null && $endDate <= new \DateTime()) {
+            // Auto-reactivate
+            return $this->reactivateHospital($hospitalId);
+        }
+
+        return $hospital;
+    }
+
+    /**
+     * Check if a hospital can perform operations (is currently active).
+     *
+     * @param string $hospitalId Hospital UUID
+     *
+     * @return bool True if hospital can perform operations
+     */
+    public function canHospitalPerformOperations(string $hospitalId): bool
+    {
+        $hospital = $this->hospitalRepository->find($hospitalId);
+        if (!$hospital) {
+            return false;
+        }
+
+        // Auto-check and reactivate if expired
+        $this->checkAndAutoReactivateIfExpired($hospitalId);
+
+        // Refresh from DB after potential auto-reactivation
+        $hospital = $this->hospitalRepository->find($hospitalId);
+
+        return $hospital->isCurrentlyActive();
+    }
+
+    /**
+     * Delete a hospital (hard delete - use with caution).
+     * DEPRECATED: Use deactivateHospital() instead for soft-delete behavior
      *
      * @param string $hospitalId Hospital UUID
      *

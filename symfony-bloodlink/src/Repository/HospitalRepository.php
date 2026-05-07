@@ -60,4 +60,59 @@ class HospitalRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
+
+    /**
+     * Find all deactivated hospitals
+     *
+     * @return Hospital[]
+     */
+    public function findDeactivatedHospitals(): array
+    {
+        return $this->createQueryBuilder('h')
+            ->where('h.isActive = false')
+            ->orderBy('h.deactivationStartDate', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Find hospitals with expired deactivation periods (should be auto-reactivated)
+     *
+     * @return Hospital[]
+     */
+    public function findExpiredDeactivations(): array
+    {
+        return $this->createQueryBuilder('h')
+            ->where('h.isActive = false')
+            ->andWhere('h.deactivationEndDate IS NOT NULL')
+            ->andWhere('h.deactivationEndDate <= :now')
+            ->setParameter('now', new \DateTime())
+            ->orderBy('h.deactivationEndDate', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Find currently active hospitals (respecting deactivation duration)
+     *
+     * @return Hospital[]
+     */
+    public function findCurrentlyActiveHospitals(): array
+    {
+        // Get all hospitals marked as active
+        $hospitals = $this->createQueryBuilder('h')
+            ->where('h.isActive = true')
+            ->orderBy('h.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        // Filter out those with active deactivation periods
+        $now = new \DateTime();
+        return array_filter($hospitals, function (Hospital $hospital) use ($now) {
+            if ($hospital->getDeactivationEndDate() === null) {
+                return true;
+            }
+            return $hospital->getDeactivationEndDate() <= $now;
+        });
+    }
 }

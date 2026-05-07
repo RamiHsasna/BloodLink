@@ -4,6 +4,7 @@ namespace App\Controller\Api;
 
 use App\Service\BloodInventoryService;
 use App\Service\HospitalService;
+use App\Service\AccessControlService;
 use App\Util\ResponseUtil;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -19,6 +20,7 @@ class BloodInventoryController extends AbstractController
     public function __construct(
         private readonly BloodInventoryService $inventoryService,
         private readonly HospitalService $hospitalService,
+        private readonly AccessControlService $accessControlService,
     ) {}
 
     /**
@@ -159,6 +161,22 @@ class BloodInventoryController extends AbstractController
                 );
             }
 
+            // Check if hospital is active
+            try {
+                $this->accessControlService->validateHospitalActive(
+                    $data["hospital_id"],
+                );
+            } catch (\Exception $e) {
+                return new JsonResponse(
+                    ResponseUtil::error(
+                        "Cannot add inventory: " . $e->getMessage(),
+                        null,
+                        403,
+                    ),
+                    403,
+                );
+            }
+
             // Validate units is positive integer
             if (!is_int($data["units"]) || $data["units"] <= 0) {
                 return new JsonResponse(
@@ -251,6 +269,22 @@ class BloodInventoryController extends AbstractController
                 return new JsonResponse(
                     ResponseUtil::error("Hospital not found", null, 404),
                     404,
+                );
+            }
+
+            // Check if hospital is active
+            try {
+                $this->accessControlService->validateHospitalActive(
+                    $data["hospital_id"],
+                );
+            } catch (\Exception $e) {
+                return new JsonResponse(
+                    ResponseUtil::error(
+                        "Cannot remove inventory: " . $e->getMessage(),
+                        null,
+                        403,
+                    ),
+                    403,
                 );
             }
 
@@ -457,9 +491,7 @@ class BloodInventoryController extends AbstractController
             foreach ($inventory as $item) {
                 $totalUnits += $item->getQuantityUnits();
                 $bloodTypeId = $item->getBloodType()->getBloodTypeId();
-                $bloodTypeDistribution[
-                    $bloodTypeId
-                ] = $item->getQuantityUnits();
+                $bloodTypeDistribution[$bloodTypeId] = $item->getQuantityUnits();
 
                 if ($item->getQuantityUnits() < 5) {
                     $criticalCount++;
