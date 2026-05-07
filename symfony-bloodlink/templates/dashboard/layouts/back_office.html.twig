@@ -39,10 +39,12 @@
                 <nav class="bo-nav">
                     <p class="bo-nav-title">Main</p>
 
-                    <a href="{{ path('dashboard_users') }}" class="bo-link {{ route == 'dashboard_users' ? 'is-active' : '' }}">
-                        <span>Users</span>
-                        {% if route == 'dashboard_users' %}<span class="bo-pill">Live</span>{% endif %}
-                    </a>
+                    {% if session_role == 'ADMIN' %}
+                        <a href="{{ path('dashboard_users') }}" class="bo-link {{ route == 'dashboard_users' ? 'is-active' : '' }}">
+                            <span>Users</span>
+                            {% if route == 'dashboard_users' %}<span class="bo-pill">Live</span>{% endif %}
+                        </a>
+                    {% endif %}
 
                     <a href="{{ path('dashboard_donor_eligibility') }}" class="bo-link {{ route == 'dashboard_donor_eligibility' ? 'is-active' : '' }}">
                         <span>Donor Eligibility</span>

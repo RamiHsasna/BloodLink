@@ -10,9 +10,77 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Email;
 
-class DashboardController extends AbstractController
-{
+class DashboardController extends AbstractController { 
+    #[Route("/dashboard/users", name: "dashboard_users", methods: ["GET"])]
+    public function users(Request $request, Connection $connection): Response
+    {
+        $sessionUser = $request->getSession()->get("auth_user");
+        if (!$sessionUser) {
+            return $this->redirectToRoute("auth_index");
+        }
+
+        $userType = strtoupper((string) ($sessionUser['user_type'] ?? ''));
+        if ($userType !== 'ADMIN') {
+            $this->addFlash('error', 'Only admins can manage users.');
+            return $this->redirectToRoute('dashboard_donor_home');
+        }
+
+        $bloodTypes = $this->fetchBloodTypes($connection);
+        //récupèrer ce que l’utilisateur a tapé dans la barre de recherche, le type de filtre sélectionné, le groupe sanguin et la ville
+        $q = trim((string) $request->query->get("q", ""));
+        $type = strtoupper(trim((string) $request->query->get("type", "ALL")));
+        $bloodType = strtoupper(
+            trim((string) $request->query->get("blood_type", "")),
+        );
+        $city = trim((string) $request->query->get("city", ""));
+
+        if (!in_array($type, ["ALL", "DONOR", "HOSPITAL_STAFF"], true)) {
+            $type = "ALL";
+        }
+        //vérifier que le groupe sanguin sélectionné est valide
+        if ($bloodType !== "" && !in_array($bloodType, $bloodTypes, true)) {
+            $bloodType = "";
+        }
+
+        //récupérer la liste des utilisateurs en fonction des critères de recherche et de filtrage
+        $users = $this->fetchUsers(
+            $connection,
+            $q,
+            $type,
+            $bloodType,
+            $city,
+        );
+        $stats = $this->fetchUserStats($connection);
+
+        if ($request->isXmlHttpRequest()) {
+            return $this->json([
+                "statsHtml" => $this->renderView(
+                    "dashboard/partials/users/_stats.html.twig",
+                    ["stats" => $stats],
+                ),
+                "listHtml" => $this->renderView(
+                    "dashboard/partials/users/_list.html.twig",
+                    ["users" => $users],
+                ),
+            ]);
+        }
+
+        return $this->render("dashboard/users.html.twig", [
+            "session_user" => $sessionUser,
+            "users" => $users,
+            "q" => $q,
+            "type" => $type,
+            "blood_type" => $bloodType,
+            "city" => $city,
+            "stats" => $stats,
+            "blood_types" => $bloodTypes,
+            "hospital_options" => $this->fetchHospitalOptions($connection),
+        ]);
+    }
+
     #[Route("/dashboard/donor", name: "dashboard_donor_home", methods: ["GET"])]
     public function donorHome(
         Request $request,
@@ -26,6 +94,9 @@ class DashboardController extends AbstractController
         $userType = strtoupper((string) ($sessionUser["user_type"] ?? ""));
         if ($userType == "ADMIN") {
             return $this->redirectToRoute("dashboard_users");
+        }
+        if ($userType == "HOSPITAL_STAFF") {
+            return $this->redirectToRoute("dashboard_hospital_staff_home");
         }
 
         $userId = (string) ($sessionUser["id"] ?? "");
@@ -41,6 +112,49 @@ class DashboardController extends AbstractController
             "session_user" => $sessionUser,
             "own_record" => $ownRecord,
             "donor_summary" => $donorSummary,
+        ]);
+    }
+
+    #[Route('/dashboard/hospital-staff', name: 'dashboard_hospital_staff_home', methods: ['GET'])]
+    public function hospitalStaffHome(Request $request, Connection $connection): Response
+    {
+        $sessionUser = $request->getSession()->get('auth_user');
+        if (!$sessionUser) {
+            return $this->redirectToRoute('auth_index');
+        }
+
+        $userType = strtoupper((string) ($sessionUser['user_type'] ?? ''));
+        if ($userType !== 'HOSPITAL_STAFF') {
+            return $this->redirectToRoute('dashboard_donor_home');
+        }
+
+        // Fetch hospital info
+        $hospitalId = $sessionUser['hospital_id'] ?? null;
+        $hospital = null;
+        if ($hospitalId) {
+            $hospital = $connection->fetchAssociative('SELECT * FROM hospital WHERE hospital_id::text = ? LIMIT 1', [$hospitalId]);
+        }
+
+        // Fetch summary stats (events, inventory, etc.)
+        $eventCount = $connection->fetchOne('SELECT COUNT(*) FROM donation_events WHERE hospital_id::text = ?', [$hospitalId]);
+        $inventoryCount = $connection->fetchOne('SELECT COUNT(*) FROM blood_inventory WHERE hospital_id::text = ?', [$hospitalId]);
+
+        // Fetch recent events for this hospital
+        $recentEvents = $connection->fetchAllAssociative("
+            SELECT de.*, 
+                   (SELECT COUNT(*) FROM donation_event_donor ded WHERE ded.event_id = de.event_id) as participants_count
+            FROM donation_events de
+            WHERE de.hospital_id::text = ?
+            ORDER BY de.start_date DESC
+            LIMIT 5
+        ", [$hospitalId]);
+
+        return $this->render('dashboard/hospital_staff_home.html.twig', [
+            'session_user' => $sessionUser,
+            'hospital' => $hospital,
+            'event_count' => $eventCount,
+            'inventory_count' => $inventoryCount,
+            'recent_events' => $recentEvents,
         ]);
     }
 
@@ -156,66 +270,7 @@ class DashboardController extends AbstractController
         ]);
     }
 
-    #[Route("/dashboard/users", name: "dashboard_users", methods: ["GET"])]
-    public function users(Request $request, Connection $connection): Response
-    {
-        $sessionUser = $request->getSession()->get("auth_user");
-        if (!$sessionUser) {
-            return $this->redirectToRoute("auth_index");
-        }
-
-        $bloodTypes = $this->fetchBloodTypes($connection);
-        //récupèrer ce que l’utilisateur a tapé dans la barre de recherche, le type de filtre sélectionné, le groupe sanguin et la ville
-        $q = trim((string) $request->query->get("q", ""));
-        $type = strtoupper(trim((string) $request->query->get("type", "ALL")));
-        $bloodType = strtoupper(
-            trim((string) $request->query->get("blood_type", "")),
-        );
-        $city = trim((string) $request->query->get("city", ""));
-
-        if (!in_array($type, ["ALL", "DONOR", "HOSPITAL_STAFF"], true)) {
-            $type = "ALL";
-        }
-//vérifier que le groupe sanguin sélectionné est valide
-        if ($bloodType !== "" && !in_array($bloodType, $bloodTypes, true)) {
-            $bloodType = "";
-        }
-
-        //récupérer la liste des utilisateurs en fonction des critères de recherche et de filtrage
-        $users = $this->fetchUsers(
-            $connection,
-            $q,
-            $type,
-            $bloodType,
-            $city,
-        );
-        $stats = $this->fetchUserStats($connection);
-
-        if ($request->isXmlHttpRequest()) {
-            return $this->json([
-                "statsHtml" => $this->renderView(
-                    "dashboard/partials/users/_stats.html.twig",
-                    ["stats" => $stats],
-                ),
-                "listHtml" => $this->renderView(
-                    "dashboard/partials/users/_list.html.twig",
-                    ["users" => $users],
-                ),
-            ]);
-        }
-
-        return $this->render("dashboard/users.html.twig", [
-            "session_user" => $sessionUser,
-            "users" => $users,
-            "q" => $q,
-            "type" => $type,
-            "blood_type" => $bloodType,
-            "city" => $city,
-            "stats" => $stats,
-            "blood_types" => $bloodTypes,
-            "hospital_options" => $this->fetchHospitalOptions($connection),
-        ]);
-    }
+    // The users dashboard is only accessible to admins. Hospital staff cannot access it.
 
     #[
         Route(
@@ -379,6 +434,7 @@ class DashboardController extends AbstractController
         string $userId,
         Request $request,
         Connection $connection,
+        MailerInterface $mailer,
     ): Response {
         $sessionUser = $request->getSession()->get("auth_user");
         if (!$sessionUser) {
@@ -456,6 +512,21 @@ class DashboardController extends AbstractController
             return $this->redirectToRoute("dashboard_users");
         }
 
+        // Fetch current user data for change reporting
+        $oldUser = $connection->fetchAssociative(
+            "SELECT email, first_name, last_name, phone, user_type FROM users WHERE user_id::text = ?",
+            [$userId],
+        );
+
+        $changes = [];
+        if ($oldUser) {
+            if ($oldUser['email'] !== $email) $changes['Email'] = ['old' => $oldUser['email'], 'new' => $email];
+            if ($oldUser['first_name'] !== $firstName) $changes['First Name'] = ['old' => $oldUser['first_name'], 'new' => $firstName];
+            if ($oldUser['last_name'] !== $lastName) $changes['Last Name'] = ['old' => $oldUser['last_name'], 'new' => $lastName];
+            if ($oldUser['phone'] !== ($phone !== "" ? $phone : null)) $changes['Phone'] = ['old' => $oldUser['phone'] ?? 'N/A', 'new' => $phone ?: 'N/A'];
+            if ($oldUser['user_type'] !== $userType) $changes['Account Type'] = ['old' => $oldUser['user_type'], 'new' => $userType];
+        }
+
         try {
             $connection->beginTransaction();
 
@@ -497,6 +568,30 @@ class DashboardController extends AbstractController
             }
 
             $connection->commit();
+
+            // Send notification email
+            try {
+                $changesReport = "";
+                if (!empty($changes)) {
+                    $changesReport = "<h3>Summary of Changes:</h3><table border='1' cellpadding='5' style='border-collapse: collapse;'><thead><tr style='background-color: #f2f2f2;'><th>Field</th><th>Previous Value</th><th>New Value</th></tr></thead><tbody>";
+                    foreach ($changes as $field => $values) {
+                        $changesReport .= "<tr><td><strong>$field</strong></td><td>" . htmlspecialchars($values['old']) . "</td><td>" . htmlspecialchars($values['new']) . "</td></tr>";
+                    }
+                    $changesReport .= "</tbody></table>";
+                }
+
+                $notificationEmail = (new Email())
+                    ->from('bloodlink.app.noreply@gmail.com')
+                    ->to($email)
+                    ->subject('Your BloodLink Account Has Been Updated')
+                    ->html("<p>Hello $firstName,</p><p>An administrator has updated your account information on the BloodLink platform.</p>$changesReport<p>If you have any questions or did not expect this change, please contact support.</p><p>Regards,<br>The BloodLink Team</p>");
+                
+                $mailer->send($notificationEmail);
+            } catch (Throwable $e) {
+                // Log error but don't fail the request
+                @file_put_contents($this->getParameter('kernel.logs_dir') . '/mailer_errors.log', sprintf("[%s] Error notifying updated user %s: %s\n", date('Y-m-d H:i:s'), $email, $e->getMessage()), FILE_APPEND);
+            }
+
             $this->addFlash("success", "User updated successfully.");
         } catch (Throwable $e) {
             if ($connection->isTransactionActive()) {
@@ -522,6 +617,7 @@ class DashboardController extends AbstractController
         string $userId,
         Request $request,
         Connection $connection,
+        MailerInterface $mailer,
     ): Response {
         $sessionUser = $request->getSession()->get("auth_user");
         if (!$sessionUser) {
@@ -536,11 +632,36 @@ class DashboardController extends AbstractController
             return $this->redirectToRoute("dashboard_users");
         }
 
+        // Fetch user info before deletion for notification
+        $user = $connection->fetchAssociative(
+            "SELECT email, first_name FROM users WHERE user_id::text = ?",
+            [$userId],
+        );
+
         try {
             $connection->executeStatement(
                 "DELETE FROM users WHERE user_id::text = ?",
                 [$userId],
             );
+
+            // Send notification email if user was found
+            if ($user) {
+                try {
+                    $email = (string) $user['email'];
+                    $firstName = (string) $user['first_name'];
+                    
+                    $notificationEmail = (new Email())
+                        ->from('bloodlink.app.noreply@gmail.com')
+                        ->to($email)
+                        ->subject('Your BloodLink Account Has Been Deleted')
+                        ->html("<p>Hello $firstName,</p><p>An administrator has deleted your account on the BloodLink platform.</p><p>If you have any questions, please contact support.</p><p>Regards,<br>The BloodLink Team</p>");
+                    
+                    $mailer->send($notificationEmail);
+                } catch (Throwable $e) {
+                    @file_put_contents($this->getParameter('kernel.logs_dir') . '/mailer_errors.log', sprintf("[%s] Error notifying deleted user %s: %s\n", date('Y-m-d H:i:s'), $user['email'] ?? 'unknown', $e->getMessage()), FILE_APPEND);
+                }
+            }
+
             $this->addFlash("success", "User deleted successfully.");
         } catch (Throwable $e) {
             $this->addFlash(
@@ -2299,6 +2420,7 @@ class DashboardController extends AbstractController
                     $userId,
                     $bloodType !== "" ? $bloodType : null,
                     $eligible ? 'true' : 'false',
+                    $daysUntil,
                     $lastCalculated,
                     $lat,
                     $lng,

@@ -7,6 +7,9 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Email;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 class AuthController extends AbstractController
 {
@@ -32,9 +35,13 @@ class AuthController extends AbstractController
         ]);
     }
 
-    #[Route('/auth/sign-in', name: 'auth_sign_in', methods: ['POST'])]
+    #[Route('/auth/sign-in', name: 'auth_sign_in', methods: ['GET', 'POST'])]
     public function signIn(Request $request, AuthService $authService): Response
     {
+        if ($request->isMethod('GET')) {
+            return $this->redirectToRoute('auth_index', ['tab' => 'signin']);
+        }
+
         $email = trim((string) $request->request->get('sign_in_email', ''));
         $password = (string) $request->request->get('sign_in_password', '');
 
@@ -67,9 +74,14 @@ class AuthController extends AbstractController
 
                 $this->addFlash('success', 'Signed in successfully.');
 
-                $isDonor = strtoupper((string) ($user['user_type'] ?? '')) === 'DONOR';
-
-                return $this->redirectToRoute($isDonor ? 'dashboard_donor_home' : 'dashboard_users');
+                $userType = strtoupper((string) ($user['user_type'] ?? ''));
+                if ($userType === 'HOSPITAL_STAFF') {
+                    return $this->redirectToRoute('dashboard_hospital_staff_home');
+                } elseif ($userType === 'ADMIN') {
+                    return $this->redirectToRoute('dashboard_users');
+                } else {
+                    return $this->redirectToRoute('dashboard_donor_home');
+                }
             }
         }
 
@@ -84,9 +96,13 @@ class AuthController extends AbstractController
         ]);
     }
 
-    #[Route('/auth/sign-up', name: 'auth_sign_up', methods: ['POST'])]
+    #[Route('/auth/sign-up', name: 'auth_sign_up', methods: ['GET', 'POST'])]
     public function signUp(Request $request, AuthService $authService): Response
     {
+        if ($request->isMethod('GET')) {
+            return $this->redirectToRoute('auth_index', ['tab' => 'signup']);
+        }
+
         $data = [
             'first_name' => (string) $request->request->get('first_name', ''),
             'last_name' => (string) $request->request->get('last_name', ''),
@@ -134,5 +150,69 @@ class AuthController extends AbstractController
         $response->headers->set('Expires', '0');
 
         return $response;
+    }
+
+    #[Route('/auth/forgot-password', name: 'auth_forgot_password', methods: ['GET', 'POST'])]
+    public function forgotPassword(Request $request, AuthService $authService, MailerInterface $mailer): Response
+    {
+        if ($request->isMethod('POST')) {
+            $emailAddress = trim((string) $request->request->get('email', ''));
+            $token = $authService->createPasswordResetToken($emailAddress);
+
+            if ($token) {
+                $resetUrl = $this->generateUrl('auth_reset_password', ['token' => $token], UrlGeneratorInterface::ABSOLUTE_URL);
+                
+                // For debug purposes, also log the link
+                @file_put_contents($this->getParameter('kernel.logs_dir') . '/reset_links.log', sprintf("[%s] Reset link for %s: %s\n", date('Y-m-d H:i:s'), $emailAddress, $resetUrl), FILE_APPEND);
+
+                try {
+                    $email = (new Email())
+                        ->from('bloodlink.app.noreply@gmail.com')
+                        ->to($emailAddress)
+                        ->subject('Password Reset Request')
+                        ->html("<p>You requested a password reset. Click the link below to set a new password:</p><p><a href='$resetUrl'>$resetUrl</a></p><p>This link expires in 1 hour.</p>");
+
+                    $mailer->send($email);
+                } catch (\Exception $e) {
+                    // Log error but don't show to user to avoid leaking info
+                    @file_put_contents($this->getParameter('kernel.logs_dir') . '/mailer_errors.log', sprintf("[%s] Error sending to %s: %s\n", date('Y-m-d H:i:s'), $emailAddress, $e->getMessage()), FILE_APPEND);
+                }
+            }
+
+            $this->addFlash('success', 'If an account exists with that email, we have sent a password reset link.');
+            return $this->redirectToRoute('auth_index');
+        }
+
+        return $this->render('auth/forgot_password.html.twig');
+    }
+
+    #[Route('/auth/reset-password/{token}', name: 'auth_reset_password', methods: ['GET', 'POST'])]
+    public function resetPassword(string $token, Request $request, AuthService $authService): Response
+    {
+        $user = $authService->getUserByResetToken($token);
+        if (!$user) {
+            $this->addFlash('error', 'Invalid or expired reset token.');
+            return $this->redirectToRoute('auth_index');
+        }
+
+        if ($request->isMethod('POST')) {
+            $password = (string) $request->request->get('password', '');
+            $confirmPassword = (string) $request->request->get('confirm_password', '');
+
+            if ($password === '' || $password !== $confirmPassword) {
+                $this->addFlash('error', 'Passwords do not match or are empty.');
+            } else {
+                if ($authService->resetPassword($token, $password)) {
+                    $this->addFlash('success', 'Password reset successfully. You can now sign in.');
+                    return $this->redirectToRoute('auth_index');
+                } else {
+                    $this->addFlash('error', 'An error occurred. Please try again.');
+                }
+            }
+        }
+
+        return $this->render('auth/reset_password.html.twig', [
+            'token' => $token,
+        ]);
     }
 }

@@ -478,7 +478,10 @@
                                 <p class="sub">Blood Type: {{ r.blood_type_cache ?: 'N/A' }}</p>
                             </div>
                             {% set eligible = r.is_currently_eligible ? true : false %}
-                            <span class="badge {{ eligible ? 'good' : 'bad' }}">{{ eligible ? 'Eligible' : 'Not Eligible' }}</span>
+                            {% set temporary_not_eligible = (not eligible) and ((r.days_until_eligible|default(0)) > 0) %}
+                            <span class="badge {{ eligible ? 'good' : (temporary_not_eligible ? 'neutral' : 'bad') }}">
+                                {{ eligible ? 'Eligible' : (temporary_not_eligible ? 'Temporarily Not Eligible' : 'Not Eligible') }}
+                            </span>
                         </div>
                         <div class="meta">
                             <div>Days Until Eligible: {{ r.days_until_eligible is not null ? r.days_until_eligible : 'N/A' }}</div>
@@ -625,13 +628,15 @@
                     <div id="e_blood_type_cache_error" class="field-error"></div>
                 </div>
                 <div class="field">
-                    <label for="e_is_currently_eligible">Status</label>
-                    <select id="e_is_currently_eligible" name="is_currently_eligible">
-                        <option value="1">Eligible</option>
-                        <option value="0">Not Eligible</option>
+                    <label for="e_status_mode">Status</label>
+                    <select id="e_status_mode" name="eligibility_status_mode">
+                        <option value="eligible">Eligible</option>
+                        <option value="temporarily_ineligible">Temporarily Not Eligible</option>
+                        <option value="ineligible">Not Eligible</option>
                     </select>
+                    <input id="e_is_currently_eligible" type="hidden" name="is_currently_eligible" value="1">
                 </div>
-                <div class="field">
+                <div class="field" id="e_days_field">
                     <label for="e_days_until_eligible">Days Until Eligible</label>
                     <input id="e_days_until_eligible" type="number" name="days_until_eligible" min="0">
                     <div id="e_days_until_eligible_error" class="field-error"></div>
@@ -954,6 +959,8 @@
             const inputUserId = document.getElementById('e_user_id');
             const bloodTypeInput = document.getElementById('e_blood_type_cache');
             const daysInput = document.getElementById('e_days_until_eligible');
+            const daysField = document.getElementById('e_days_field');
+            const statusModeInput = document.getElementById('e_status_mode');
             const statusInput = document.getElementById('e_is_currently_eligible');
 
             function clearFieldError(input, errorId) {
@@ -983,6 +990,25 @@
                 clearFieldError(daysInput, 'e_days_until_eligible_error');
             }
 
+            function syncStatusFields() {
+                const mode = statusModeInput.value;
+                if (mode === 'eligible') {
+                    statusInput.value = '1';
+                    daysField.style.display = 'none';
+                    daysInput.required = false;
+                    daysInput.value = '0';
+                } else if (mode === 'temporarily_ineligible') {
+                    statusInput.value = '0';
+                    daysField.style.display = '';
+                    daysInput.required = true;
+                } else {
+                    statusInput.value = '0';
+                    daysField.style.display = 'none';
+                    daysInput.required = false;
+                    daysInput.value = '0';
+                }
+            }
+
             function resetCreateMode() {
                 form.reset();
                 form.action = '{{ path('dashboard_donor_eligibility_create') }}';
@@ -991,6 +1017,8 @@
                 fieldUserId.style.display = '';
                 inputUserId.required = true;
                 inputUserId.readOnly = false;
+                statusModeInput.value = 'eligible';
+                syncStatusFields();
             }
 
             function setEditMode(data) {
@@ -1004,11 +1032,20 @@
                 fieldUserId.style.display = '';
 
                 document.getElementById('e_blood_type_cache').value = data.bloodTypeCache || '';
-                document.getElementById('e_is_currently_eligible').value = data.isCurrentlyEligible || '1';
-                document.getElementById('e_days_until_eligible').value = data.daysUntilEligible || '';
+                const isCurrentlyEligible = data.isCurrentlyEligible === '1';
+                const daysUntilEligible = parseInt(data.daysUntilEligible || '0', 10);
+                if (isCurrentlyEligible) {
+                    statusModeInput.value = 'eligible';
+                } else if (!Number.isNaN(daysUntilEligible) && daysUntilEligible > 0) {
+                    statusModeInput.value = 'temporarily_ineligible';
+                } else {
+                    statusModeInput.value = 'ineligible';
+                }
+                document.getElementById('e_days_until_eligible').value = data.daysUntilEligible || '0';
                 document.getElementById('e_last_calculated_at').value = data.lastCalculatedAt || '';
                 document.getElementById('e_city').value = data.city || '';
                 document.getElementById('e_eligibility_details').value = data.eligibilityDetails || '';
+                syncStatusFields();
             }
 
             const openAddBtn = document.getElementById('openEligibilityAdd');
@@ -1041,7 +1078,7 @@
 
                 const bloodType = (bloodTypeInput.value || '').trim().toUpperCase();
                 const daysRaw = (daysInput.value || '').trim();
-                const eligible = statusInput.value === '1';
+                const mode = statusModeInput.value;
                 let hasErrors = false;
 
                 if (bloodType !== '' && !/^(A|B|AB|O)[+-]$/.test(bloodType)) {
@@ -1049,25 +1086,25 @@
                     hasErrors = true;
                 }
 
-                if (daysRaw === '') {
-                    setFieldError(daysInput, 'e_days_until_eligible_error', 'Days until eligible is required.');
-                    hasErrors = true;
-                } else if (!/^-?\d+$/.test(daysRaw)) {
-                    setFieldError(daysInput, 'e_days_until_eligible_error', 'Please enter a valid integer.');
-                    hasErrors = true;
-                } else {
-                    const days = parseInt(daysRaw, 10);
-                    if (days < 0) {
-                        setFieldError(daysInput, 'e_days_until_eligible_error', 'Value cannot be negative.');
+                if (mode === 'temporarily_ineligible') {
+                    if (daysRaw === '') {
+                        setFieldError(daysInput, 'e_days_until_eligible_error', 'Days until eligible is required for temporary ineligibility.');
                         hasErrors = true;
-                    } else if (eligible && days !== 0) {
-                        setFieldError(daysInput, 'e_days_until_eligible_error', 'If status is Eligible, value must be 0.');
+                    } else if (!/^\d+$/.test(daysRaw)) {
+                        setFieldError(daysInput, 'e_days_until_eligible_error', 'Please enter a valid integer.');
                         hasErrors = true;
-                    } else if (!eligible && days <= 0) {
-                        setFieldError(daysInput, 'e_days_until_eligible_error', 'If status is Not Eligible, value must be greater than 0.');
-                        hasErrors = true;
+                    } else {
+                        const days = parseInt(daysRaw, 10);
+                        if (days <= 0) {
+                            setFieldError(daysInput, 'e_days_until_eligible_error', 'Value must be greater than 0 for temporary ineligibility.');
+                            hasErrors = true;
+                        }
                     }
+                } else {
+                    daysInput.value = '0';
                 }
+
+                statusInput.value = mode === 'eligible' ? '1' : '0';
 
                 if (hasErrors) {
                     e.preventDefault();
@@ -1076,7 +1113,11 @@
 
             bloodTypeInput.addEventListener('input', function () { clearFieldError(bloodTypeInput, 'e_blood_type_cache_error'); });
             daysInput.addEventListener('input', function () { clearFieldError(daysInput, 'e_days_until_eligible_error'); });
-            statusInput.addEventListener('change', function () { clearFieldError(daysInput, 'e_days_until_eligible_error'); });
+            statusModeInput.addEventListener('change', function () {
+                clearFieldError(daysInput, 'e_days_until_eligible_error');
+                syncStatusFields();
+            });
+            syncStatusFields();
         }
 
         closeBtn.addEventListener('click', closeModal);
