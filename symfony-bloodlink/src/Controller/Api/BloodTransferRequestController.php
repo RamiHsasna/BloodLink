@@ -4,6 +4,7 @@ namespace App\Controller\Api;
 
 use App\Service\BloodTransferService;
 use App\Service\HospitalService;
+use App\Service\AccessControlService;
 use App\Util\ResponseUtil;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -19,6 +20,7 @@ class BloodTransferRequestController extends AbstractController
     public function __construct(
         private readonly BloodTransferService $transferService,
         private readonly HospitalService $hospitalService,
+        private readonly AccessControlService $accessControlService,
     ) {}
 
     /**
@@ -162,6 +164,22 @@ class BloodTransferRequestController extends AbstractController
                 );
             }
 
+            // Check if requesting hospital is active
+            try {
+                $this->accessControlService->validateHospitalActive(
+                    $data["requesting_hospital_id"],
+                );
+            } catch (\Exception $e) {
+                return new JsonResponse(
+                    ResponseUtil::error(
+                        "Cannot create transfer: " . $e->getMessage(),
+                        null,
+                        403,
+                    ),
+                    403,
+                );
+            }
+
             $approvingHospital = $this->hospitalService->getHospitalById(
                 $data["approving_hospital_id"],
             );
@@ -173,6 +191,22 @@ class BloodTransferRequestController extends AbstractController
                         404,
                     ),
                     404,
+                );
+            }
+
+            // Check if supplying hospital is active
+            try {
+                $this->accessControlService->validateHospitalActive(
+                    $data["approving_hospital_id"],
+                );
+            } catch (\Exception $e) {
+                return new JsonResponse(
+                    ResponseUtil::error(
+                        "Supplying hospital is not available: " . $e->getMessage(),
+                        null,
+                        403,
+                    ),
+                    403,
                 );
             }
 
@@ -564,16 +598,16 @@ class BloodTransferRequestController extends AbstractController
                 "staffId" => $transfer->getRequestingStaff()?->getUserId(),
                 "name" => $transfer->getRequestingStaff()
                     ? $transfer->getRequestingStaff()->getFirstName() .
-                        " " .
-                        $transfer->getRequestingStaff()->getLastName()
+                    " " .
+                    $transfer->getRequestingStaff()->getLastName()
                     : null,
             ],
             "approvingStaff" => [
                 "staffId" => $transfer->getApprovingStaff()?->getUserId(),
                 "name" => $transfer->getApprovingStaff()
                     ? $transfer->getApprovingStaff()->getFirstName() .
-                        " " .
-                        $transfer->getApprovingStaff()->getLastName()
+                    " " .
+                    $transfer->getApprovingStaff()->getLastName()
                     : null,
             ],
             "requestedAt" => $transfer

@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Service\AuthService;
+use App\Service\HospitalService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -36,7 +37,7 @@ class AuthController extends AbstractController
     }
 
     #[Route('/auth/sign-in', name: 'auth_sign_in', methods: ['GET', 'POST'])]
-    public function signIn(Request $request, AuthService $authService): Response
+    public function signIn(Request $request, AuthService $authService, HospitalService $hospitalService): Response
     {
         if ($request->isMethod('GET')) {
             return $this->redirectToRoute('auth_index', ['tab' => 'signin']);
@@ -58,29 +59,59 @@ class AuthController extends AbstractController
             if ($user === null) {
                 $errors['password'] = 'Invalid email or password.';
             } else {
-                $request->getSession()->set('auth_user', [
-                    'id' => (string) ($user['user_id'] ?? ''),
-                    'email' => (string) ($user['email'] ?? ''),
-                    'first_name' => (string) ($user['first_name'] ?? ''),
-                    'last_name' => (string) ($user['last_name'] ?? ''),
-                    'user_type' => (string) ($user['user_type'] ?? ''),
-                    'hospital_id' => isset($user['hospital_id']) && $user['hospital_id'] !== null
-                        ? (string) $user['hospital_id']
-                        : null,
-                    'hospital_name' => isset($user['hospital_name']) && $user['hospital_name'] !== null
-                        ? trim((string) $user['hospital_name'])
-                        : null,
-                ]);
-
-                $this->addFlash('success', 'Signed in successfully.');
-
+                // Check if hospital staff's hospital is deactivated
                 $userType = strtoupper((string) ($user['user_type'] ?? ''));
-                if ($userType === 'HOSPITAL_STAFF') {
-                    return $this->redirectToRoute('dashboard_hospital_staff_home');
-                } elseif ($userType === 'ADMIN') {
-                    return $this->redirectToRoute('dashboard_users');
-                } else {
-                    return $this->redirectToRoute('dashboard_donor_home');
+                if ($userType === 'HOSPITAL_STAFF' && isset($user['hospital_id']) && $user['hospital_id'] !== null) {
+                    $hospital = $hospitalService->getHospitalById($user['hospital_id']);
+                    if ($hospital !== null) {
+                        $isActive = $hospital->isCurrentlyActive();
+                        if (!$isActive) {
+                            $deactivationReason = $hospital->getDeactivationReason() ?? 'Unknown reason';
+                            $deactivationEndDate = $hospital->getDeactivationEndDate();
+
+                            if ($deactivationEndDate === null) {
+                                // Indefinite deactivation
+                                $errors['login'] = sprintf(
+                                    'Your hospital is currently deactivated and is not accepting staff logins. Reason: %s. Please contact your administrator for more information.',
+                                    $deactivationReason
+                                );
+                            } else {
+                                $formattedDate = $deactivationEndDate->format('M d, Y \a\t g:i A');
+                                $errors['login'] = sprintf(
+                                    'Your hospital is currently deactivated and is not accepting staff logins until %s. Reason: %s. Please try again later.',
+                                    $formattedDate,
+                                    $deactivationReason
+                                );
+                            }
+                        }
+                    }
+                }
+
+                // If no deactivation errors, proceed with login
+                if (!isset($errors['login'])) {
+                    $request->getSession()->set('auth_user', [
+                        'id' => (string) ($user['user_id'] ?? ''),
+                        'email' => (string) ($user['email'] ?? ''),
+                        'first_name' => (string) ($user['first_name'] ?? ''),
+                        'last_name' => (string) ($user['last_name'] ?? ''),
+                        'user_type' => (string) ($user['user_type'] ?? ''),
+                        'hospital_id' => isset($user['hospital_id']) && $user['hospital_id'] !== null
+                            ? (string) $user['hospital_id']
+                            : null,
+                        'hospital_name' => isset($user['hospital_name']) && $user['hospital_name'] !== null
+                            ? trim((string) $user['hospital_name'])
+                            : null,
+                    ]);
+
+                    $this->addFlash('success', 'Signed in successfully.');
+
+                    if ($userType === 'HOSPITAL_STAFF') {
+                        return $this->redirectToRoute('dashboard_hospital_staff_home');
+                    } elseif ($userType === 'ADMIN') {
+                        return $this->redirectToRoute('dashboard_users');
+                    } else {
+                        return $this->redirectToRoute('dashboard_donor_home');
+                    }
                 }
             }
         }
@@ -161,7 +192,7 @@ class AuthController extends AbstractController
 
             if ($token) {
                 $resetUrl = $this->generateUrl('auth_reset_password', ['token' => $token], UrlGeneratorInterface::ABSOLUTE_URL);
-                
+
                 // For debug purposes, also log the link
                 @file_put_contents($this->getParameter('kernel.logs_dir') . '/reset_links.log', sprintf("[%s] Reset link for %s: %s\n", date('Y-m-d H:i:s'), $emailAddress, $resetUrl), FILE_APPEND);
 
