@@ -549,7 +549,7 @@ class DonationEventController extends AbstractController
     }
 
     #[Route('/dashboard/donation-events/{id}/participate', name: 'donation_events_participate', methods: ['POST'])]
-    public function participate(string $id, Request $request, Connection $connection): Response
+    public function participate(string $id, Request $request, Connection $connection, MailerInterface $mailer): Response
     {
         $sessionUser = $request->getSession()->get('auth_user');
         if (!$sessionUser) return $this->redirectToRoute('auth_index');
@@ -705,6 +705,31 @@ class DonationEventController extends AbstractController
             );
 
             $connection->commit();
+            
+            try {
+                $userRow = $connection->fetchAssociative('SELECT email, first_name FROM users WHERE user_id = :uid LIMIT 1', ['uid' => $userId]);
+                if ($userRow && !empty($userRow['email'])) {
+                    $donorEmail = $userRow['email'];
+                    $donorName = $userRow['first_name'] ?: 'Donor';
+                    $eventName = $eventRow['name'] ?? 'Donation Event';
+
+                    $email = (new Email())
+                        ->from('bloodlink.app.noreply@gmail.com')
+                        ->to($donorEmail)
+                        ->subject('Registration Confirmed: ' . $eventName)
+                        ->html("
+                            <p>Hello $donorName,</p>
+                            <p>Thank you for registering to participate in the donation event <strong>$eventName</strong>!</p>
+                            <p>Your participation has been successfully confirmed. We look forward to seeing you at the event.</p>
+                            <hr>
+                            <p>Regards,<br>The BloodLink Team</p>
+                        ");
+                    $mailer->send($email);
+                }
+            } catch (\Throwable $e) {
+                // Log notification errors silently
+            }
+
             if ($isAjax) return $this->json(['ok' => true, 'message' => 'Successfully joined the event!']);
             $this->addFlash('success', 'You have successfully joined the event!');
         } catch (UniqueConstraintViolationException) {
