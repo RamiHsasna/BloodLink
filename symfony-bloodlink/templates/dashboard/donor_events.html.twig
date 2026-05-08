@@ -4,6 +4,7 @@
 
 {% block stylesheets %}
     {{ parent() }}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
     :root { --brand: #8f1d1f; --brand-2: #b3272a; --ok: #10b981; --line: #e2e8f0; --subtle: #64748b; --ink: #0f172a; }
     .flash { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
@@ -24,6 +25,18 @@
     .progress-fill { height: 100%; background: linear-gradient(90deg,var(--ok),var(--brand)); border-radius: 4px; }
     .empty { text-align: center; padding: 48px; background: white; border: 2px dashed #d1d5db; border-radius: 14px; color: var(--subtle); }
     .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: .5; }
+
+    /* Map modal */
+    #map-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 20px; }
+    #map-modal-overlay.open { display: flex; }
+    #map-modal { width: min(700px,96vw); background: white; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
+    #map-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #e5e7eb; }
+    #map-modal-header h3 { margin: 0; font-size: 17px; color: #111827; }
+    #map-modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #6b7280; padding: 4px 8px; border-radius: 6px; }
+    #map-modal-close:hover { background: #f3f4f6; }
+    #map-container { height: 420px; width: 100%; }
+    #map-not-found { display: none; padding: 40px 20px; text-align: center; color: #6b7280; font-size: 14px; }
+    #map-location-label { padding: 10px 20px; font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; background: #f9fafb; }
 </style>
 {% endblock %}
 
@@ -75,16 +88,23 @@
         </div>
         {% endif %}
 
-        {% if not event.has_joined %}
-        <form method="post" action="{{ path('donation_events_participate', {'id': event.event_id}) }}" style="margin-top:14px;">
-            <button type="submit" style="background:var(--brand);color:white;border:none;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer;">
-                Participate
+        <div style="display:flex; gap:10px; align-items:center; margin-top:14px; flex-wrap:wrap;">
+            {% if not event.has_joined %}
+            <form method="post" action="{{ path('donation_events_participate', {'id': event.event_id}) }}" style="margin:0;">
+                <button type="submit" style="background:var(--brand);color:white;border:none;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer;font-size:14px;">
+                    Participate
+                </button>
+                <div class="participate-message" style="margin-top:8px;font-weight:600;"></div>
+            </form>
+            {% else %}
+            <div style="font-size:13px;font-weight:700;color:#166534;margin:0;padding:10px 0;">You already joined this event.</div>
+            {% endif %}
+
+            <button type="button" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer;font-size:14px;margin-left:auto;"
+                onclick="openMap('{{ event.event_id }}', '{{ event.name|e('js') }}', '{{ (event.location ?? '')|e('js') }}')">
+                📍 Map
             </button>
-            <div class="participate-message" style="margin-top:8px;font-weight:600;"></div>
-        </form>
-        {% else %}
-        <div style="margin-top:14px;font-size:13px;font-weight:700;color:#166534;">You already joined this event.</div>
-        {% endif %}
+        </div>
     </div>
     {% endfor %}
 </div>
@@ -96,12 +116,105 @@
 </div>
 {% endif %}
 
+<!-- MAP MODAL -->
+<div id="map-modal-overlay">
+    <div id="map-modal">
+        <div id="map-modal-header">
+            <h3 id="map-modal-title">📍 Event Location</h3>
+            <button id="map-modal-close" onclick="closeMap()" type="button">✕</button>
+        </div>
+        <div id="map-container"></div>
+        <div id="map-not-found">⚠️ Location not found.</div>
+        <div id="map-location-label"></div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block javascripts %}
     {{ parent() }}
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+    let leafletMap = null;
+
+    async function openMap(eventId, eventName, location) {
+        if (!location || location.trim() === '') {
+            alert('No location set for this event.');
+            return;
+        }
+
+        document.getElementById('map-modal-title').textContent = '📍 ' + eventName;
+        document.getElementById('map-location-label').textContent = '🔍 Searching: ' + location;
+        document.getElementById('map-not-found').style.display = 'none';
+        document.getElementById('map-container').style.display = 'block';
+        document.getElementById('map-modal-overlay').classList.add('open');
+
+        if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+
+        leafletMap = L.map('map-container').setView([33.8, 9.5], 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(leafletMap);
+
+        try {
+            const clean = s => s.replace(/blood bank/gi,'').replace(/banc du sang/gi,'').replace(/collection hall/gi,'').replace(/main lobby/gi,'').replace(/\s+/g,' ').trim();
+            const parts = location.split(',');
+            const place = clean(parts[0].trim());
+            const city  = parts.length > 1 ? parts[parts.length - 1].trim() : '';
+
+            const queries = [
+                place + (city ? ', ' + city : '') + ', Tunisia',
+                place + (city ? ', ' + city : '') + ', Tunisie',
+                location + ', Tunisia',
+                location + ', Tunisie',
+                place + ', Tunisia',
+                city ? city + ', Tunisia' : null,
+            ].filter(Boolean);
+
+            let found = null;
+            for (const q of queries) {
+                const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1&countrycodes=tn&accept-language=fr`);
+                const data = await resp.json();
+                if (data.length > 0) { found = data[0]; break; }
+                await new Promise(r => setTimeout(r, 300));
+            }
+
+            if (found) {
+                const lat = parseFloat(found.lat);
+                const lon = parseFloat(found.lon);
+                leafletMap.setView([lat, lon], 16);
+                const redIcon = L.divIcon({
+                    html: `<div style="background:#dc2626;width:20px;height:20px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.3);"></div>`,
+                    iconSize: [20,20], iconAnchor: [10,20], className: ''
+                });
+                L.marker([lat,lon],{icon:redIcon}).addTo(leafletMap)
+                    .bindPopup(`<div style="font-family:sans-serif;min-width:160px;"><strong style="color:#dc2626;">📍 ${eventName}</strong><br><span style="font-size:12px;color:#6b7280;">${found.display_name}</span></div>`,{maxWidth:280})
+                    .openPopup();
+                document.getElementById('map-location-label').textContent = '📍 ' + found.display_name;
+            } else {
+                document.getElementById('map-container').style.display = 'none';
+                document.getElementById('map-not-found').style.display = 'block';
+                document.getElementById('map-not-found').innerHTML = `⚠️ Location not found: <strong>${location}</strong>`;
+            }
+        } catch(err) {
+            document.getElementById('map-container').style.display = 'none';
+            document.getElementById('map-not-found').style.display = 'block';
+            document.getElementById('map-not-found').textContent = '⚠️ Network error.';
+        }
+    }
+
+    function closeMap() {
+        document.getElementById('map-modal-overlay').classList.remove('open');
+        if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+    }
+
     document.addEventListener('DOMContentLoaded', function(){
+        document.getElementById('map-modal-overlay').addEventListener('click', e => {
+            if (e.target === document.getElementById('map-modal-overlay')) closeMap();
+        });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeMap();
+        });
         document.querySelectorAll('form[action$="/participate"]').forEach(function(form){
             form.addEventListener('submit', async function(e){
                 e.preventDefault();
