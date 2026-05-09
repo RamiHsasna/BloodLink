@@ -45,7 +45,9 @@ a {
 
 .bo-sidebar,
 .fo-sidebar {
-    position: relative;
+    position: sticky;
+    top: 0;
+    height: 100vh;
     overflow: hidden;
     border-right: 1px solid rgba(148, 163, 184, 0.24);
     color: #dbe4ff;
@@ -124,8 +126,23 @@ a {
 .bo-nav,
 .fo-nav {
     display: grid;
+    align-content: start;
     gap: 10px;
     margin-top: 22px;
+    margin-bottom: 16px;
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.bo-nav::-webkit-scrollbar,
+.fo-nav::-webkit-scrollbar {
+    width: 4px;
+}
+.bo-nav::-webkit-scrollbar-thumb,
+.fo-nav::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.15);
+    border-radius: 4px;
 }
 
 .bo-nav-title,
