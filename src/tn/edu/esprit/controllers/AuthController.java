@@ -49,9 +49,11 @@ public class AuthController implements Initializable {
     @FXML private TextField lastName;
     @FXML private TextField signUpEmail;
     @FXML private TextField phone;
+    @FXML private TextField city;
     @FXML private Label firstNameError;
     @FXML private Label lastNameError;
     @FXML private Label signUpEmailError;
+    @FXML private Label cityError;
 
     @FXML private ComboBox<String> bloodTypeCombo;
     @FXML private Label bloodTypeError;
@@ -404,6 +406,7 @@ public class AuthController implements Initializable {
         String lastNameValue = lastName.getText() != null ? lastName.getText().trim() : "";
         String emailValue = signUpEmail.getText() != null ? signUpEmail.getText().trim() : "";
         String phoneValue = phone.getText() != null ? phone.getText().trim() : "";
+        String cityValue = city.getText() != null ? city.getText().trim() : "";
         String bloodTypeValue = bloodTypeCombo != null && bloodTypeCombo.getValue() != null
                 ? bloodTypeCombo.getValue().trim()
                 : (selectedBloodType != null ? selectedBloodType.trim() : "");
@@ -420,6 +423,10 @@ public class AuthController implements Initializable {
         }
         if (emailValue.isEmpty()) {
             showFieldError(signUpEmail, signUpEmailError, "Email is required.");
+            valid = false;
+        }
+        if (cityValue.isEmpty()) {
+            showFieldError(city, cityError, "City is required.");
             valid = false;
         }
         if (!valid) {
@@ -465,6 +472,7 @@ public class AuthController implements Initializable {
                 lastNameValue,
                 emailValue,
                 phoneValue,
+                cityValue,
                 pw,
                 bloodTypeValue
         );
@@ -482,6 +490,7 @@ public class AuthController implements Initializable {
         lastName.clear();
         signUpEmail.clear();
         phone.clear();
+        city.clear();
         if (bloodTypeCombo != null) {
             bloodTypeCombo.getSelectionModel().clearSelection();
         }
@@ -536,6 +545,7 @@ public class AuthController implements Initializable {
         String firstNameValue = firstName.getText() == null ? "" : firstName.getText().trim();
         String lastNameValue = lastName.getText() == null ? "" : lastName.getText().trim();
         String emailValue = signUpEmail.getText() == null ? "" : signUpEmail.getText().trim();
+        String cityValue = city.getText() == null ? "" : city.getText().trim();
         String bloodTypeValue = bloodTypeCombo == null || bloodTypeCombo.getValue() == null
                 ? ""
                 : bloodTypeCombo.getValue().trim();
@@ -559,6 +569,10 @@ public class AuthController implements Initializable {
             showFieldError(bloodTypeCombo, bloodTypeError, "Please select a blood type.");
             valid = false;
         }
+        if (cityValue.isEmpty()) {
+            showFieldError(city, cityError, "City is required.");
+            valid = false;
+        }
 
         return valid;
     }
@@ -578,6 +592,7 @@ public class AuthController implements Initializable {
         clearFieldError(firstName, firstNameError);
         clearFieldError(lastName, lastNameError);
         clearFieldError(signUpEmail, signUpEmailError);
+        clearFieldError(city, cityError);
         clearFieldError(bloodTypeCombo, bloodTypeError);
         clearFieldError(newPassword, newPasswordError);
         clearFieldError(newPasswordVisible, newPasswordError);

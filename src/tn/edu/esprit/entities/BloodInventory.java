@@ -1,86 +1,172 @@
 package tn.edu.esprit.entities;
 
-import java.math.BigDecimal;
-import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.UUID;
 
+/**
+ * BloodInventory represents the consolidated stock of a specific blood type at a specific hospital.
+ *
+ * Key Design:
+ * - One row per hospital per blood type (e.g., Hospital A + O+ = one inventory row)
+ * - quantityUnits: total units in stock for this (hospital, blood_type) pair
+ * - status: automatically derived from quantityUnits
+ *   * quantity <= 5   → CRITICAL
+ *   * quantity 6..10  → LOW
+ *   * quantity > 10   → OPTIMAL
+ * - Donor-specific details (donor_id, expiration_date) are NOT stored here;
+ *   they belong to the donations table.
+ */
 public class BloodInventory {
 
     private Integer inventoryId;
     private UUID hospitalId;
     private String bloodTypeId;
-    private String donorId;
-    private Integer quantityUnitsInt;
-    private BigDecimal quantityUnitsDecimal;
-    private Date expirationDate;
-    private Timestamp entryDate;
+    private Integer quantityUnits;
     private InventoryStatus status;
     private Timestamp updatedAt;
 
+    // ============================================================
+    // Constructors
+    // ============================================================
+
+    /**
+     * Default constructor.
+     */
     public BloodInventory() {
-        this.quantityUnitsInt = 0;
-        this.quantityUnitsDecimal = BigDecimal.ZERO;
+        this.quantityUnits = 0;
+        this.status = computeStatus(this.quantityUnits);
     }
 
+    /**
+     * Constructor for creating a new inventory entry (without ID).
+     */
     public BloodInventory(
         UUID hospitalId,
         String bloodTypeId,
-        String donorId,
-        Integer quantityUnitsInt,
-        Date expirationDate
-    ) {
-        this();
-        this.hospitalId = hospitalId;
-        this.bloodTypeId = bloodTypeId;
-        this.donorId = donorId;
-        this.quantityUnitsInt = quantityUnitsInt;
-        this.expirationDate = expirationDate;
-    }
-
-    public BloodInventory(
-        UUID hospitalId,
-        String bloodTypeId,
-        String donorId,
-        Integer quantityUnitsInt,
-        BigDecimal quantityUnitsDecimal,
-        Date expirationDate,
-        InventoryStatus status
+        Integer quantityUnits
     ) {
         this.hospitalId = hospitalId;
         this.bloodTypeId = bloodTypeId;
-        this.donorId = donorId;
-        this.quantityUnitsInt = quantityUnitsInt;
-        this.quantityUnitsDecimal = quantityUnitsDecimal;
-        this.expirationDate = expirationDate;
-        this.status = status;
+        this.quantityUnits = quantityUnits != null ? quantityUnits : 0;
+        this.status = computeStatus(this.quantityUnits);
     }
 
+    /**
+     * Full constructor including ID and timestamp (for loading from database).
+     */
     public BloodInventory(
         Integer inventoryId,
         UUID hospitalId,
         String bloodTypeId,
-        String donorId,
-        Integer quantityUnitsInt,
-        BigDecimal quantityUnitsDecimal,
-        Date expirationDate,
-        Timestamp entryDate,
+        Integer quantityUnits,
         InventoryStatus status,
         Timestamp updatedAt
     ) {
         this.inventoryId = inventoryId;
         this.hospitalId = hospitalId;
         this.bloodTypeId = bloodTypeId;
-        this.donorId = donorId;
-        this.quantityUnitsInt = quantityUnitsInt;
-        this.quantityUnitsDecimal = quantityUnitsDecimal;
-        this.expirationDate = expirationDate;
-        this.entryDate = entryDate;
+        this.quantityUnits = quantityUnits != null ? quantityUnits : 0;
         this.status = status;
         this.updatedAt = updatedAt;
     }
 
-    //Getters and Setters
+    // ============================================================
+    // Business Logic Methods
+    // ============================================================
+
+    /**
+     * Computes the inventory status based on the quantity of units.
+     *
+     * Rules:
+     * - quantity <= 5   → CRITICAL
+     * - quantity 6..10  → LOW
+     * - quantity > 10   → OPTIMAL
+     *
+     * @param quantity the number of units in stock
+     * @return the computed InventoryStatus
+     */
+    public static InventoryStatus computeStatus(Integer quantity) {
+        if (quantity == null || quantity <= 5) {
+            return InventoryStatus.CRITICAL;
+        } else if (quantity <= 10) {
+            return InventoryStatus.LOW;
+        } else {
+            return InventoryStatus.OPTIMAL;
+        }
+    }
+
+    /**
+     * Adds units to the current inventory and updates status accordingly.
+     *
+     * @param units the number of units to add
+     */
+    public void addUnits(Integer units) {
+        if (units == null || units < 0) {
+            throw new IllegalArgumentException(
+                "Units to add must be non-negative"
+            );
+        }
+        this.quantityUnits += units;
+        this.status = computeStatus(this.quantityUnits);
+    }
+
+    /**
+     * Deducts units from the current inventory and updates status accordingly.
+     * Throws an exception if there are insufficient units.
+     *
+     * @param units the number of units to deduct
+     * @throws IllegalArgumentException if units to deduct exceed available quantity
+     */
+    public void deductUnits(Integer units) {
+        if (units == null || units < 0) {
+            throw new IllegalArgumentException(
+                "Units to deduct must be non-negative"
+            );
+        }
+        if (this.quantityUnits < units) {
+            throw new IllegalArgumentException(
+                String.format(
+                    "Insufficient inventory: have %d units, requested to deduct %d",
+                    this.quantityUnits,
+                    units
+                )
+            );
+        }
+        this.quantityUnits -= units;
+        this.status = computeStatus(this.quantityUnits);
+    }
+
+    /**
+     * Checks if the inventory status is critical.
+     *
+     * @return true if status is CRITICAL
+     */
+    public boolean isCritical() {
+        return this.status == InventoryStatus.CRITICAL;
+    }
+
+    /**
+     * Checks if the inventory status is low.
+     *
+     * @return true if status is LOW
+     */
+    public boolean isLow() {
+        return this.status == InventoryStatus.LOW;
+    }
+
+    /**
+     * Checks if the inventory status is optimal.
+     *
+     * @return true if status is OPTIMAL
+     */
+    public boolean isOptimal() {
+        return this.status == InventoryStatus.OPTIMAL;
+    }
+
+    // ============================================================
+    // Getters and Setters
+    // ============================================================
+
     public Integer getInventoryId() {
         return inventoryId;
     }
@@ -105,44 +191,13 @@ public class BloodInventory {
         this.bloodTypeId = bloodTypeId;
     }
 
-    public String getDonorId() {
-        return donorId;
+    public Integer getQuantityUnits() {
+        return quantityUnits;
     }
 
-    public void setDonorId(String donorId) {
-        this.donorId = donorId;
-    }
-
-    public Integer getQuantityUnitsInt() {
-        return quantityUnitsInt;
-    }
-
-    public void setQuantityUnitsInt(Integer quantityUnitsInt) {
-        this.quantityUnitsInt = quantityUnitsInt;
-    }
-
-    public BigDecimal getQuantityUnitsDecimal() {
-        return quantityUnitsDecimal;
-    }
-
-    public void setQuantityUnitsDecimal(BigDecimal quantityUnitsDecimal) {
-        this.quantityUnitsDecimal = quantityUnitsDecimal;
-    }
-
-    public Date getExpirationDate() {
-        return expirationDate;
-    }
-
-    public void setExpirationDate(Date expirationDate) {
-        this.expirationDate = expirationDate;
-    }
-
-    public Timestamp getEntryDate() {
-        return entryDate;
-    }
-
-    public void setEntryDate(Timestamp entryDate) {
-        this.entryDate = entryDate;
+    public void setQuantityUnits(Integer quantityUnits) {
+        this.quantityUnits = quantityUnits != null ? quantityUnits : 0;
+        this.status = computeStatus(this.quantityUnits);
     }
 
     public InventoryStatus getStatus() {
@@ -159,5 +214,30 @@ public class BloodInventory {
 
     public void setUpdatedAt(Timestamp updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    // ============================================================
+    // toString
+    // ============================================================
+
+    @Override
+    public String toString() {
+        return (
+            "BloodInventory{" +
+            "inventoryId=" +
+            inventoryId +
+            ", hospitalId=" +
+            hospitalId +
+            ", bloodTypeId='" +
+            bloodTypeId +
+            '\'' +
+            ", quantityUnits=" +
+            quantityUnits +
+            ", status=" +
+            status +
+            ", updatedAt=" +
+            updatedAt +
+            '}'
+        );
     }
 }

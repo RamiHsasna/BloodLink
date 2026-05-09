@@ -64,28 +64,3 @@ bin/
 /.idea/libraries/lib.xml
 /FINAL_IMPLEMENTATION_SUMMARY.md
 /HOSPITAL_SPECIFIC_INVENTORY_VIEW.md
-
-# Symfony
-symfony/var/
-symfony/public/bundles/
-symfony/.env.local
-symfony/.env.*.local
-symfony/vendor/
-symfony/node_modules/
-symfony/.php-cs-fixer.cache
-symfony/.phpunit.result.cache
-l
-/database_migration_inventory_fix.sql
-/.idea/libraries/lib.xml
-
-# Symfony
-symfony/var/
-symfony/public/bundles/
-symfony/.env.local
-symfony/.env.*.local
-symfony/vendor/
-symfony/node_modules/
-symfony/.php-cs-fixer.cache
-symfony/.phpunit.result.cache
-
-/vendor/

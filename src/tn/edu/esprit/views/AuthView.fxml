@@ -145,6 +145,10 @@
                         <Label text="PHONE NUMBER" styleClass="field-label"/>
                         <TextField fx:id="phone" promptText="+216 00 000 000" styleClass="field-input"/>
 
+                        <Label text="CITY" styleClass="field-label"/>
+                        <TextField fx:id="city" promptText="e.g. Tunis" styleClass="field-input"/>
+                        <Label fx:id="cityError" styleClass="field-error-text" managed="false" visible="false"/>
+
                         <Label text="BLOOD TYPE" styleClass="field-label"/>
                         <ComboBox fx:id="bloodTypeCombo" promptText="Select blood type" maxWidth="Infinity" styleClass="bloodtype-combo"/>
                         <Label fx:id="bloodTypeError" styleClass="field-error-text" managed="false" visible="false"/>
