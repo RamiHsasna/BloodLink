@@ -4,6 +4,7 @@
 
 {% block extra_head_assets %}
     <link rel="stylesheet" href="{{ asset('styles/donation-events.css') }}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 {% endblock %}
 
 {% block module_content %}
@@ -63,8 +64,9 @@
                     </div>
 
                     <div class="event-card-actions">
-                        <a href="{{ path('dashboard_donor_events_show', {eventId: entry.eventId}) }}" class="event-action-link">Open detail</a>
-                    </div>
+                                            <a href="{{ path('dashboard_donor_events_show', {eventId: entry.eventId}) }}" class="event-action-link">Open detail</a>
+                                            <button type="button" class="event-action-link" onclick="openMap('{{ entry.eventId }}', '{{ entry.name|e('js') }}', '{{ (entry.location ?: '')|e('js') }}')">📍 Map</button>
+                                        </div>"
                 </article>
             {% else %}
                 <div class="rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center text-sm text-slate-500">
