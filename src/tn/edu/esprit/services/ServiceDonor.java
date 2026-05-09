@@ -9,40 +9,51 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
+import java.util.Optional;
 
 public class ServiceDonor implements IService<Donor> {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
 
     private Connection cnx;
+    private final GeocodingService geocodingService;
 
     public ServiceDonor() {
         this.cnx = DataSource.getInstance().getConnection();
+        this.geocodingService = new GeocodingService();
     }
 
     @Override
     public void ajouter(Donor d) {
         try {
 
+                String city = normalizeText(d.getCity());
+                Double latitude = d.getLatitude();
+                Double longitude = d.getLongitude();
+
+                if (city != null && (latitude == null || longitude == null)) {
+                    Optional<GeocodingService.Coordinates> geocoded = geocodingService.geocodeCity(city);
+                    if (geocoded.isPresent()) {
+                        latitude = geocoded.get().getLatitude();
+                        longitude = geocoded.get().getLongitude();
+                    }
+                }
+
                 String req = "INSERT INTO donors "
-                    + "(user_id, first_name, last_name, blood_type_id, last_donation_date, "
+                    + "(user_id, first_name, last_name, blood_type_id, city, last_donation_date, "
                     + "is_currently_eligible, latitude, longitude, total_donations, created_at) "
                     + "VALUES ("
                     + "'" + d.getUserId() + "', "
-                    + (d.getFirstName() != null
-                    ? "'" + d.getFirstName() + "'"
-                    : "NULL") + ", "
-                    + (d.getLastName() != null
-                    ? "'" + d.getLastName() + "'"
-                    : "NULL") + ", "
-                    + "'" + d.getBloodTypeId() + "', "
+                    + toSqlString(d.getFirstName()) + ", "
+                    + toSqlString(d.getLastName()) + ", "
+                    + toSqlString(d.getBloodTypeId()) + ", "
+                    + toSqlString(city) + ", "
                     + (d.getLastDonationDate() != null
                     ? "'" + d.getLastDonationDate().format(DATE_FORMATTER) + "'"
                     : "NULL") + ", "
                     + (d.isCurrentlyEligible() ? "true" : "false") + ", "
-                    + (d.getLatitude() != null ? d.getLatitude() : "NULL") + ", "
-                    + (d.getLongitude() != null ? d.getLongitude() : "NULL") + ", "
+                    + (latitude != null ? latitude : "NULL") + ", "
+                    + (longitude != null ? longitude : "NULL") + ", "
                     + d.getTotalDonations() + ", "
                     + "NOW())";
 
@@ -79,6 +90,10 @@ public class ServiceDonor implements IService<Donor> {
                     ? d.getBloodTypeId()
                     : existing.getBloodTypeId();
 
+                String incomingCity = normalizeText(d.getCity());
+                String existingCity = normalizeText(existing.getCity());
+                String city = incomingCity != null ? incomingCity : existingCity;
+
 
             String lastDonationDate = d.getLastDonationDate() != null
             ? "'" + d.getLastDonationDate().format(DATE_FORMATTER) + "'"
@@ -98,10 +113,21 @@ public class ServiceDonor implements IService<Donor> {
                     ? d.getLongitude()
                     : existing.getLongitude();
 
+            boolean cityChanged = incomingCity != null && !incomingCity.equalsIgnoreCase(existingCity);
+            boolean missingCoords = latitude == null || longitude == null;
+            if (city != null && (cityChanged || missingCoords)) {
+                Optional<GeocodingService.Coordinates> geocoded = geocodingService.geocodeCity(city);
+                if (geocoded.isPresent()) {
+                    latitude = geocoded.get().getLatitude();
+                    longitude = geocoded.get().getLongitude();
+                }
+            }
+
                 String req = "UPDATE donors SET "
-                    + "first_name = " + (firstName != null ? "'" + firstName + "'" : "NULL") + ", "
-                    + "last_name = " + (lastName != null ? "'" + lastName + "'" : "NULL") + ", "
-                    + "blood_type_id = '" + bloodTypeId + "', "
+                    + "first_name = " + toSqlString(firstName) + ", "
+                    + "last_name = " + toSqlString(lastName) + ", "
+                    + "blood_type_id = " + toSqlString(bloodTypeId) + ", "
+                    + "city = " + toSqlString(city) + ", "
 
                     + "last_donation_date = " + lastDonationDate + ", "
                     + "is_currently_eligible = " + isCurrentlyEligible + ", "
@@ -162,6 +188,7 @@ public class ServiceDonor implements IService<Donor> {
                 donor.setFirstName(rs.getString("first_name"));
                 donor.setLastName(rs.getString("last_name"));
                 donor.setBloodTypeId(rs.getString("blood_type_id"));
+                donor.setCity(rs.getString("city"));
 
                 Date sqlDate = rs.getDate("last_donation_date");
                 donor.setLastDonationDate(sqlDate != null ? sqlDate.toLocalDate() : null);
@@ -199,6 +226,7 @@ public class ServiceDonor implements IService<Donor> {
                 donor.setFirstName(rs.getString("first_name"));
                 donor.setLastName(rs.getString("last_name"));
                 donor.setBloodTypeId(rs.getString("blood_type_id"));
+                donor.setCity(rs.getString("city"));
 
                 Date sqlDate = rs.getDate("last_donation_date");
                 donor.setLastDonationDate(sqlDate != null ? sqlDate.toLocalDate() : null);
@@ -221,6 +249,21 @@ public class ServiceDonor implements IService<Donor> {
             System.out.println("Erreur getAll Donors : " + ex.getMessage());
         }
         return donors;
+    }
+
+    private String toSqlString(String value) {
+        if (value == null) {
+            return "NULL";
+        }
+        return "'" + value.replace("'", "''") + "'";
+    }
+
+    private String normalizeText(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
 }
