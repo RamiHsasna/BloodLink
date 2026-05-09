@@ -1,0 +1,143 @@
+{% extends 'base.html.twig' %}
+
+{% set body_class = 'bo-page' %}
+{% set route = app.request.attributes.get('_route')|default('') %}
+{% set session_payload = session_user is defined and session_user ? session_user : (app.session is defined ? app.session.get('auth_user') : null) %}
+{% set session_role = session_payload.user_type|default('')|upper %}
+{% set is_staff = session_role == 'HOSPITAL_STAFF' %}
+{% set is_alerts_route = route starts with 'dashboard_alerts_' %}
+{% set is_logs_route = route starts with 'dashboard_logs_' %}
+{% set is_events_route = route starts with 'dashboard_events_' %}
+{% set is_hospital_mgmt_route = route starts with 'dashboard_hospitals_' or route == 'dashboard_blood_inventory' or route == 'dashboard_transfers' %}
+{% set is_events_route = route starts with 'dashboard_events_' or route starts with 'donation_events_' %}
+{% set is_donations_route = route starts with 'donations_' %}
+
+{% block title %}{{ page_title|default('BloodLink Back Office') }}{% endblock %}
+
+{% block stylesheets %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('styles/normalized-ui.css') }}">
+    {% block extra_head_assets %}{% endblock %}
+{% endblock %}
+
+{% block body %}
+    <div class="bo-shell">
+        <div class="bo-layout">
+            <aside class="bo-sidebar">
+                <div class="bo-brand">
+                    <div class="bo-brand-row">
+                        <div class="bo-brand-mark">BL</div>
+                        <div>
+                            <p class="bo-brand-name">BloodLink</p>
+                            <p class="bo-brand-subtitle">Back Office Dashboard</p>
+                        </div>
+                    </div>
+                </div>
+
+                <nav class="bo-nav">
+                    <p class="bo-nav-title">Main</p>
+
+                    {% if session_role == 'ADMIN' %}
+                        <a href="{{ path('dashboard_users') }}" class="bo-link {{ route == 'dashboard_users' ? 'is-active' : '' }}">
+                            <span>Users</span>
+                            {% if route == 'dashboard_users' %}<span class="bo-pill">Live</span>{% endif %}
+                        </a>
+                    {% endif %}
+
+                    <a href="{{ path('dashboard_donor_eligibility') }}" class="bo-link {{ route == 'dashboard_donor_eligibility' ? 'is-active' : '' }}">
+                        <span>Donor Eligibility</span>
+                        {% if route == 'dashboard_donor_eligibility' %}<span class="bo-pill">Live</span>{% endif %}
+                    </a>
+
+                    <div class="bo-link-group {{ is_hospital_mgmt_route ? 'is-active' : '' }}">
+                        <div class="bo-link bo-link--group {{ is_hospital_mgmt_route ? 'is-active' : '' }}">
+                            <span>Hospital Management</span>
+                            {% if is_hospital_mgmt_route %}<span class="bo-pill">Live</span>{% endif %}
+                        </div>
+
+                        <div class="bo-subnav">
+                            <a href="{{ path('dashboard_hospitals_index') }}" class="bo-subnav-link {{ route == 'dashboard_hospitals_index' ? 'is-active' : '' }}">Hospitals</a>
+                            <a href="{{ path('dashboard_blood_inventory') }}" class="bo-subnav-link {{ route == 'dashboard_blood_inventory' ? 'is-active' : '' }}">Blood Inventory</a>
+                            <a href="{{ path('dashboard_transfers') }}" class="bo-subnav-link {{ route == 'dashboard_transfers' ? 'is-active' : '' }}">Transfers</a>
+                        </div>
+                    </div>
+
+
+                    <a href="{{ path('donations_index') }}" class="bo-link {{ is_donations_route ? 'is-active' : '' }}">
+                        <span>Donations</span>
+                        {% if is_donations_route %}<span class="bo-pill">Live</span>{% endif %}
+                    </a>
+
+                    <a href="{{ path('dashboard_events_index') }}" class="bo-link {{ is_events_route ? 'is-active' : '' }}">
+                        <span>Donation Events</span>
+                        {% if is_events_route %}<span class="bo-pill">Live</span>{% endif %}
+                    </a>
+
+                    <a href="{{ path('dashboard_alerts_index') }}" class="bo-link {{ is_alerts_route ? 'is-active' : '' }}">
+                        <span>Alerts</span>
+                        {% if is_alerts_route %}<span class="bo-pill">Live</span>{% endif %}
+                    </a>
+
+                    <div class="bo-link-group {{ is_logs_route ? 'is-active' : '' }}">
+                        <div class="bo-link bo-link--group {{ is_logs_route ? 'is-active' : '' }}">
+                            <span>Audit Logs</span>
+                            {% if is_logs_route %}<span class="bo-pill">Live</span>{% endif %}
+                        </div>
+
+                        <div class="bo-subnav">
+                            <a href="{{ path('dashboard_logs_index') }}" class="bo-subnav-link {{ route == 'dashboard_logs_index' ? 'is-active' : '' }}">Overview</a>
+                            <a href="{{ path('dashboard_logs_donations') }}" class="bo-subnav-link {{ route starts with 'dashboard_logs_donations' ? 'is-active' : '' }}">Donation Logs</a>
+                            <a href="{{ path('dashboard_logs_transfers') }}" class="bo-subnav-link {{ route starts with 'dashboard_logs_transfers' ? 'is-active' : '' }}">Transfer Logs</a>
+                        </div>
+                    </div>
+
+                    {% block sidebar_nav_extras %}{% endblock %}
+                </nav>
+
+                <div class="bo-session-card">
+                    <p class="bo-session-label">Signed in as</p>
+                    <p class="bo-session-name">{{ session_payload.first_name|default('User') }} {{ session_payload.last_name|default('') }}</p>
+                    <p class="bo-session-role">{{ session_payload.user_type|default('N/A') }}</p>
+                    {% if is_staff and session_payload.hospital_name|default('') %}
+                        <div class="bo-session-hospital">
+                            <p class="bo-session-hospital-name">{{ session_payload.hospital_name }}</p>
+                        </div>
+                    {% endif %}
+
+                    <form method="post" action="{{ path('auth_logout') }}" class="bo-session-logout">
+                        <button type="submit" class="shared-button shared-button--secondary shared-button--full">Logout</button>
+                    </form>
+                </div>
+            </aside>
+
+            <main class="bo-main-shell">
+                <div class="bo-main-card">
+                    <header class="bo-header">
+                        <div>
+                            <p class="bo-kicker">BloodLink Symfony</p>
+                            <h1 class="bo-title">{{ page_title|default('Back Office') }}</h1>
+                            {% if page_description is defined and page_description %}
+                                <p class="bo-description">{{ page_description }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="bo-header-actions">
+                            {% block page_actions %}{% endblock %}
+                        </div>
+                    </header>
+
+                    <section class="bo-content">
+                        {% include 'shared/_flash.html.twig' %}
+                        {% block module_content %}{% endblock %}
+                    </section>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    {% include 'shared/_confirm_modal.html.twig' %}
+    <script src="{{ asset('scripts/shared-shell.js') }}"></script>
+    {% block extra_body_assets %}{% endblock %}
+{% endblock %}

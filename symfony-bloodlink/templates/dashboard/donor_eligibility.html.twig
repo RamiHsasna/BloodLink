@@ -1,0 +1,1132 @@
+{% set layout = donor_mode ? 'log_management/layouts/front_office.html.twig' : 'dashboard/layouts/back_office.html.twig' %}
+{% set page_title = donor_mode ? 'My Eligibility' : 'Donor Eligibility Dashboard' %}
+{% set page_description = donor_mode ? 'Review your current eligibility status and screening history.' : 'Calculate and maintain donor eligibility records for the blood bank network.' %}
+{% extends layout %}
+
+{% block stylesheets %}
+    {{ parent() }}
+<style>
+    :root {
+        --bg: #f1f3f7;
+        --panel: #ffffff;
+        --ink: #0f172a;
+        --subtle: #64748b;
+        --line: #e2e8f0;
+        --brand: #8f1d1f;
+        --brand-2: #b3272a;
+        --nav: #0b1736;
+        --ok: #10b981;
+        --bad: #ef4444;
+    }
+    body { margin: 0; font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; background: var(--bg); color: var(--ink); }
+    .shell { min-height: 100vh; display: grid; grid-template-columns: 260px 1fr; }
+
+    .sidebar {
+        background: linear-gradient(180deg, var(--nav), #09122d 65%);
+        color: #e2e8f0;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #19254c;
+    }
+    .sidebar.donor-sidebar {
+        position: relative;
+        overflow: hidden;
+    }
+    .sidebar.donor-sidebar::after {
+        content: "";
+        position: absolute;
+        inset: auto -120px -130px auto;
+        width: 260px;
+        height: 260px;
+        border-radius: 999px;
+        background: radial-gradient(circle, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0) 72%);
+        pointer-events: none;
+    }
+    .brand { padding: 24px 20px; border-bottom: 1px solid #22315f; }
+    .brand h2 { margin: 0; font-size: 29px; font-family: Georgia, "Times New Roman", serif; color: #fff; }
+    .brand p { margin: 4px 0 0; color: #8fa0ce; font-size: 13px; }
+    .menu { padding: 16px 12px; display: grid; gap: 8px; }
+    .menu a { text-decoration: none; color: #c8d3f3; padding: 11px 12px; border-radius: 10px; font-weight: 600; }
+    .menu a.active { background: #1d2c56; color: #fff; border-left: 3px solid #ef4444; padding-left: 9px; }
+    .menu a:hover { background: #16254d; }
+    .profile { margin-top: auto; padding: 16px; border-top: 1px solid #22315f; }
+    .profile .name { margin: 0; font-size: 14px; color: #fff; }
+    .profile .role { margin: 4px 0 10px; color: #8fa0ce; font-size: 12px; }
+    .logout-btn { width: 100%; height: 36px; border: 1px solid #2d3e6f; background: #101d42; color: #dbe5ff; border-radius: 8px; font-weight: 600; }
+    .sidebar.donor-sidebar .brand {
+        padding: 22px 18px;
+        border-bottom: 1px solid #22315f;
+    }
+    .sidebar.donor-sidebar .brand-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .sidebar.donor-sidebar .brand-logo {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: #fff;
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        box-shadow: 0 8px 18px rgba(239, 68, 68, 0.35);
+    }
+    .sidebar.donor-sidebar .brand h2 {
+        margin: 0;
+        font-size: 25px;
+        font-family: "Manrope", "Segoe UI", Arial, sans-serif;
+        color: #fff;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+    }
+    .sidebar.donor-sidebar .brand p {
+        margin: 3px 0 0;
+        color: #93a6d6;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .sidebar.donor-sidebar .menu {
+        padding: 16px 12px 10px;
+        gap: 8px;
+    }
+    .sidebar.donor-sidebar .menu-label {
+        margin: 0 0 2px;
+        padding: 0 8px;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #8fa0ce;
+        font-weight: 700;
+    }
+    .sidebar.donor-sidebar .menu a {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 11px 12px;
+        border-radius: 12px;
+        font-weight: 700;
+        border: 1px solid transparent;
+        transition: background .2s ease, border-color .2s ease, transform .2s ease;
+    }
+    .sidebar.donor-sidebar .menu .ico {
+        width: 22px;
+        height: 22px;
+        border-radius: 7px;
+        border: 1px solid #2f4378;
+        background: #0f1f47;
+        color: #a9b9e4;
+        font-size: 12px;
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        flex-shrink: 0;
+    }
+    .sidebar.donor-sidebar .menu a.active {
+        background: linear-gradient(135deg, #1c2e5c, #162650);
+        color: #fff;
+        border: 1px solid #2b3f74;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+        border-left: 1px solid #2b3f74;
+        padding-left: 12px;
+    }
+    .sidebar.donor-sidebar .menu a.active .ico {
+        border-color: #f87171;
+        background: #7f1d1d;
+        color: #ffd7d7;
+    }
+    .sidebar.donor-sidebar .menu a:hover {
+        background: #16254d;
+        border-color: #2f4378;
+        transform: translateX(2px);
+    }
+    .sidebar.donor-sidebar .quick-card {
+        margin: 0 14px 14px;
+        border: 1px solid #2a3d70;
+        background: linear-gradient(160deg, rgba(26, 39, 77, 0.95), rgba(14, 27, 61, 0.98));
+        border-radius: 14px;
+        padding: 12px;
+    }
+    .sidebar.donor-sidebar .quick-card .k {
+        margin: 0;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #8fa0ce;
+        font-weight: 700;
+    }
+    .sidebar.donor-sidebar .quick-card .v {
+        margin: 6px 0 0;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 800;
+    }
+    .sidebar.donor-sidebar .quick-card.good { border-color: rgba(16, 185, 129, 0.5); }
+    .sidebar.donor-sidebar .quick-card.bad { border-color: rgba(239, 68, 68, 0.5); }
+    .sidebar.donor-sidebar .quick-link {
+        display: inline-block;
+        margin-top: 9px;
+        color: #dbe5ff;
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 700;
+    }
+    .sidebar.donor-sidebar .quick-link:hover { color: #fff; }
+    .sidebar.donor-sidebar .profile-card {
+        border: 1px solid #2a3d70;
+        background: #0d1b3e;
+        border-radius: 14px;
+        padding: 12px;
+    }
+    .sidebar.donor-sidebar .profile-top {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 10px;
+    }
+    .sidebar.donor-sidebar .profile-avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #334155, #1e293b);
+        color: #fff;
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        font-size: 12px;
+    }
+    .sidebar.donor-sidebar .profile .name { margin: 0; font-size: 13px; color: #fff; font-weight: 700; }
+    .sidebar.donor-sidebar .profile .role { margin: 2px 0 0; color: #8fa0ce; font-size: 11px; }
+    .sidebar.donor-sidebar .logout-btn {
+        height: 34px;
+        border: 1px solid #374d83;
+        background: #101f45;
+        border-radius: 9px;
+        font-weight: 700;
+        transition: background .2s ease, border-color .2s ease;
+    }
+    .sidebar.donor-sidebar .logout-btn:hover {
+        background: #162a5e;
+        border-color: #4762a6;
+    }
+
+    .main { padding: 24px; }
+    .head { margin-bottom: 14px; }
+    .head h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 40px; }
+    .head p { margin: 6px 0 0; color: var(--subtle); }
+    .flash { border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; font-size: 13px; }
+    .flash.success { background: #edf9f0; border: 1px solid #b6e2c1; color: #1b6a34; }
+    .flash.error { background: #fff1f2; border: 1px solid #fecdd3; color: #9f1239; }
+
+    .add-btn { border: 0; border-radius: 10px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 700; padding: 10px 16px; }
+
+    .filters { display: grid; grid-template-columns: 1fr 180px 120px; gap: 12px; margin-bottom: 14px; }
+    .filters input, .filters select { width: 100%; height: 42px; border: 1px solid #dccdc6; border-radius: 10px; padding: 0 12px; background: #fff; }
+    .filters button { border: 0; border-radius: 10px; background: #3d1a15; color: #fff; font-weight: 700; }
+
+    .stats { display: flex; gap: 18px; margin-bottom: 14px; flex-wrap: wrap; }
+    .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+
+    .donor-shell { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+    .donor-title { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 26px; }
+    .donor-sub { margin: 4px 0 14px; color: var(--subtle); }
+    .cards3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+    .mini { border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: #fffdfc; }
+    .mini .k { color: var(--subtle); font-size: 12px; }
+    .mini .v { font-size: 20px; font-weight: 800; margin-top: 4px; }
+    .status { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: #fff; }
+    .status-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .badge { border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 700; }
+    .badge.good { background: #dcfce7; color: #166534; }
+    .badge.bad { background: #fee2e2; color: #991b1b; }
+    .badge.neutral { background: #f1f5f9; color: #334155; }
+    .note { margin-top: 10px; color: #475569; font-size: 13px; }
+
+    .list { display: grid; gap: 12px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+    .card-head { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+    .name { margin: 0; font-size: 17px; font-weight: 700; }
+    .sub { margin: 2px 0 0; color: var(--subtle); font-size: 13px; }
+    .meta { margin-top: 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; color: #475569; font-size: 13px; }
+    .details { margin-top: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; color: #334155; font-size: 12.5px; white-space: pre-wrap; }
+    .actions { margin-top: 10px; display: flex; gap: 8px; justify-content: flex-end; }
+    .btn-ghost { border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; border-radius: 8px; padding: 7px 10px; font-weight: 700; }
+    .btn-danger { border: 1px solid #fda4af; background: #fff1f2; color: #be123c; border-radius: 8px; padding: 7px 10px; font-weight: 700; }
+
+    .crud-bar { margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end; }
+    .btn-edit { border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; border-radius: 9px; padding: 8px 12px; font-weight: 700; }
+    .btn-delete { border: 1px solid #fecaca; background: #fff1f2; color: #b91c1c; border-radius: 9px; padding: 8px 12px; font-weight: 700; }
+
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+        width: min(760px, 96vw);
+        max-height: 92vh;
+        overflow: auto;
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        box-shadow: 0 20px 40px rgba(2, 6, 23, 0.25);
+        padding: 16px;
+    }
+    .modal-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+    .modal-head h3 { margin: 0; font-size: 21px; }
+    .modal-close {
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        border-radius: 8px;
+        width: 34px;
+        height: 34px;
+        font-size: 18px;
+        line-height: 1;
+    }
+    .modal-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+    .field {
+        display: grid;
+        gap: 4px;
+    }
+    .field.invalid input,
+    .field.invalid select,
+    .field.invalid textarea {
+        border-color: #dc2626;
+        background: #fff5f5;
+    }
+    .field-error {
+        min-height: 16px;
+        color: #b91c1c;
+        font-size: 12px;
+        line-height: 1.2;
+    }
+    .field label { margin: 0; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--subtle); font-weight: 700; }
+    .field input, .field select, .field textarea {
+        border: 1px solid #d6deea;
+        border-radius: 9px;
+        background: #fbfdff;
+        padding: 8px 10px;
+    }
+    .field input, .field select { height: 40px; }
+    .field textarea { min-height: 88px; resize: vertical; grid-column: 1 / -1; }
+    .modal-actions {
+        margin-top: 12px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+    .btn-secondary { border: 1px solid #cbd5e1; background: #fff; color: #334155; border-radius: 9px; padding: 8px 12px; }
+    .btn-primary { border: 0; border-radius: 9px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 700; padding: 8px 12px; }
+    .empty { border: 1px dashed #d5c5be; border-radius: 12px; padding: 28px; text-align: center; color: var(--subtle); background: #fff; }
+    .check-result {
+        margin-top: 12px;
+        border: 1px solid #d8e0ee;
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 10px;
+    }
+    .check-result .rt { margin: 0; font-weight: 800; }
+    .check-result .rd { margin: 6px 0 0; color: #475569; font-size: 13px; }
+    .check-result .rr {
+        margin: 8px 0 0;
+        padding: 8px;
+        border: 1px solid #dbe5f4;
+        background: #fff;
+        border-radius: 8px;
+        white-space: pre-wrap;
+        color: #334155;
+        font-size: 12px;
+    }
+    .check-result.good .rt { color: #166534; }
+    .check-result.bad .rt { color: #991b1b; }
+    .checks {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px 10px;
+        margin-top: 6px;
+    }
+    .check-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #334155;
+        font-size: 13px;
+    }
+
+    @media (max-width: 900px) {
+        .shell { grid-template-columns: 1fr; }
+        .sidebar.donor-sidebar { border-right: 0; border-bottom: 1px solid #1e2d5b; }
+        .sidebar.donor-sidebar .menu { grid-template-columns: 1fr 1fr; }
+        .sidebar.donor-sidebar .menu-label { grid-column: 1 / -1; }
+        .filters { grid-template-columns: 1fr; }
+        .cards3 { grid-template-columns: 1fr; }
+        .meta { grid-template-columns: 1fr; }
+        .modal-grid { grid-template-columns: 1fr; }
+        .checks { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<main class="main">
+    <div class="head" style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+        <div>
+            <h1>Donor Eligibility</h1>
+        </div>
+        {% if not donor_mode %}
+            <button type="button" class="add-btn" id="openEligibilityAdd">+ Add Eligibility</button>
+        {% endif %}
+    </div>
+
+    {% for message in app.flashes('success') %}
+        <div class="flash success">{{ message }}</div>
+    {% endfor %}
+    {% for message in app.flashes('error') %}
+        <div class="flash error">{{ message }}</div>
+    {% endfor %}
+
+    {% if donor_mode %}
+        <section class="donor-shell">
+            <h2 class="donor-title">Donor Eligibility</h2>
+            <p class="donor-sub">Review your status and run a pre-screening check before joining a campaign.</p>
+
+            <div class="cards3">
+                <div class="mini">
+                    <div class="k">Last check</div>
+                    <div class="v">{{ donor_summary.last_check_days }}</div>
+                    <div class="k">{{ donor_summary.last_check_date }}</div>
+                </div>
+                <div class="mini">
+                    <div class="k">Days since last donation</div>
+                    <div class="v">{{ donor_summary.days_since_last_donation }}</div>
+                    <div class="k">min. 56 required</div>
+                </div>
+                <div class="mini">
+                    <div class="k">Total donations</div>
+                    <div class="v">{{ donor_summary.total_donations }}</div>
+                    <div class="k">since joining</div>
+                </div>
+            </div>
+
+            <div class="status">
+                <div class="status-row">
+                    <div>
+                        <strong>Current eligibility status</strong>
+                        <div class="sub">{{ donor_summary.last_checked_on }}</div>
+                    </div>
+                    <span class="badge {{ donor_summary.status_mood }}">{{ donor_summary.status_text }}</span>
+                </div>
+                <div class="note">{{ donor_summary.note }}</div>
+
+                <div class="actions" style="justify-content:flex-start; gap: 8px; margin-top: 12px;">
+                    <button
+                        type="button"
+                        class="btn-edit"
+                        id="openDonorCheck"
+                        data-last-donation="{{ donor_summary.last_donation_date_iso|default('')|e('html_attr') }}"
+                    >Check again</button>
+                    <a href="{{ path('dashboard_donor_eligibility_export_pdf') }}" class="btn-edit" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                        <span>📄</span> Export to Doctor
+                    </a>
+                </div>
+            </div>
+        </section>
+    {% else %}
+        <form class="filters" method="get" action="{{ path('dashboard_donor_eligibility') }}" id="eligibilityFiltersForm">
+            <input type="text" name="q" value="{{ q }}" placeholder="Search by donor ID or blood type...">
+            <select name="status">
+                <option value="all" {% if status == 'all' %}selected{% endif %}>All Eligibility</option>
+                <option value="eligible" {% if status == 'eligible' %}selected{% endif %}>Eligible</option>
+                <option value="temporarily_not_eligible" {% if status == 'temporarily_not_eligible' %}selected{% endif %}>Temporarily Not Eligible</option>
+                <option value="not_eligible" {% if status == 'not_eligible' %}selected{% endif %}>Not Eligible</option>
+            </select>
+            <noscript><button type="submit">Apply</button></noscript>
+        </form>
+
+        <div class="stats">
+            <div class="stat">Total: <strong>{{ stats.total }}</strong></div>
+            <div class="stat">Eligible: <strong>{{ stats.eligible }}</strong></div>
+            <div class="stat">Not Eligible: <strong>{{ stats.not_eligible }}</strong></div>
+        </div>
+
+        <div class="list">
+            {% if records is empty %}
+                <div class="empty">No eligibility records found.</div>
+            {% else %}
+                {% for r in records %}
+                    <div class="card">
+                        <div class="card-head">
+                            <div>
+                                <p class="name">Donor ID: {{ (r.user_id|default('')|slice(0, 13)) ~ '...' }}</p>
+                                <p class="sub">Blood Type: {{ r.blood_type_cache ?: 'N/A' }}</p>
+                            </div>
+                            {% set eligible = r.is_currently_eligible ? true : false %}
+                            {% set temporary_not_eligible = (not eligible) and ((r.days_until_eligible|default(0)) > 0) %}
+                            <span class="badge {{ eligible ? 'good' : (temporary_not_eligible ? 'neutral' : 'bad') }}">
+                                {{ eligible ? 'Eligible' : (temporary_not_eligible ? 'Temporarily Not Eligible' : 'Not Eligible') }}
+                            </span>
+                        </div>
+                        <div class="meta">
+                            <div>Days Until Eligible: {{ r.days_until_eligible is not null ? r.days_until_eligible : 'N/A' }}</div>
+                            <div>Last Calculated: {{ r.last_calculated_at ? r.last_calculated_at|date('Y-m-d') : 'N/A' }}</div>
+                            <div>City: {{ r.donor_city ?: 'N/A' }}</div>
+                        </div>
+                        <div class="details">{{ r.eligibility_details ?: 'Detailed questionnaire responses are not available for this record yet.' }}</div>
+
+                        <div class="crud-bar">
+                            <button
+                                type="button"
+                                class="btn-edit open-eligibility-edit"
+                                data-user-id="{{ r.user_id|e('html_attr') }}"
+                                data-blood-type-cache="{{ (r.blood_type_cache|default(''))|e('html_attr') }}"
+                                data-is-currently-eligible="{{ r.is_currently_eligible ? '1' : '0' }}"
+                                data-days-until-eligible="{{ (r.days_until_eligible is not null ? r.days_until_eligible : '')|e('html_attr') }}"
+                                data-last-calculated-at="{{ r.last_calculated_at ? r.last_calculated_at|date('Y-m-d') : '' }}"
+                                data-city="{{ (r.donor_city|default(''))|e('html_attr') }}"
+                                data-eligibility-details="{{ (r.eligibility_details|default(''))|e('html_attr') }}"
+                            >Modify</button>
+
+                            <form method="post" action="{{ path('dashboard_donor_eligibility_delete', { userId: r.user_id }) }}" onsubmit="return confirm('Delete this eligibility record?');">
+                                <button class="btn-delete" type="submit">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    {% endif %}
+    </main>
+</div>
+
+<div id="eligibilityModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="eligibilityModalTitle">
+        <div class="modal-head">
+            <h3 id="eligibilityModalTitle">{{ donor_mode ? 'Donor Eligibility Check' : 'Add Eligibility' }}</h3>
+            <button type="button" class="modal-close" id="closeEligibilityModal">×</button>
+        </div>
+
+        {% if donor_mode %}
+        <form id="eligibilityModalForm" method="post" action="{{ path('dashboard_donor_eligibility_create') }}">
+            <div class="modal-grid">
+                <!-- Basic Details -->
+                <div class="field">
+                    <label for="e_age">Age</label>
+                    <input id="e_age" type="number" name="age" min="16" max="80" value="18" required>
+                    <div id="e_age_error" class="field-error"></div>
+                </div>
+                <div class="field">
+                    <label for="e_date_of_birth">Date of Birth</label>
+                    <input id="e_date_of_birth" type="date" name="date_of_birth" max="{{ "now"|date('Y-m-d') }}" required>
+                    <div id="e_date_of_birth_error" class="field-error"></div>
+                </div>
+                <div class="field">
+                    <label for="e_weight">Weight (kg)</label>
+                    <input id="e_weight" type="number" step="0.1" min="0.1" name="weight" required>
+                    <div id="e_weight_error" class="field-error"></div>
+                </div>
+                <div class="field">
+                    <label for="e_gender">Gender (Optional)</label>
+                    <select id="e_gender" name="gender">
+                        <option value="">-- Select --</option>
+                        <option value="M">Male</option>
+                        <option value="F">Female</option>
+                        <option value="O">Other</option>
+                    </select>
+                </div>
+                <div class="field" style="grid-column: 1 / -1;">
+                    <label for="e_last_donation_date">Last Donation Date</label>
+                    <input id="e_last_donation_date" type="date" name="last_donation_date" max="{{ "now"|date('Y-m-d') }}">
+                    <div id="e_last_donation_date_error" class="field-error"></div>
+                </div>
+
+                <!-- Current Health Status -->
+                <div class="field" style="grid-column: 1 / -1;">
+                    <label>Current Health Status</label>
+                    <div class="checks">
+                        <label class="check-item"><input type="checkbox" name="unwell_today" value="1"> Not feeling well</label>
+                        <label class="check-item"><input type="checkbox" name="has_fever" value="1"> Have fever or elevated temperature</label>
+                        <label class="check-item"><input type="checkbox" name="has_illness" value="1"> Currently have acute illness</label>
+                    </div>
+                </div>
+
+                <!-- Pregnancy Status -->
+                <div class="field" style="grid-column: 1 / -1;">
+                    <label class="check-item"><input type="checkbox" name="pregnant_recent_birth" value="1"> Pregnant or recent birth (within 6 weeks)</label>
+                </div>
+
+                <!-- Medical Conditions -->
+                <div class="field" style="grid-column: 1 / -1;">
+                    <label>Medical Conditions (Check any that apply)</label>
+                    <div class="checks">
+                        <label class="check-item"><input type="checkbox" name="heart_disease" value="1"> Heart disease or cardiac condition</label>
+                        <label class="check-item"><input type="checkbox" name="anemia" value="1"> Anemia or iron deficiency</label>
+                        <label class="check-item"><input type="checkbox" name="chronic_illness" value="1"> Chronic illness or disease</label>
+                        <label class="check-item"><input type="checkbox" name="on_medication" value="1"> Currently on medication</label>
+                        <label class="check-item"><input type="checkbox" name="bleeding_disorder" value="1"> Bleeding disorder or clotting issue</label>
+                        <label class="check-item"><input type="checkbox" name="infectious_disease" value="1"> Infectious disease (HIV, Hepatitis, etc)</label>
+                    </div>
+                </div>
+
+                <!-- Recent Events -->
+                <div class="field" style="grid-column: 1 / -1;">
+                    <label>Recent Events (within last 6 months)</label>
+                    <div class="checks">
+                        <label class="check-item"><input type="checkbox" name="recent_surgery" value="1"> Recent surgery or procedures</label>
+                        <label class="check-item"><input type="checkbox" name="recent_vaccine" value="1"> Recent vaccine</label>
+                        <label class="check-item"><input type="checkbox" name="recent_travel" value="1"> Recent travel abroad</label>
+                        <label class="check-item"><input type="checkbox" name="recent_tattoo" value="1"> Recent tattoo or piercing</label>
+                        <label class="check-item"><input type="checkbox" name="recent_blood_transfusion" value="1"> Recent blood transfusion</label>
+                    </div>
+                </div>
+
+                <!-- General Well-being Notes -->
+                <div class="field" style="grid-column: 1 / -1;">
+                    <label for="e_wellbeing_notes">General Well-being Notes (Optional)</label>
+                    <textarea id="e_wellbeing_notes" name="wellbeing_notes" placeholder="Any additional health information or concerns..."></textarea>
+                </div>
+            </div>
+
+            <div id="eligibilityCheckResult" class="check-result">
+                <p class="rt" id="checkResultTitle">No calculation yet</p>
+                <p class="rd" id="checkResultDescription">Click Calculate to preview your result before saving.</p>
+                <div class="rr" id="checkResultReasons">No reasons to display yet.</div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" id="calculateEligibilityBtn">Calculate</button>
+                <button type="button" class="btn-secondary" id="cancelEligibilityModal">Cancel</button>
+                <button type="submit" class="btn-primary" id="submitEligibilityModal" disabled>Save Result</button>
+            </div>
+        </form>
+        {% else %}
+        <form id="eligibilityModalForm" method="post" action="{{ path('dashboard_donor_eligibility_create') }}">
+            <div class="modal-grid">
+                <div class="field" id="fieldUserId">
+                    <label for="e_user_id">Donor User ID</label>
+                    <input id="e_user_id" type="text" name="user_id" required>
+                </div>
+                <div class="field">
+                    <label for="e_blood_type_cache">Blood Type</label>
+                    <input id="e_blood_type_cache" type="text" name="blood_type_cache" placeholder="e.g. O+">
+                    <div id="e_blood_type_cache_error" class="field-error"></div>
+                </div>
+                <div class="field">
+                    <label for="e_status_mode">Status</label>
+                    <select id="e_status_mode" name="eligibility_status_mode">
+                        <option value="eligible">Eligible</option>
+                        <option value="temporarily_ineligible">Temporarily Not Eligible</option>
+                        <option value="ineligible">Not Eligible</option>
+                    </select>
+                    <input id="e_is_currently_eligible" type="hidden" name="is_currently_eligible" value="1">
+                </div>
+                <div class="field" id="e_days_field">
+                    <label for="e_days_until_eligible">Days Until Eligible</label>
+                    <input id="e_days_until_eligible" type="number" name="days_until_eligible" min="0">
+                    <div id="e_days_until_eligible_error" class="field-error"></div>
+                </div>
+                <div class="field">
+                    <label for="e_last_calculated_at">Last Calculated</label>
+                    <input id="e_last_calculated_at" type="date" name="last_calculated_at">
+                </div>
+                <div class="field">
+                    <label for="e_city">City</label>
+                    <input id="e_city" type="text" name="city" placeholder="Tunis">
+                </div>
+                <div class="field" style="grid-column: 1 / -1;">
+                    <label for="e_eligibility_details">Eligibility Details</label>
+                    <textarea id="e_eligibility_details" name="eligibility_details" placeholder="Details"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" id="cancelEligibilityModal">Cancel</button>
+                <button type="submit" class="btn-primary" id="submitEligibilityModal">Create Record</button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    (function () {
+        const donorMode = {{ donor_mode ? 'true' : 'false' }};
+        const overlay = document.getElementById('eligibilityModal');
+        const closeBtn = document.getElementById('closeEligibilityModal');
+        const cancelBtn = document.getElementById('cancelEligibilityModal');
+        const form = document.getElementById('eligibilityModalForm');
+        const title = document.getElementById('eligibilityModalTitle');
+        const submitBtn = document.getElementById('submitEligibilityModal');
+
+        if (!donorMode) {
+            const filtersForm = document.getElementById('eligibilityFiltersForm');
+            if (filtersForm) {
+                const qInput = filtersForm.querySelector('input[name="q"]');
+                const statusSelect = filtersForm.querySelector('select[name="status"]');
+                let typingTimer = null;
+
+                const submitFilters = function () {
+                    filtersForm.submit();
+                };
+
+                if (qInput) {
+                    qInput.addEventListener('input', function () {
+                        if (typingTimer !== null) {
+                            window.clearTimeout(typingTimer);
+                        }
+                        typingTimer = window.setTimeout(submitFilters, 300);
+                    });
+                }
+
+                if (statusSelect) {
+                    statusSelect.addEventListener('change', submitFilters);
+                }
+            }
+        }
+
+        function openModal() {
+            overlay.classList.add('open');
+            overlay.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeModal() {
+            overlay.classList.remove('open');
+            overlay.setAttribute('aria-hidden', 'true');
+        }
+
+        if (donorMode) {
+            const openCheckBtn = document.getElementById('openDonorCheck');
+            const quickCheckLink = document.getElementById('quickDonorCheckLink');
+            const calcBtn = document.getElementById('calculateEligibilityBtn');
+            const resultBox = document.getElementById('eligibilityCheckResult');
+            const resultTitle = document.getElementById('checkResultTitle');
+            const resultDescription = document.getElementById('checkResultDescription');
+            const resultReasons = document.getElementById('checkResultReasons');
+            const ageInput = document.getElementById('e_age');
+            const dateOfBirthInput = document.getElementById('e_date_of_birth');
+            const weightInput = document.getElementById('e_weight');
+            const lastDonationInput = document.getElementById('e_last_donation_date');
+
+            function clearFieldError(input, errorId) {
+                const field = input ? input.closest('.field') : null;
+                const errorEl = document.getElementById(errorId);
+                if (field) {
+                    field.classList.remove('invalid');
+                }
+                if (errorEl) {
+                    errorEl.textContent = '';
+                }
+            }
+
+            function setFieldError(input, errorId, message) {
+                const field = input ? input.closest('.field') : null;
+                const errorEl = document.getElementById(errorId);
+                if (field) {
+                    field.classList.add('invalid');
+                }
+                if (errorEl) {
+                    errorEl.textContent = message;
+                }
+            }
+
+            function clearDonorFormErrors() {
+                clearFieldError(ageInput, 'e_age_error');
+                clearFieldError(dateOfBirthInput, 'e_date_of_birth_error');
+                clearFieldError(weightInput, 'e_weight_error');
+                clearFieldError(lastDonationInput, 'e_last_donation_date_error');
+            }
+
+            function disableSaveUntilRecalc() {
+                submitBtn.disabled = true;
+            }
+
+            function buildReasonsText(reasons) {
+                if (!reasons || reasons.length === 0) {
+                    return 'No reasons to display yet.';
+                }
+                return reasons.join('\n');
+            }
+
+            function calculate() {
+                clearDonorFormErrors();
+                const age = parseInt((ageInput.value || '').trim(), 10);
+                const dateOfBirthRaw = (dateOfBirthInput.value || '').trim();
+                const weight = parseFloat((weightInput.value || '').trim());
+                const lastDonationRaw = (lastDonationInput.value || '').trim();
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                let hasErrors = false;
+
+                if (Number.isNaN(age)) {
+                    setFieldError(ageInput, 'e_age_error', 'Age is required and must be a valid number.');
+                    hasErrors = true;
+                }
+
+                if (dateOfBirthRaw === '') {
+                    setFieldError(dateOfBirthInput, 'e_date_of_birth_error', 'Date of birth is required.');
+                    hasErrors = true;
+                } else {
+                    const dateOfBirth = new Date(dateOfBirthRaw + 'T00:00:00');
+                    if (Number.isNaN(dateOfBirth.getTime())) {
+                        setFieldError(dateOfBirthInput, 'e_date_of_birth_error', 'Date of birth must be a valid date.');
+                        hasErrors = true;
+                    } else if (dateOfBirth > today) {
+                        setFieldError(dateOfBirthInput, 'e_date_of_birth_error', 'Date of birth cannot be in the future.');
+                        hasErrors = true;
+                    }
+                }
+
+                if (Number.isNaN(weight)) {
+                    setFieldError(weightInput, 'e_weight_error', 'Weight is required and must be a valid number.');
+                    hasErrors = true;
+                } else if (weight <= 0) {
+                    setFieldError(weightInput, 'e_weight_error', 'Weight must be greater than 0.');
+                    hasErrors = true;
+                }
+
+                let lastDonationDate = null;
+                if (lastDonationRaw !== '') {
+                    lastDonationDate = new Date(lastDonationRaw + 'T00:00:00');
+                    if (Number.isNaN(lastDonationDate.getTime())) {
+                        setFieldError(lastDonationInput, 'e_last_donation_date_error', 'Last donation date must be a valid date.');
+                        hasErrors = true;
+                    }
+                    if (!Number.isNaN(lastDonationDate.getTime()) && lastDonationDate > today) {
+                        setFieldError(lastDonationInput, 'e_last_donation_date_error', 'Last donation date cannot be in the future.');
+                        hasErrors = true;
+                    }
+                }
+
+                if (hasErrors) {
+                    submitBtn.disabled = true;
+                    return;
+                }
+
+                const hardStops = [];
+                const doctorReview = [];
+                let daysUntilEligible = 0;
+                const minDaysBetweenDonations = 56;
+
+                if (age < 18 || age > 65) {
+                    hardStops.push('Donors must be between 18 and 65 years old to participate');
+                }
+                if (weight < 50) {
+                    hardStops.push('A minimum weight of 50 kg is required to donate.');
+                }
+
+                if (lastDonationDate) {
+                    const elapsed = Math.floor((today.getTime() - lastDonationDate.getTime()) / 86400000);
+                    if (elapsed < minDaysBetweenDonations) {
+                        daysUntilEligible = Math.max(minDaysBetweenDonations - elapsed, 1);
+                        hardStops.push('Last donation was too recent (wait ' + daysUntilEligible + ' more day(s)).');
+                    }
+                }
+
+                if (form.querySelector('input[name="unwell_today"]').checked) {
+                    hardStops.push('You reported not feeling well today.Donating while unwell can affect both your health and the quality of the donated blood. Please wait until you have fully recovered before attempting to donate.');
+                }
+                if (form.querySelector('input[name="has_fever"]').checked) {
+                    hardStops.push('You have fever or elevated temperature. Blood donation is not possible until body temperature returns to normal.');
+                }
+                if (form.querySelector('input[name="has_illness"]').checked) {
+                    hardStops.push('You currently have acute illness. Please wait until fully recovered before donating.');
+                }
+                if (form.querySelector('input[name="pregnant_recent_birth"]').checked) {
+                    hardStops.push('Donation is temporarily deferred during pregnancy and for 6 weeks following childbirth.');
+                }
+                if (form.querySelector('input[name="heart_disease"]').checked) {
+                    doctorReview.push('Heart disease or cardiac condition - must be reviewed by a doctor.');
+                }
+                if (form.querySelector('input[name="anemia"]').checked) {
+                    doctorReview.push('Anemia or iron deficiency reported - doctor review required.');
+                }
+                if (form.querySelector('input[name="chronic_illness"]').checked) {
+                    doctorReview.push('Chronic illness or disease reported - must be assessed by doctor.');
+                }
+                if (form.querySelector('input[name="bleeding_disorder"]').checked) {
+                    hardStops.push('Bleeding disorder or clotting issues prevent blood donation.');
+                }
+                if (form.querySelector('input[name="infectious_disease"]').checked) {
+                    hardStops.push('Infectious disease detected - blood donation is not permitted.');
+                }
+
+                if (form.querySelector('input[name="on_medication"]').checked) {
+                    doctorReview.push('Currently on medication, a doctor will review the case to determine if the medication affects eligibility.');
+                }
+                if (form.querySelector('input[name="recent_surgery"]').checked) {
+                    doctorReview.push('Recent surgery - may affect donation eligibility depending on type and recovery time.');
+                }
+                if (form.querySelector('input[name="recent_vaccine"]').checked) {
+                    doctorReview.push('Recent vaccine - deferral period may apply depending on vaccine type.');
+                }
+                if (form.querySelector('input[name="recent_travel"]').checked) {
+                    doctorReview.push('Recent travel abroad - travel history has been noted and will be reviewed by a doctor before donation day.');
+                }
+                if (form.querySelector('input[name="recent_tattoo"]').checked) {
+                    doctorReview.push('Recent tattoo or piercing - a 6-month waiting period applies.');
+                }
+                if (form.querySelector('input[name="recent_blood_transfusion"]').checked) {
+                    hardStops.push('Recent blood transfusion recorded - must wait minimum deferral period before donating.');
+                }
+
+                resultBox.classList.remove('good', 'bad');
+                if (hardStops.length > 0) {
+                    if (daysUntilEligible <= 0 && lastDonationDate) {
+                        daysUntilEligible = 1;
+                    }
+                    resultBox.classList.add('bad');
+                    resultTitle.textContent = 'Not Recommended Now';
+                    resultDescription.textContent = 'Donation is not recommended at this time based on your answers.';
+                    resultReasons.textContent = buildReasonsText(hardStops);
+                } else if (doctorReview.length > 0) {
+                    resultBox.classList.add('bad');
+                    resultTitle.textContent = 'Needs Doctor Review';
+                    resultDescription.textContent = 'A doctor should review your case before donation.';
+                    resultReasons.textContent = buildReasonsText(doctorReview);
+                } else {
+                    resultBox.classList.add('good');
+                    resultTitle.textContent = 'Likely Eligible';
+                    resultDescription.textContent = 'No major blockers detected from your answers.';
+                    resultReasons.textContent = 'You can proceed to donation center screening.';
+                }
+
+                submitBtn.disabled = false;
+            }
+
+            if (openCheckBtn) {
+                openCheckBtn.addEventListener('click', function () {
+                    form.reset();
+                    title.textContent = 'Donor Eligibility Check';
+                    submitBtn.textContent = 'Save Result';
+                    submitBtn.disabled = true;
+
+                    const lastDonation = openCheckBtn.dataset.lastDonation || '';
+                    if (lastDonation) {
+                        lastDonationInput.value = lastDonation;
+                    }
+
+                    resultBox.classList.remove('good', 'bad');
+                    resultTitle.textContent = 'No calculation yet';
+                    resultDescription.textContent = 'Click Calculate to preview your result before saving.';
+                    resultReasons.textContent = 'No reasons to display yet.';
+                    clearDonorFormErrors();
+                    openModal();
+                });
+            }
+
+            if (quickCheckLink) {
+                quickCheckLink.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    if (openCheckBtn) {
+                        openCheckBtn.click();
+                    } else {
+                        openModal();
+                    }
+                });
+            }
+
+            if (calcBtn) {
+                calcBtn.addEventListener('click', calculate);
+            }
+
+            form.querySelectorAll('input, select, textarea').forEach(function (el) {
+                el.addEventListener('change', disableSaveUntilRecalc);
+                el.addEventListener('input', disableSaveUntilRecalc);
+            });
+
+            ageInput.addEventListener('input', function () { clearFieldError(ageInput, 'e_age_error'); });
+            dateOfBirthInput.addEventListener('input', function () { clearFieldError(dateOfBirthInput, 'e_date_of_birth_error'); });
+            weightInput.addEventListener('input', function () { clearFieldError(weightInput, 'e_weight_error'); });
+            lastDonationInput.addEventListener('input', function () { clearFieldError(lastDonationInput, 'e_last_donation_date_error'); });
+        } else {
+            const fieldUserId = document.getElementById('fieldUserId');
+            const inputUserId = document.getElementById('e_user_id');
+            const bloodTypeInput = document.getElementById('e_blood_type_cache');
+            const daysInput = document.getElementById('e_days_until_eligible');
+            const daysField = document.getElementById('e_days_field');
+            const statusModeInput = document.getElementById('e_status_mode');
+            const statusInput = document.getElementById('e_is_currently_eligible');
+
+            function clearFieldError(input, errorId) {
+                const field = input ? input.closest('.field') : null;
+                const errorEl = document.getElementById(errorId);
+                if (field) {
+                    field.classList.remove('invalid');
+                }
+                if (errorEl) {
+                    errorEl.textContent = '';
+                }
+            }
+
+            function setFieldError(input, errorId, message) {
+                const field = input ? input.closest('.field') : null;
+                const errorEl = document.getElementById(errorId);
+                if (field) {
+                    field.classList.add('invalid');
+                }
+                if (errorEl) {
+                    errorEl.textContent = message;
+                }
+            }
+
+            function clearAdminErrors() {
+                clearFieldError(bloodTypeInput, 'e_blood_type_cache_error');
+                clearFieldError(daysInput, 'e_days_until_eligible_error');
+            }
+
+            function syncStatusFields() {
+                const mode = statusModeInput.value;
+                if (mode === 'eligible') {
+                    statusInput.value = '1';
+                    daysField.style.display = 'none';
+                    daysInput.required = false;
+                    daysInput.value = '0';
+                } else if (mode === 'temporarily_ineligible') {
+                    statusInput.value = '0';
+                    daysField.style.display = '';
+                    daysInput.required = true;
+                } else {
+                    statusInput.value = '0';
+                    daysField.style.display = 'none';
+                    daysInput.required = false;
+                    daysInput.value = '0';
+                }
+            }
+
+            function resetCreateMode() {
+                form.reset();
+                form.action = '{{ path('dashboard_donor_eligibility_create') }}';
+                title.textContent = 'Add Eligibility';
+                submitBtn.textContent = 'Create Record';
+                fieldUserId.style.display = '';
+                inputUserId.required = true;
+                inputUserId.readOnly = false;
+                statusModeInput.value = 'eligible';
+                syncStatusFields();
+            }
+
+            function setEditMode(data) {
+                form.action = '{{ path('dashboard_donor_eligibility_update', { userId: '__ID__' }) }}'.replace('__ID__', data.userId);
+                title.textContent = 'Modify Eligibility';
+                submitBtn.textContent = 'Save Changes';
+
+                inputUserId.value = data.userId || '';
+                inputUserId.required = false;
+                inputUserId.readOnly = true;
+                fieldUserId.style.display = '';
+
+                document.getElementById('e_blood_type_cache').value = data.bloodTypeCache || '';
+                const isCurrentlyEligible = data.isCurrentlyEligible === '1';
+                const daysUntilEligible = parseInt(data.daysUntilEligible || '0', 10);
+                if (isCurrentlyEligible) {
+                    statusModeInput.value = 'eligible';
+                } else if (!Number.isNaN(daysUntilEligible) && daysUntilEligible > 0) {
+                    statusModeInput.value = 'temporarily_ineligible';
+                } else {
+                    statusModeInput.value = 'ineligible';
+                }
+                document.getElementById('e_days_until_eligible').value = data.daysUntilEligible || '0';
+                document.getElementById('e_last_calculated_at').value = data.lastCalculatedAt || '';
+                document.getElementById('e_city').value = data.city || '';
+                document.getElementById('e_eligibility_details').value = data.eligibilityDetails || '';
+                syncStatusFields();
+            }
+
+            const openAddBtn = document.getElementById('openEligibilityAdd');
+            if (openAddBtn) {
+                openAddBtn.addEventListener('click', function () {
+                    resetCreateMode();
+                    clearAdminErrors();
+                    openModal();
+                });
+            }
+
+            document.querySelectorAll('.open-eligibility-edit').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    setEditMode({
+                        userId: btn.dataset.userId || '',
+                        bloodTypeCache: btn.dataset.bloodTypeCache || '',
+                        isCurrentlyEligible: btn.dataset.isCurrentlyEligible || '1',
+                        daysUntilEligible: btn.dataset.daysUntilEligible || '',
+                        lastCalculatedAt: btn.dataset.lastCalculatedAt || '',
+                        city: btn.dataset.city || '',
+                        eligibilityDetails: btn.dataset.eligibilityDetails || ''
+                    });
+                    clearAdminErrors();
+                    openModal();
+                });
+            });
+
+            form.addEventListener('submit', function (e) {
+                clearAdminErrors();
+
+                const bloodType = (bloodTypeInput.value || '').trim().toUpperCase();
+                const daysRaw = (daysInput.value || '').trim();
+                const mode = statusModeInput.value;
+                let hasErrors = false;
+
+                if (bloodType !== '' && !/^(A|B|AB|O)[+-]$/.test(bloodType)) {
+                    setFieldError(bloodTypeInput, 'e_blood_type_cache_error', 'Expected format: A+, A-, B+, B-, AB+, AB-, O+ or O-.');
+                    hasErrors = true;
+                }
+
+                if (mode === 'temporarily_ineligible') {
+                    if (daysRaw === '') {
+                        setFieldError(daysInput, 'e_days_until_eligible_error', 'Days until eligible is required for temporary ineligibility.');
+                        hasErrors = true;
+                    } else if (!/^\d+$/.test(daysRaw)) {
+                        setFieldError(daysInput, 'e_days_until_eligible_error', 'Please enter a valid integer.');
+                        hasErrors = true;
+                    } else {
+                        const days = parseInt(daysRaw, 10);
+                        if (days <= 0) {
+                            setFieldError(daysInput, 'e_days_until_eligible_error', 'Value must be greater than 0 for temporary ineligibility.');
+                            hasErrors = true;
+                        }
+                    }
+                } else {
+                    daysInput.value = '0';
+                }
+
+                statusInput.value = mode === 'eligible' ? '1' : '0';
+
+                if (hasErrors) {
+                    e.preventDefault();
+                }
+            });
+
+            bloodTypeInput.addEventListener('input', function () { clearFieldError(bloodTypeInput, 'e_blood_type_cache_error'); });
+            daysInput.addEventListener('input', function () { clearFieldError(daysInput, 'e_days_until_eligible_error'); });
+            statusModeInput.addEventListener('change', function () {
+                clearFieldError(daysInput, 'e_days_until_eligible_error');
+                syncStatusFields();
+            });
+            syncStatusFields();
+        }
+
+        closeBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) {
+                closeModal();
+            }
+        });
+    })();
+</script>
+{% endblock %}

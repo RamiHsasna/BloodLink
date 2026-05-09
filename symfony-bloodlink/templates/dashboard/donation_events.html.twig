@@ -1,0 +1,1042 @@
+{% set page_title = 'Donation Events' %}
+{% set page_description = 'Manage blood drive events and track collections. Statuses update automatically based on date.' %}
+{% extends 'dashboard/layouts/back_office.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+    :root {
+        --primary: #dc2626; --primary-dark: #991b1b;
+        --success: #10b981; --warning: #f59e0b; --info: #3b82f6; --danger: #ef4444;
+        --gray-50:#f9fafb; --gray-100:#f3f4f6; --gray-200:#e5e7eb; --gray-300:#d1d5db;
+        --gray-400:#9ca3af; --gray-500:#6b7280; --gray-600:#4b5563; --gray-700:#374151;
+        --gray-800:#1f2937; --gray-900:#111827;
+    }
+    .add-btn { background: var(--primary); color: white; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .3s; box-shadow: 0 2px 8px rgba(220,38,38,.2); font-family: inherit; }
+    .add-btn:hover { background: var(--primary-dark); transform: translateY(-2px); }
+    .flash { padding: 14px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; display: flex; align-items: center; gap: 10px; }
+    .flash.success { background: #d1fae5; color: #065f46; border-left: 4px solid var(--success); }
+    .flash.error   { background: #fee2e2; color: #991b1b; border-left: 4px solid var(--danger); }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap: 16px; margin-bottom: 32px; }
+    .stat-card { background: white; border-radius: 12px; padding: 20px; border: 1px solid var(--gray-200); box-shadow: 0 1px 3px rgba(0,0,0,.05); transition: all .2s; }
+    .stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+    .stat-icon { font-size: 22px; margin-bottom: 8px; }
+    .stat-label { font-size: 11px; font-weight: 600; color: var(--gray-600); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+    .stat-value { font-size: 28px; font-weight: 700; color: var(--gray-900); }
+
+    .filters-section { background: white; border-radius: 12px; padding: 20px; margin-bottom: 32px; border: 1px solid var(--gray-200); }
+    .filters { display: grid; grid-template-columns: 1fr 200px 120px; gap: 12px; align-items: end; }
+    .filter-input { height: 40px; border: 1px solid var(--gray-300); border-radius: 8px; padding: 0 12px; font-size: 14px; color: var(--gray-900); font-family: inherit; }
+    .filter-input:focus { outline: none; border-color: var(--primary); }
+    .search-btn { height: 40px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; font-family: inherit; }
+    .search-btn:hover { background: var(--primary-dark); }
+
+    .events-container { display: grid; gap: 16px; }
+    .event-card { background: white; border: 1px solid var(--gray-200); border-radius: 12px; padding: 24px; transition: all .2s; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+    .event-card:hover { box-shadow: 0 8px 16px rgba(0,0,0,.08); }
+    .event-card.cancelled-card { border-color: #fca5a5; background: #fff5f5; }
+    .event-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
+    .event-title-section h3 { font-size: 18px; font-weight: 700; color: var(--gray-900); margin-bottom: 4px; }
+    .event-dates { font-size: 13px; color: var(--gray-600); }
+    .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+    .badge { display: inline-block; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; white-space: nowrap; }
+    .badge-PLANNED   { background: #fef3c7; color: #92400e; }
+    .badge-ACTIVE    { background: #d1fae5; color: #065f46; }
+    .badge-COMPLETED { background: #e5e7eb; color: #374151; }
+    .badge-CANCELLED { background: #fee2e2; color: #991b1b; }
+
+    .event-details { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 16px; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--gray-200); }
+    .detail-label { font-size: 11px; font-weight: 700; color: var(--gray-600); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+    .detail-value { font-size: 14px; color: var(--gray-900); font-weight: 500; }
+
+    .cancellation-banner { background: #fee2e2; border-left: 4px solid #dc2626; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px; color: #991b1b; }
+    .cancellation-banner strong { display: block; margin-bottom: 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+
+    .progress-container { margin-bottom: 16px; }
+    .progress-label { font-size: 12px; color: var(--gray-600); margin-bottom: 6px; display: flex; justify-content: space-between; }
+    .progress-bar { height: 8px; background: var(--gray-200); border-radius: 4px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg,var(--success),var(--primary)); border-radius: 4px; }
+
+    .event-description { background: var(--gray-50); border-left: 3px solid var(--primary); padding: 12px 16px; border-radius: 6px; font-size: 13px; color: var(--gray-700); line-height: 1.6; margin-bottom: 16px; }
+
+    .event-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-action { flex: 1; min-width: 80px; padding: 10px 12px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 6px; font-family: inherit; }
+    .btn-edit   { background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; }
+    .btn-edit:hover { background: #ddd6fe; }
+    .btn-map    { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .btn-map:hover { background: #bae6fd; }
+    .btn-view   { background: #ecfeff; color: #0f766e; border: 1px solid #99f6e4; }
+    .btn-view:hover { background: #ccfbf1; }
+    .btn-cancel { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+    .btn-cancel:hover { background: #ffedd5; }
+    .btn-delete { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .btn-delete:hover { background: #fecaca; }
+
+    .participants-meta { margin-top: 8px; font-size: 12px; color: var(--gray-600); }
+    .participants-table { width: 100%; border-collapse: collapse; }
+    .participants-table th, .participants-table td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--gray-200); font-size: 13px; }
+    .participants-table th { font-size: 11px; color: var(--gray-600); text-transform: uppercase; letter-spacing: .05em; }
+    .participants-empty { padding: 20px 0; color: var(--gray-600); font-size: 14px; text-align: center; }
+
+    .empty-state { text-align: center; padding: 60px 20px; background: white; border: 2px dashed var(--gray-300); border-radius: 12px; }
+    .empty-state-icon { font-size: 48px; margin-bottom: 16px; opacity: .5; }
+    .empty-state h3 { font-size: 18px; font-weight: 600; color: var(--gray-900); margin-bottom: 8px; }
+    .empty-state p { font-size: 14px; color: var(--gray-600); }
+
+    /* Modals */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+    .modal-overlay.open { display: flex; }
+    .modal { width: min(600px,96vw); max-height: 90vh; overflow-y: auto; background: white; border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.15); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 24px; border-bottom: 1px solid var(--gray-200); }
+    .modal-header h2 { font-size: 20px; font-weight: 700; color: var(--gray-900); margin: 0; }
+    .modal-close { background: none; border: none; font-size: 22px; color: var(--gray-500); cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; }
+    .modal-close:hover { background: var(--gray-100); }
+    .modal-body { padding: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .modal-body .full-width { grid-column: 1 / -1; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-label { font-size: 12px; font-weight: 700; color: var(--gray-700); text-transform: uppercase; letter-spacing: .5px; }
+    .form-input, .form-select, .form-textarea { height: 40px; border: 1px solid var(--gray-300); border-radius: 8px; padding: 0 12px; font-size: 14px; color: var(--gray-900); font-family: inherit; background: white; }
+    .form-textarea { height: auto; min-height: 90px; padding: 10px 12px; resize: vertical; }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(220,38,38,.06); }
+    .form-input.error { border-color: var(--danger); }
+    .form-hint { font-size: 11px; color: var(--gray-500); }
+    .form-error { font-size: 11px; color: var(--danger); display: none; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 20px 24px; border-top: 1px solid var(--gray-200); background: var(--gray-50); border-radius: 0 0 14px 14px; }
+    .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .btn-secondary { background: var(--gray-200); color: var(--gray-900); }
+    .btn-secondary:hover { background: var(--gray-300); }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-warning { background: #f97316; color: white; }
+    .btn-warning:hover { background: #ea580c; }
+
+    /* Blood type checkboxes */
+    .blood-type-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+    .bt-checkbox { display: none; }
+    .bt-label { display: flex; align-items: center; justify-content: center; padding: 8px 6px; border: 2px solid var(--gray-200); border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .2s; text-align: center; }
+    .bt-checkbox:checked + .bt-label { border-color: var(--primary); background: #fee2e2; color: var(--primary-dark); }
+    .bt-label:hover { border-color: var(--gray-400); background: var(--gray-50); }
+
+    /* Map modal */
+    #map-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 20px; }
+    #map-modal-overlay.open { display: flex; }
+    #map-modal { width: min(700px,96vw); background: white; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
+    #map-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #e5e7eb; }
+    #map-modal-header h3 { margin: 0; font-size: 17px; color: #111827; }
+    #map-modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #6b7280; padding: 4px 8px; border-radius: 6px; }
+    #map-modal-close:hover { background: #f3f4f6; }
+    #map-container { height: 420px; width: 100%; }
+    #map-not-found { display: none; padding: 40px 20px; text-align: center; color: #6b7280; font-size: 14px; }
+    #map-location-label { padding: 10px 20px; font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; background: #f9fafb; }
+</style>
+{% endblock %}
+
+{% block page_actions %}
+    <button type="button" class="add-btn" onclick="openCreate()">+ Add Event</button>
+{% endblock %}
+
+{% block module_content %}
+
+{% for msg in app.flashes('success') %}<div class="flash success">✓ {{ msg }}</div>{% endfor %}
+{% for msg in app.flashes('error') %}<div class="flash error">✕ {{ msg }}</div>{% endfor %}
+
+<!-- Stats -->
+<div class="stats-grid">
+    <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-label">Total Events</div><div class="stat-value">{{ stats.total_events }}</div></div>
+    <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-label">Planned</div><div class="stat-value">{{ stats.planned }}</div></div>
+    <div class="stat-card"><div class="stat-icon">▶</div><div class="stat-label">Active</div><div class="stat-value">{{ stats.active }}</div></div>
+    <div class="stat-card"><div class="stat-icon">✓</div><div class="stat-label">Completed</div><div class="stat-value">{{ stats.completed }}</div></div>
+    <div class="stat-card"><div class="stat-icon">🩸</div><div class="stat-label">Total Litres</div><div class="stat-value">{{ stats.total_litres|number_format(2) }}</div></div>
+</div>
+
+<!-- Filters -->
+<div class="filters-section">
+    <form class="filters" method="GET" action="{{ path('donation_events_index') }}">
+        <input type="text" class="filter-input" name="q" value="{{ search }}" placeholder="Search by name, location...">
+        <select class="filter-input" name="status">
+            <option value="">All Statuses</option>
+            <option value="PLANNED"   {% if status_filter == 'PLANNED'   %}selected{% endif %}>Planned</option>
+            <option value="ACTIVE"    {% if status_filter == 'ACTIVE'    %}selected{% endif %}>Active</option>
+            <option value="COMPLETED" {% if status_filter == 'COMPLETED' %}selected{% endif %}>Completed</option>
+            <option value="CANCELLED" {% if status_filter == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+        </select>
+        <button type="submit" class="search-btn">Search</button>
+    </form>
+</div>
+
+<!-- Events -->
+{% if events %}
+<div class="events-container">
+    {% for event in events %}
+    {% set pct = event.target_collection_units > 0 ? ((event.total_litres_collected / event.target_collection_units) * 100) : 0 %}
+    <div class="event-card {% if event.status == 'CANCELLED' %}cancelled-card{% endif %}">
+        <div class="event-header">
+            <div class="event-title-section">
+                <h3>{{ event.name }}</h3>
+                <p class="event-dates">📅 {{ event.start_date|date('M d, Y H:i') }} → {{ event.end_date|date('M d, Y H:i') }}</p>
+            </div>
+            <div class="badges">
+                <span class="badge badge-{{ event.status }}">
+                    {% if event.status == 'PLANNED' %}📅 Planned
+                    {% elseif event.status == 'ACTIVE' %}▶ Active
+                    {% elseif event.status == 'COMPLETED' %}✓ Completed
+                    {% else %}✕ Cancelled{% endif %}
+                </span>
+            </div>
+        </div>
+
+        {% if event.status == 'CANCELLED' and event.cancellation_reason %}
+        <div class="cancellation-banner">
+            <strong>⚠ Reason for Cancellation</strong>
+            {{ event.cancellation_reason }}
+        </div>
+        {% endif %}
+
+        <div class="event-details">
+            <div>
+                <div class="detail-label">📍 Location</div>
+                <div class="detail-value">{{ event.location ?? 'N/A' }}</div>
+            </div>
+            <div>
+                <div class="detail-label">🏥 Hospital</div>
+                <div class="detail-value">{{ event.hospital_name ?? 'N/A' }}</div>
+            </div>
+            <div>
+                <div class="detail-label">💉 Donations</div>
+                <div class="detail-value">{{ event.total_donations }}</div>
+            </div>
+            <div>
+                <div class="detail-label">👥 Participants</div>
+                <div class="detail-value">{{ event.participants_count }}</div>
+            </div>
+            <div>
+                <div class="detail-label">🎯 Target Types</div>
+                <div class="detail-value">{{ event.target_blood_types ?? 'All types' }}</div>
+            </div>
+        </div>
+
+        {% if event.target_collection_units %}
+        <div class="progress-container">
+            <div class="progress-label">
+                <span>🩸 Collection Progress (Litres)</span>
+                <span>{{ event.total_litres_collected|number_format(2) }}L / {{ event.target_collection_units }}L — {{ pct > 100 ? 100 : pct|round(0) }}%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width:{{ pct > 100 ? 100 : pct|round(1) }}%"></div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if event.description %}
+        <div class="event-description">{{ event.description|slice(0,200) }}{% if event.description|length > 200 %}...{% endif %}</div>
+        {% endif %}
+
+        <div class="event-actions">
+            <button class="btn-action btn-edit" type="button" onclick="openEdit({{ event|json_encode }})">✎ Edit</button>
+            <button class="btn-action btn-map" type="button"
+                onclick="openMap('{{ event.event_id }}', '{{ event.name|e('js') }}', '{{ (event.location ?? '')|e('js') }}')">
+                📍 Map
+            </button>
+            <button class="btn-action btn-view" type="button"
+                onclick="openParticipants('{{ event.event_id }}', '{{ event.name|e('js') }}')">
+                👥 Participants
+            </button>
+            {% if event.status != 'CANCELLED' and event.status != 'COMPLETED' %}
+            <button class="btn-action btn-cancel" type="button"
+                onclick="openCancel('{{ event.event_id }}', '{{ event.name|e('js') }}')">
+                ✕ Cancel
+            </button>
+            {% endif %}
+            <form method="POST" action="{{ path('donation_events_delete', {id: event.event_id}) }}" onsubmit="return confirm('Delete this event?');" style="flex:1;">
+                <button class="btn-action btn-delete" style="width:100%;" type="submit">🗑 Delete</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-state-icon">📭</div>
+    <h3>No Events Found</h3>
+    <p>No donation events match your criteria.</p>
+</div>
+{% endif %}
+
+<!-- MAP MODAL -->
+<div id="map-modal-overlay">
+    <div id="map-modal">
+        <div id="map-modal-header">
+            <h3 id="map-modal-title">📍 Event Location</h3>
+            <button id="map-modal-close" onclick="closeMap()" type="button">✕</button>
+        </div>
+        <div id="map-container"></div>
+        <div id="map-not-found">⚠️ Location not found.</div>
+        <div id="map-location-label"></div>
+    </div>
+</div>
+
+<!-- PARTICIPANTS MODAL -->
+<div class="modal-overlay" id="modal-participants">
+    <div class="modal" style="width:min(900px,96vw)">
+        <div class="modal-header">
+            <h2>👥 Participants - <span id="participants-event-name"></span></h2>
+            <button class="modal-close" onclick="closeParticipants()" type="button">✕</button>
+        </div>
+        <div class="modal-body" style="grid-template-columns:1fr;">
+            <p class="participants-meta" id="participants-count">Loading...</p>
+            <div style="overflow:auto;">
+                <table class="participants-table" id="participants-table" style="display:none;">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Blood Type</th>
+                            <th>Eligibility Status</th>
+                            <th>Valid Until</th>
+                            <th>Joined At</th>
+                            <th>Report</th>
+                        </tr>
+                    </thead>
+                    <tbody id="participants-body"></tbody>
+                </table>
+                <div class="participants-empty" id="participants-empty" style="display:none;">No participants yet for this event.</div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeParticipants()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ELIGIBILITY REPORT MODAL -->
+<div class="modal-overlay" id="modal-report">
+    <div class="modal" style="width:min(700px,96vw);max-height:90vh;overflow-y:auto;">
+        <div class="modal-header">
+            <h2>📋 Eligibility Report - <span id="report-donor-name"></span></h2>
+            <button class="modal-close" onclick="closeReportModal()" type="button">✕</button>
+        </div>
+        <div class="modal-body" style="grid-template-columns:1fr;">
+            <div style="padding:0;">
+                <div style="background:#f3f4f6;padding:16px;border-radius:8px;margin-bottom:16px;">
+                    <p style="font-size:13px;color:var(--gray-600);margin:0 0 8px;font-weight:700;text-transform:uppercase;">Status</p>
+                    <p style="margin:0;font-size:16px;font-weight:700;"><span id="report-status" style="padding:4px 8px;border-radius:4px;color:white;"></span></p>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                    <div>
+                        <p style="font-size:13px;color:var(--gray-600);margin:0 0 6px;font-weight:700;text-transform:uppercase;">Blood Type</p>
+                        <p style="margin:0;font-size:14px;" id="report-blood-type">N/A</p>
+                    </div>
+                    <div>
+                        <p style="font-size:13px;color:var(--gray-600);margin:0 0 6px;font-weight:700;text-transform:uppercase;">Valid Until</p>
+                        <p style="margin:0;font-size:14px;" id="report-valid-until">N/A</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <p style="font-size:13px;color:var(--gray-600);margin:0 0 6px;font-weight:700;text-transform:uppercase;">Questionnaire</p>
+                    <div id="report-questionnaire" style="background:#f9fafb;padding:12px;border-radius:6px;font-size:13px;min-height:40px;border-left:3px solid #d1d5db;">No questionnaire data</div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <p style="font-size:13px;color:var(--gray-600);margin:0 0 6px;font-weight:700;text-transform:uppercase;">Doctor Notes</p>
+                    <div id="report-doctor-notes" style="background:#f9fafb;padding:12px;border-radius:6px;font-size:13px;min-height:40px;border-left:3px solid #d1d5db;">No doctor notes</div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <p style="font-size:13px;color:var(--gray-600);margin:0 0 6px;font-weight:700;text-transform:uppercase;">Disqualifying Reasons</p>
+                    <div id="report-disqualifying" style="background:#f9fafb;padding:12px;border-radius:6px;font-size:13px;min-height:40px;border-left:3px solid #d1d5db;">None</div>
+                </div>
+
+                <div>
+                    <p style="font-size:13px;color:var(--gray-600);margin:0 0 6px;font-weight:700;text-transform:uppercase;">QR Token</p>
+                    <div style="background:#f9fafb;padding:12px;border-radius:6px;font-size:12px;word-break:break-all;font-family:monospace;" id="report-qr-token">-</div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeReportModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ELIGIBILITY EDIT MODAL -->
+<div class="modal-overlay" id="modal-eligibility-edit">
+    <div class="modal" style="width:min(600px,96vw)">
+        <div class="modal-header">
+            <h2>📋 Modify Eligibility - <span id="edit-elig-donor-name"></span></h2>
+            <button class="modal-close" onclick="closeEligibilityEdit()" type="button">✕</button>
+        </div>
+        <form method="POST" id="eligibility-edit-form" action="" onsubmit="return prepareEligibilitySubmit(event)">
+            <div class="modal-body" style="grid-template-columns:1fr;">
+                <div class="form-group full-width" style="display:none;">
+                    <label class="form-label">User ID</label>
+                    <input type="text" class="form-input" id="edit-elig-user-id" readonly>
+                </div>
+                <input type="hidden" id="edit-elig-is-currently-eligible" name="is_currently_eligible">
+                <div class="form-group">
+                    <label class="form-label">Blood Type</label>
+                    <input type="text" class="form-input" id="edit-elig-blood-type" name="blood_type_cache" placeholder="e.g. O+">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Eligibility Status</label>
+                    <select class="form-select" id="edit-elig-status" onchange="toggleDaysField()">
+                        <option value="eligible">✓ Eligible</option>
+                        <option value="temporarily_ineligible">⏳ Temporarily Not Eligible</option>
+                        <option value="ineligible">✕ Not Eligible</option>
+                    </select>
+                </div>
+                <div class="form-group" id="days-field" style="display:none;">
+                    <label class="form-label">Days Until Eligible *</label>
+                    <input type="number" class="form-input" id="edit-elig-days" name="days_until_eligible" placeholder="Number of days" min="0">
+                    <span class="form-hint">Required for temporary ineligibility</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Last Calculated Date</label>
+                    <input type="date" class="form-input" id="edit-elig-date" name="last_calculated_at">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">City</label>
+                    <input type="text" class="form-input" id="edit-elig-city" name="city" placeholder="e.g. Tunis">
+                </div>
+                <div class="form-group full-width">
+                    <label class="form-label">Eligibility Details</label>
+                    <textarea class="form-textarea" id="edit-elig-details" name="eligibility_details" placeholder="Medical notes..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEligibilityEdit()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- CANCEL MODAL -->
+<div class="modal-overlay" id="modal-cancel">
+    <div class="modal" style="width:min(500px,96vw)">
+        <div class="modal-header">
+            <h2>✕ Cancel Event</h2>
+            <button class="modal-close" onclick="closeCancel()" type="button">✕</button>
+        </div>
+        <form method="POST" id="cancel-form" action="">
+            <div class="modal-body" style="grid-template-columns:1fr;">
+                <div class="form-group full-width">
+                    <p style="font-size:14px;color:var(--gray-600);margin:0 0 16px;">
+                        Are you sure you want to cancel <strong id="cancel-event-name"></strong>?<br>
+                        This action cannot be undone. Please provide a reason.
+                    </p>
+                    <label class="form-label">Cancellation Reason *</label>
+                    <textarea class="form-textarea" name="cancellation_reason" id="cancel-reason" required
+                              placeholder="e.g. Insufficient donor registration, facility unavailable, emergency..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCancel()">No, Keep Event</button>
+                <button type="submit" class="btn btn-warning">Yes, Cancel Event</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- CREATE MODAL -->
+<div class="modal-overlay" id="modal-create">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>➕ New Donation Event</h2>
+            <button class="modal-close" onclick="closeCreate()" type="button">✕</button>
+        </div>
+        <form method="POST" action="{{ path('donation_events_create') }}" id="create-form" novalidate>
+            <div class="modal-body">
+                <div class="form-group full-width">
+                    <label class="form-label">Event Name *</label>
+                    <input type="text" class="form-input" name="name" required placeholder="e.g. Winter Blood Drive 2026">
+                </div>
+                <div class="form-group full-width">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-textarea" name="description" placeholder="Event details..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Start Date & Time *</label>
+                    <input type="datetime-local" class="form-input" name="start_date" id="c-start" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">End Date & Time *</label>
+                    <input type="datetime-local" class="form-input" name="end_date" id="c-end" required>
+                    <span class="form-error" id="c-end-error">End date must be on or after start date.</span>
+                </div>
+                <div class="form-group full-width" {% if user_type == 'HOSPITAL_STAFF' %}style="display:none;"{% endif %}>
+                    <label class="form-label">Hospital *</label>
+                    <select class="form-select" name="hospital_id" id="c-hospital" required>
+                        <option value="">-- Select Hospital --</option>
+                        {% for h in hospitals %}
+                            <option value="{{ h.hospital_id }}">{{ h.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="form-hint">Assign this event to a specific hospital.</span>
+                </div>
+                <div class="form-group full-width">
+                    <label class="form-label">Location * (for map)</label>
+                    <input type="text" class="form-input" name="location" required placeholder="e.g. Hôpital Fattouma Bourguiba, Monastir">
+                    <span class="form-hint">📍 Format: Hôpital X, Ville — or — Banc du sang X, Ville</span>
+                </div>
+                <div class="form-group full-width">
+                    <label class="form-label">Target Blood Types</label>
+                    <div class="blood-type-grid">
+                        {% set btypes = ['O+','O-','A+','A-','B+','B-','AB+','AB-'] %}
+                        {% for bt in btypes %}
+                        <div>
+                            <input type="checkbox" class="bt-checkbox" name="blood_types[]" value="{{ bt }}" id="c-bt-{{ bt|replace({'+':'plus','-':'minus'}) }}">
+                            <label class="bt-label" for="c-bt-{{ bt|replace({'+':'plus','-':'minus'}) }}">{{ bt }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <input type="hidden" name="target_blood_types" id="c-bt-hidden">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Target Collection (Litres)</label>
+                    <input type="number" class="form-input" name="target_collection_units" min="0" step="0.1" placeholder="e.g. 50.0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCreate()">Cancel</button>
+                <button type="submit" class="btn btn-primary" onclick="syncBloodTypes('c')">Create Event</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="modal-edit">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>✏️ Edit Donation Event</h2>
+            <button class="modal-close" onclick="closeEdit()" type="button">✕</button>
+        </div>
+        <form method="POST" id="edit-form" action="" novalidate>
+            <div class="modal-body">
+                <div class="form-group full-width">
+                    <label class="form-label">Event Name *</label>
+                    <input type="text" class="form-input" id="edit-name" name="name" required>
+                </div>
+                <div class="form-group full-width">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-textarea" id="edit-description" name="description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Start Date & Time *</label>
+                    <input type="datetime-local" class="form-input" id="edit-start" name="start_date" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">End Date & Time *</label>
+                    <input type="datetime-local" class="form-input" id="edit-end" name="end_date" required>
+                    <span class="form-error" id="e-end-error">End date must be on or after start date.</span>
+                </div>
+                <div class="form-group full-width" {% if user_type == 'HOSPITAL_STAFF' %}style="display:none;"{% endif %}>
+                    <label class="form-label">Hospital *</label>
+                    <select class="form-select" id="edit-hospital" name="hospital_id" required>
+                        <option value="">-- Select Hospital --</option>
+                        {% for h in hospitals %}
+                            <option value="{{ h.hospital_id }}">{{ h.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group full-width">
+                    <label class="form-label">Location * (for map)</label>
+                    <input type="text" class="form-input" id="edit-location" name="location" required
+                           placeholder="e.g. Hôpital Fattouma Bourguiba, Monastir">
+                    <span class="form-hint">📍 Format: Hôpital X, Ville — or — Banc du sang X, Ville</span>
+                </div>
+                <div class="form-group full-width">
+                    <label class="form-label">Target Blood Types</label>
+                    <div class="blood-type-grid">
+                        {% set btypes = ['O+','O-','A+','A-','B+','B-','AB+','AB-'] %}
+                        {% for bt in btypes %}
+                        <div>
+                            <input type="checkbox" class="bt-checkbox" name="blood_types[]" value="{{ bt }}" id="e-bt-{{ bt|replace({'+':'plus','-':'minus'}) }}">
+                            <label class="bt-label" for="e-bt-{{ bt|replace({'+':'plus','-':'minus'}) }}">{{ bt }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <input type="hidden" name="target_blood_types" id="e-bt-hidden">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Target Collection (Litres)</label>
+                    <input type="number" class="form-input" id="edit-target" name="target_collection_units" min="0" step="0.1">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEdit()">Cancel</button>
+                <button type="submit" class="btn btn-primary" onclick="syncBloodTypes('e')">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// ── Blood type sync ───────────────────────────────────────────────────────────
+function syncBloodTypes(prefix) {
+    const checks = document.querySelectorAll(`input[name="blood_types[]"]:checked`);
+    const hidden = document.getElementById(prefix === 'c' ? 'c-bt-hidden' : 'e-bt-hidden');
+    const vals = Array.from(checks).filter(c => c.id.startsWith(prefix + '-bt-')).map(c => c.value);
+    hidden.value = vals.join(', ');
+}
+
+// ── Date validation ───────────────────────────────────────────────────────────
+function validateDates(startId, endId, errorId) {
+    const s = document.getElementById(startId).value;
+    const e = document.getElementById(endId).value;
+    const err = document.getElementById(errorId);
+    if (s && e) {
+        const diff = (new Date(e) - new Date(s)) / 1000;
+        if (diff < 43200) {
+            document.getElementById(endId).classList.add('error');
+            err.textContent = '⚠ Event must last at least 12 hours. Please choose a later end date.';
+            err.style.display = 'block';
+            return false;
+        }
+    } else if (s && !e) {
+        document.getElementById(endId).classList.add('error');
+        err.textContent = '⚠ Please select an end date and time.';
+        err.style.display = 'block';
+        return false;
+    }
+    document.getElementById(endId).classList.remove('error');
+    err.style.display = 'none';
+    return true;
+}
+
+// ── Create modal ──────────────────────────────────────────────────────────────
+function openCreate() {
+    // Reset form fields every time modal opens
+    document.getElementById('create-form').reset();
+    document.getElementById('c-start').value = '';
+    document.getElementById('c-end').value = '';
+    document.getElementById('c-start').min = todayStr;
+    document.getElementById('c-end').min = '';
+    document.getElementById('c-end-error').style.display = 'none';
+    document.getElementById('c-end').classList.remove('error');
+    // Uncheck all blood types
+    document.querySelectorAll('[id^="c-bt-"]').forEach(cb => { if(cb.type==='checkbox') cb.checked = false; });
+    document.getElementById('modal-create').classList.add('open');
+}
+function closeCreate() { document.getElementById('modal-create').classList.remove('open'); }
+document.getElementById('c-end').addEventListener('change', () => validateDates('c-start','c-end','c-end-error'));
+document.getElementById('create-form').addEventListener('submit', e => {
+    syncBloodTypes('c');
+    if (!validateDates('c-start','c-end','c-end-error')) e.preventDefault();
+});
+
+// ── Edit modal ────────────────────────────────────────────────────────────────
+function openEdit(ev) {
+    document.getElementById('edit-form').action = '/dashboard/donation-events/' + ev.event_id + '/edit';
+    document.getElementById('edit-name').value        = ev.name ?? '';
+    document.getElementById('edit-description').value = ev.description ?? '';
+    document.getElementById('edit-location').value    = ev.location ?? '';
+    document.getElementById('edit-target').value      = ev.target_collection_units ?? '';
+    document.getElementById('edit-hospital').value    = ev.hospital_id ?? '';
+    if (ev.start_date) document.getElementById('edit-start').value = ev.start_date.replace(' ','T').substring(0,16);
+    if (ev.end_date)   document.getElementById('edit-end').value   = ev.end_date.replace(' ','T').substring(0,16);
+
+    // Set blood type checkboxes
+    const selected = (ev.target_blood_types ?? '').split(',').map(s => s.trim());
+    document.querySelectorAll('[id^="e-bt-"]').forEach(cb => {
+        if (cb.type === 'checkbox') cb.checked = selected.includes(cb.value);
+    });
+
+    document.getElementById('modal-edit').classList.add('open');
+}
+function closeEdit() { document.getElementById('modal-edit').classList.remove('open'); }
+document.getElementById('edit-end').addEventListener('change', () => validateDates('edit-start','edit-end','e-end-error'));
+document.getElementById('edit-form').addEventListener('submit', e => {
+    syncBloodTypes('e');
+    if (!validateDates('edit-start','edit-end','e-end-error')) e.preventDefault();
+});
+
+// ── Cancel modal ──────────────────────────────────────────────────────────────
+function openCancel(eventId, eventName) {
+    document.getElementById('cancel-form').action = '/dashboard/donation-events/' + eventId + '/cancel';
+    document.getElementById('cancel-event-name').textContent = eventName;
+    document.getElementById('cancel-reason').value = '';
+    document.getElementById('modal-cancel').classList.add('open');
+}
+function closeCancel() { document.getElementById('modal-cancel').classList.remove('open'); }
+
+// ── Participants modal ───────────────────────────────────────────────────────
+async function openParticipants(eventId, eventName) {
+    document.getElementById('participants-event-name').textContent = eventName;
+    document.getElementById('participants-count').textContent = 'Loading participants...';
+    document.getElementById('participants-table').style.display = 'none';
+    document.getElementById('participants-empty').style.display = 'none';
+    document.getElementById('participants-body').innerHTML = '';
+    document.getElementById('modal-participants').classList.add('open');
+
+    try {
+        const response = await fetch('/dashboard/donation-events/' + eventId + '/participants', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+
+        if (!response.ok) {
+            let errorText = 'Could not load participants.';
+            try {
+                const err = await response.json();
+                if (err && err.error) {
+                    errorText = 'Could not load participants: ' + err.error;
+                }
+            } catch (_) {
+                // Keep default fallback message
+            }
+            document.getElementById('participants-count').textContent = errorText;
+            return;
+        }
+
+        const payload = await response.json();
+        const rows = payload.participants || [];
+        document.getElementById('participants-count').textContent = rows.length + ' participant(s)';
+
+        if (rows.length === 0) {
+            document.getElementById('participants-empty').style.display = 'block';
+            return;
+        }
+
+        const body = document.getElementById('participants-body');
+        rows.forEach((p) => {
+            const tr = document.createElement('tr');
+            const name = (p.first_name || '') + ' ' + (p.last_name || '');
+            const joinedAt = p.joined_at ? new Date(p.joined_at).toLocaleString() : 'N/A';
+            const eligStatus = p.eligibility_status || 'N/A';
+            const validUntil = p.valid_until ? new Date(p.valid_until).toLocaleDateString() : 'N/A';
+            const statusColor = (eligStatus === 'PENDING') ? '#f59e0b' : (eligStatus === 'ELIGIBLE' || eligStatus === 'APPROVED') ? '#10b981' : '#ef4444';
+            
+            // Add data attributes for eligibility data
+            tr.setAttribute('data-user-id', p.user_id || '');
+            tr.setAttribute('data-blood-type-cache', p.blood_type_cache || '');
+            tr.setAttribute('data-is-currently-eligible', p.is_currently_eligible ? '1' : '0');
+            tr.setAttribute('data-days-until-eligible', p.days_until_eligible || '');
+            tr.setAttribute('data-last-calculated-at', p.last_calculated_at ? new Date(p.last_calculated_at).toISOString().split('T')[0] : '');
+            tr.setAttribute('data-city', p.donor_city || '');
+            tr.setAttribute('data-eligibility-details', p.eligibility_details || '');
+            
+            tr.innerHTML = `
+                <td>${name.trim() || 'N/A'}</td>
+                <td>${p.email || 'N/A'}</td>
+                <td>${p.phone || 'N/A'}</td>
+                <td>${p.blood_type || 'N/A'}</td>
+                <td><span style="background:${statusColor};color:white;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:700;">${eligStatus}</span></td>
+                <td>${validUntil}</td>
+                <td>${joinedAt}</td>
+                <td style="display:flex;gap:4px;flex-wrap:wrap;">
+                    <button style="padding:4px 8px;background:#3b82f6;color:white;border:none;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;" onclick="openReportModal('${payload.event.id}', '${p.user_id}', '${name.trim()}')">View</button>
+                    <button style="padding:4px 8px;background:#8b5cf6;color:white;border:none;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;" onclick="openEligibilityEditModal(this)">Modify</button>
+                </td>
+            `;
+            body.appendChild(tr);
+        });
+
+        document.getElementById('participants-table').style.display = 'table';
+    } catch (_) {
+        document.getElementById('participants-count').textContent = 'Network error while loading participants.';
+    }
+}
+
+function closeParticipants() {
+    document.getElementById('modal-participants').classList.remove('open');
+}
+
+// ── Eligibility Report modal ─────────────────────────────────────────────────
+async function openReportModal(eventId, userId, donorName) {
+    document.getElementById('report-donor-name').textContent = donorName;
+    document.getElementById('modal-report').classList.add('open');
+
+    try {
+        const url = '/dashboard/eligibility-report/' + eventId + '/' + userId;
+        console.log('🔍 Fetching report from:', url);
+        
+        const response = await fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+
+        console.log('📊 Response status:', response.status);
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+            const msg = 'Error: ' + (err.error || 'Status ' + response.status);
+            document.getElementById('report-questionnaire').textContent = msg;
+            console.error('❌ Failed to fetch report:', msg);
+            return;
+        }
+
+        const report = await response.json();
+        console.log('✅ Full report data:', JSON.stringify(report, null, 2));
+        console.log('📋 Eligibility details:', report.eligibility_details);
+        console.log('📋 Questionnaire:', report.questionnaire);
+        console.log('📝 Doctor Notes:', report.doctor_notes);
+        console.log('🔖 Status:', report.status);
+
+        const status = report.status || 'N/A';
+        const statusColor = (status === 'PENDING') ? '#f59e0b' : (status === 'ELIGIBLE' || status === 'APPROVED') ? '#10b981' : '#ef4444';
+
+        document.getElementById('report-status').textContent = status;
+        document.getElementById('report-status').style.background = statusColor;
+        document.getElementById('report-blood-type').textContent = report.blood_type || 'N/A';
+        document.getElementById('report-valid-until').textContent = report.valid_until ? new Date(report.valid_until).toLocaleDateString() : 'N/A';
+
+        // Display the real eligibility details text from donor_eligibility
+        const eligibilityDetails = report.eligibility_details;
+        if (eligibilityDetails && typeof eligibilityDetails === 'string' && eligibilityDetails.trim()) {
+            console.log('📝 Eligibility details length:', eligibilityDetails.length);
+            document.getElementById('report-questionnaire').innerHTML = '<pre style="white-space:pre-wrap;margin:0;font-family:inherit;">' + eligibilityDetails.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>';
+        } else {
+            const questionnaire = report.questionnaire;
+            if (questionnaire && typeof questionnaire === 'object' && Object.keys(questionnaire).length > 0) {
+                console.log('📊 Questionnaire is object with', Object.keys(questionnaire).length, 'keys');
+                const q = Object.entries(questionnaire)
+                    .map(([k, v]) => `<strong>${k}:</strong> ${v}`)
+                    .join('<br>');
+                document.getElementById('report-questionnaire').innerHTML = q;
+            } else if (questionnaire && typeof questionnaire === 'string' && questionnaire.trim()) {
+                console.log('📝 Questionnaire is string:', questionnaire);
+                document.getElementById('report-questionnaire').textContent = questionnaire;
+            } else {
+                console.log('⚠️ No questionnaire data found');
+                document.getElementById('report-questionnaire').textContent = 'No questionnaire data available';
+            }
+        }
+
+        // Display doctor notes
+        const doctorNotes = report.doctor_notes;
+        if (doctorNotes && typeof doctorNotes === 'string' && doctorNotes.trim()) {
+            console.log('🔍 Doctor notes found, length:', doctorNotes.length);
+            document.getElementById('report-doctor-notes').textContent = doctorNotes;
+        } else {
+            console.log('⚠️ No doctor notes found');
+            document.getElementById('report-doctor-notes').textContent = 'No assessment reasons available';
+        }
+
+        // Display disqualifying reasons
+        const disqualifying = report.disqualifying_reasons;
+        if (disqualifying && Array.isArray(disqualifying)) {
+            document.getElementById('report-disqualifying').innerHTML = disqualifying.length > 0 ? disqualifying.join('<br>') : 'None';
+        } else if (disqualifying && typeof disqualifying === 'object') {
+            const d = Object.values(disqualifying).filter(v => v).join(', ');
+            document.getElementById('report-disqualifying').textContent = d || 'None';
+        } else {
+            document.getElementById('report-disqualifying').textContent = 'None';
+        }
+
+        document.getElementById('report-qr-token').textContent = report.qr_token ? report.qr_token.substring(0, 64) + '...' : '-';
+    } catch (err) {
+        const msg = 'Network error: ' + (err.message || 'Unknown');
+        document.getElementById('report-questionnaire').textContent = msg;
+        console.error('❌ Exception loading report:', err);
+    }
+}
+
+function closeReportModal() {
+    document.getElementById('modal-report').classList.remove('open');
+}
+
+// ── Eligibility Edit modal ────────────────────────────────────────────────────
+// ── Eligibility Edit modal ────────────────────────────────────────────────────
+function prepareEligibilitySubmit(event) {
+    const status = document.getElementById('edit-elig-status').value;
+    const daysInput = document.getElementById('edit-elig-days');
+    const isCurrentlyEligibleField = document.getElementById('edit-elig-is-currently-eligible');
+    
+    // Validate temporary ineligibility has days
+    if (status === 'temporarily_ineligible' && (!daysInput.value || parseInt(daysInput.value) <= 0)) {
+        alert('Please enter the number of days until eligible');
+        return false;
+    }
+    
+    // Set is_currently_eligible based on status
+    if (status === 'eligible') {
+        isCurrentlyEligibleField.value = '1';
+        daysInput.value = '0';
+    } else if (status === 'temporarily_ineligible') {
+        isCurrentlyEligibleField.value = '0';
+        // days_until_eligible keeps its value
+    } else if (status === 'ineligible') {
+        isCurrentlyEligibleField.value = '0';
+        daysInput.value = '0';
+    }
+    
+    return true; // Allow form submission
+}
+
+function toggleDaysField() {
+    const status = document.getElementById('edit-elig-status').value;
+    const daysField = document.getElementById('days-field');
+    const daysInput = document.getElementById('edit-elig-days');
+    
+    if (status === 'temporarily_ineligible') {
+        daysField.style.display = 'block';
+        daysInput.required = true;
+    } else {
+        daysField.style.display = 'none';
+        daysInput.required = false;
+        daysInput.value = '';
+    }
+}
+
+function openEligibilityEditModal(button) {
+    // Get the table row element
+    const row = button.closest('tr');
+    if (!row) {
+        alert('Error: Could not find participant row');
+        return;
+    }
+
+    // Extract data from row attributes
+    const userId = row.getAttribute('data-user-id');
+    const bloodType = row.getAttribute('data-blood-type-cache') || '';
+    const isEligible = row.getAttribute('data-is-currently-eligible') === '1';
+    const daysUntil = row.getAttribute('data-days-until-eligible') || '';
+    const lastDate = row.getAttribute('data-last-calculated-at') || '';
+    const city = row.getAttribute('data-city') || '';
+    const details = row.getAttribute('data-eligibility-details') || '';
+    const donorName = row.querySelector('td').textContent.trim();
+
+    if (!userId) {
+        alert('Error: Could not find user ID');
+        return;
+    }
+
+    // Determine eligibility status value
+    let statusValue = 'eligible';
+    if (!isEligible) {
+        statusValue = daysUntil && parseInt(daysUntil) > 0 ? 'temporarily_ineligible' : 'ineligible';
+    }
+
+    // Set form action and populate fields
+    document.getElementById('eligibility-edit-form').action = '/dashboard/donor-eligibility/' + userId + '/update';
+    document.getElementById('edit-elig-user-id').value = userId;
+    document.getElementById('edit-elig-blood-type').value = bloodType;
+    document.getElementById('edit-elig-status').value = statusValue;
+    document.getElementById('edit-elig-days').value = daysUntil || '';
+    document.getElementById('edit-elig-date').value = lastDate;
+    document.getElementById('edit-elig-city').value = city;
+    document.getElementById('edit-elig-details').value = details;
+    document.getElementById('edit-elig-donor-name').textContent = donorName;
+
+    // Toggle days field visibility based on status
+    toggleDaysField();
+
+    document.getElementById('modal-eligibility-edit').classList.add('open');
+}
+
+function closeEligibilityEdit() {
+    document.getElementById('modal-eligibility-edit').classList.remove('open');
+}
+document.querySelectorAll('.modal-overlay').forEach(o => {
+    o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.open').forEach(o => o.classList.remove('open'));
+        closeMap();
+    }
+});
+
+const todayStr = new Date().toISOString().slice(0, 16);
+document.getElementById('c-start').min = todayStr;
+document.getElementById('c-start').value = '';
+
+document.getElementById('c-start').addEventListener('change', function() {
+    const start = new Date(this.value);
+    // Auto-set end date to start + 1 day
+    const autoEnd = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+    const endStr = autoEnd.toISOString().slice(0, 16);
+    document.getElementById('c-end').min = this.value;
+    document.getElementById('c-end').value = endStr;
+    validateDates('c-start', 'c-end', 'c-end-error');
+});
+
+// ── MAP ───────────────────────────────────────────────────────────────────────
+let leafletMap = null;
+
+async function openMap(eventId, eventName, location) {
+    if (!location || location.trim() === '') {
+        alert('No location set for this event.\nEdit the event and add a location in the format:\nHôpital X, Ville  or  Banc du sang X, Ville');
+        return;
+    }
+
+    document.getElementById('map-modal-title').textContent = '📍 ' + eventName;
+    document.getElementById('map-location-label').textContent = '🔍 Searching: ' + location;
+    document.getElementById('map-not-found').style.display = 'none';
+    document.getElementById('map-container').style.display = 'block';
+    document.getElementById('map-modal-overlay').classList.add('open');
+
+    if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+
+    leafletMap = L.map('map-container').setView([33.8, 9.5], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(leafletMap);
+
+    try {
+        const clean = s => s.replace(/blood bank/gi,'').replace(/banc du sang/gi,'').replace(/collection hall/gi,'').replace(/main lobby/gi,'').replace(/\s+/g,' ').trim();
+        const parts = location.split(',');
+        const place = clean(parts[0].trim());
+        const city  = parts.length > 1 ? parts[parts.length - 1].trim() : '';
+
+        const queries = [
+            place + (city ? ', ' + city : '') + ', Tunisia',
+            place + (city ? ', ' + city : '') + ', Tunisie',
+            location + ', Tunisia',
+            location + ', Tunisie',
+            place + ', Tunisia',
+            city ? city + ', Tunisia' : null,
+        ].filter(Boolean);
+
+        let found = null;
+        for (const q of queries) {
+            const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1&countrycodes=tn&accept-language=fr`);
+            const data = await resp.json();
+            if (data.length > 0) { found = data[0]; break; }
+            await new Promise(r => setTimeout(r, 300));
+        }
+
+        if (found) {
+            const lat = parseFloat(found.lat);
+            const lon = parseFloat(found.lon);
+            leafletMap.setView([lat, lon], 16);
+            const redIcon = L.divIcon({
+                html: `<div style="background:#dc2626;width:20px;height:20px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.3);"></div>`,
+                iconSize: [20,20], iconAnchor: [10,20], className: ''
+            });
+            L.marker([lat,lon],{icon:redIcon}).addTo(leafletMap)
+                .bindPopup(`<div style="font-family:sans-serif;min-width:160px;"><strong style="color:#dc2626;">📍 ${eventName}</strong><br><span style="font-size:12px;color:#6b7280;">${found.display_name}</span></div>`,{maxWidth:280})
+                .openPopup();
+            document.getElementById('map-location-label').textContent = '📍 ' + found.display_name;
+        } else {
+            document.getElementById('map-container').style.display = 'none';
+            document.getElementById('map-not-found').style.display = 'block';
+            document.getElementById('map-not-found').innerHTML = `⚠️ Location not found: <strong>${location}</strong><br><small>Try: Hôpital Fattouma Bourguiba, Monastir</small>`;
+        }
+    } catch(err) {
+        document.getElementById('map-container').style.display = 'none';
+        document.getElementById('map-not-found').style.display = 'block';
+        document.getElementById('map-not-found').textContent = '⚠️ Network error.';
+    }
+}
+
+function closeMap() {
+    document.getElementById('map-modal-overlay').classList.remove('open');
+    if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+}
+
+document.getElementById('map-modal-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('map-modal-overlay')) closeMap();
+});
+</script>
+
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{% endblock %}

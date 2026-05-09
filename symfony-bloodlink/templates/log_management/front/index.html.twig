@@ -1,0 +1,126 @@
+{% set page_title = 'My Audit Trail' %}
+{% set page_description = 'Read-only donor history that gathers your donations, the related audit records, and matching network transfer context in one place.' %}
+{% set summary = summary|default({}) %}
+{% set donations = donations|default([]) %}
+{% set donation_logs = donation_logs|default([]) %}
+{% set transfer_context = transfer_context|default([]) %}
+{% extends 'log_management/layouts/front_office.html.twig' %}
+
+{% block module_content %}
+    <div class="grid gap-4 lg:grid-cols-4">
+        <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Donations</p>
+            <p class="mt-3 text-3xl font-extrabold tracking-tight text-slate-950">{{ summary.donations|default(summary.total_donations|default(donations|length)) }}</p>
+            <p class="mt-2 text-sm text-slate-500">Donation history tied to your donor account.</p>
+        </article>
+        <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Audit records</p>
+            <p class="mt-3 text-3xl font-extrabold tracking-tight text-slate-950">{{ summary.logs|default(summary.total_logs|default(donation_logs|length)) }}</p>
+            <p class="mt-2 text-sm text-slate-500">Logged operational events linked to your donations.</p>
+        </article>
+        <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Transfer context</p>
+            <p class="mt-3 text-3xl font-extrabold tracking-tight text-slate-950">{{ summary.transfers|default(summary.total_transfers|default(transfer_context|length)) }}</p>
+            <p class="mt-2 text-sm text-slate-500">Matching network transfer context related to your donation activity.</p>
+        </article>
+        <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Access</p>
+            <p class="mt-3 text-xl font-extrabold tracking-tight text-slate-950">Read only</p>
+            <p class="mt-2 text-sm text-slate-500">This page is donor-facing and never exposes staff actions.</p>
+        </article>
+    </div>
+
+    <div class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+        <section class="rounded-3xl border border-slate-200 bg-white p-6">
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-extrabold tracking-tight text-slate-950">Donation history</h2>
+                    <p class="mt-1 text-sm text-slate-500">A donor-friendly list of your recorded donations.</p>
+                </div>
+            </div>
+
+            <div class="mt-5 space-y-4">
+                {% for donation in donations %}
+                    <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                            <div>
+                                <p class="text-xs font-bold uppercase tracking-[0.18em] text-blood-600">Donation</p>
+                                <h3 class="mt-1 text-lg font-extrabold text-slate-950">
+                                    {{ donation.bloodType ? donation.bloodType.bloodTypeId|default('Blood donation') : 'Blood donation' }}
+                                </h3>
+                                <p class="mt-2 text-sm text-slate-600">
+                                    {{ donation.hospital ? donation.hospital.name|default(donation.hospital.hospitalName|default('Hospital')) : 'Hospital' }}
+                                </p>
+                                <p class="mt-1 text-sm text-slate-600">
+                                    {{ donation.donationDate ? donation.donationDate|date('Y-m-d H:i') : (donation.createdAt ? donation.createdAt|date('Y-m-d H:i') : 'No donation date') }}
+                                </p>
+                            </div>
+                            <div class="text-sm text-slate-500 md:text-right">
+                                <p class="font-semibold text-slate-900">Reference</p>
+                                <p class="mt-1 break-all">{{ donation.donationId|default(donation.id|default('N/A')) }}</p>
+                            </div>
+                        </div>
+                    </article>
+                {% else %}
+                    <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                        No donation records are visible for this account yet.
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="space-y-6">
+            <article class="rounded-3xl border border-slate-200 bg-white p-6">
+                <h2 class="text-xl font-extrabold tracking-tight text-slate-950">Audit activity</h2>
+                <p class="mt-1 text-sm text-slate-500">Recent log entries linked to your donor history.</p>
+
+                <div class="mt-5 space-y-3">
+                    {% for log in donation_logs %}
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <p class="text-xs font-bold uppercase tracking-[0.18em] text-blood-600">{{ log.action|default('Audit log') }}</p>
+                            <p class="mt-2 text-sm font-semibold text-slate-950">
+                                {{ log.donation and log.donation.bloodType ? log.donation.bloodType.bloodTypeId|default('Donation record') : 'Donation record' }}
+                            </p>
+                            <p class="mt-1 text-sm text-slate-600">{{ log.notes|default(log.note|default('No note was attached.')) }}</p>
+                            <p class="mt-2 text-xs text-slate-500">
+                                {{ log.createdAt ? log.createdAt|date('Y-m-d H:i') : (log.loggedAt ? log.loggedAt|date('Y-m-d H:i') : 'No timestamp') }}
+                            </p>
+                        </div>
+                    {% else %}
+                        <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                            No audit entries are available for your account.
+                        </div>
+                    {% endfor %}
+                </div>
+            </article>
+
+            <article class="rounded-3xl border border-slate-200 bg-white p-6">
+                <h2 class="text-xl font-extrabold tracking-tight text-slate-950">Transfer context</h2>
+                <p class="mt-1 text-sm text-slate-500">Matching transfer activity around your hospital and blood type after a recorded donation.</p>
+
+                <div class="mt-5 space-y-3">
+                    {% for item in transfer_context %}
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <p class="text-xs font-bold uppercase tracking-[0.18em] text-blood-600">
+                                {{ item.status|default(item.transferStatus|default('Transfer')) }}
+                            </p>
+                            <p class="mt-2 text-sm font-semibold text-slate-950">
+                                {{ item.requestingHospital ? item.requestingHospital.name|default(item.requestingHospital.hospitalName|default('Requesting hospital')) : 'Requesting hospital' }}
+                            </p>
+                            <p class="mt-1 text-sm text-slate-600">
+                                {{ item.approvingHospital ? item.approvingHospital.name|default(item.approvingHospital.hospitalName|default('Approving hospital')) : 'Approving hospital' }}
+                            </p>
+                            <p class="mt-2 text-xs text-slate-500">
+                                {{ item.occurredAt ? item.occurredAt|date('Y-m-d H:i') : (item.requestedAt ? item.requestedAt|date('Y-m-d H:i') : 'No timestamp') }}
+                            </p>
+                        </div>
+                    {% else %}
+                        <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                            No transfer context is currently linked to your donor record.
+                        </div>
+                    {% endfor %}
+                </div>
+            </article>
+        </section>
+    </div>
+{% endblock %}
