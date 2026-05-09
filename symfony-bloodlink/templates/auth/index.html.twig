@@ -1,0 +1,279 @@
+{% extends 'base.html.twig' %}
+{% set body_class = 'auth-page' %}
+
+{% block title %}BloodLink Authentication{% endblock %}
+
+{% block stylesheets %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('styles/auth-shell.css') }}?v=20260505-1">
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script src="{{ asset('scripts/auth-shell.js') }}?v=20260421-3" defer></script>
+{% endblock %}
+
+{% block body %}
+    {% set has_signup_step1_errors = sign_up_errors.password is defined or sign_up_errors.confirm_password is defined or sign_up_errors.terms is defined or sign_up_errors.global is defined %}
+    {% set initial_tab = active_tab|default('signin') == 'signup' ? 'signup' : 'signin' %}
+    {% set signin_active = initial_tab == 'signin' %}
+    {% set signup_active = initial_tab == 'signup' %}
+    {% set signup_step1_active = signup_active and has_signup_step1_errors %}
+
+    <div class="auth-shell" data-auth-shell data-initial-tab="{{ initial_tab }}" data-has-step1-errors="{{ has_signup_step1_errors ? 1 : 0 }}">
+        <section class="auth-hero">
+            <div class="auth-brand">
+                <canvas class="auth-logo-canvas" data-auth-logo-canvas aria-hidden="true"></canvas>
+                <div>
+                    <p class="auth-brand-name">BloodLink</p>
+                    <p class="auth-brand-subtitle">Blood Bank Platform</p>
+                </div>
+            </div>
+
+            <div class="auth-hero-copy">
+                <p class="auth-kicker">Join thousands of donors helping hospitals stay ready</p>
+                <h1>Every drop is a lifeline</h1>
+                <h1>Be someone's miracle today</h1>
+            </div>
+
+            <div class="auth-illustration-wrap" aria-hidden="true">
+                <canvas class="auth-illustration-canvas" data-auth-illustration-canvas></canvas>
+            </div>
+
+            <div class="auth-surface-grid">
+                <div class="auth-surface-card">
+                    <strong>12K+</strong>
+                    <span>Active donors</span>
+                </div>
+                <div class="auth-surface-card">
+                    <strong>200+</strong>
+                    <span>Partner hospitals</span>
+                </div>
+                <div class="auth-surface-card">
+                    <strong>98%</strong>
+                    <span>Response rate.</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="auth-panel">
+            <div class="auth-card">
+                <div class="auth-tabs">
+                    <button type="button" id="tab-signin" class="tab-btn {{ signin_active ? 'active' : '' }}" aria-selected="{{ signin_active ? 'true' : 'false' }}">Sign in</button>
+                    <button type="button" id="tab-signup" class="tab-btn {{ signup_active ? 'active' : '' }}" aria-selected="{{ signup_active ? 'true' : 'false' }}">Create account</button>
+                </div>
+
+                {% include 'shared/_flash.html.twig' %}
+
+                <div id="pane-signin" class="pane {{ signin_active ? 'active' : '' }}">
+                    <h2 class="auth-title">Sign in</h2>
+                    <p class="auth-sub">Continue to your BloodLink workspace with the account assigned to you.</p>
+
+                    <form method="post" action="{{ path('auth_sign_in') }}" data-turbo="false">
+                        <div class="auth-field">
+                            <label for="sign_in_email">Email address</label>
+                            <input
+                                id="sign_in_email"
+                                type="email"
+                                name="sign_in_email"
+                                value="{{ sign_in_email|default('') }}"
+                                autocomplete="email"
+                                placeholder="name@example.com"
+                            >
+                            {% if sign_in_errors.email is defined %}<div class="error">{{ sign_in_errors.email }}</div>{% endif %}
+                        </div>
+
+                        <div class="auth-field">
+                            <label for="sign_in_password">Password</label>
+                            <input
+                                id="sign_in_password"
+                                type="password"
+                                name="sign_in_password"
+                                autocomplete="current-password"
+                                placeholder="Your password"
+                            >
+                            {% if sign_in_errors.password is defined %}<div class="error">{{ sign_in_errors.password }}</div>{% endif %}
+                            <div style="margin-top: 0.5rem; text-align: right;">
+                                <a href="{{ path('auth_forgot_password') }}" class="switch-link" style="font-size: 0.875rem;">Forgot password?</a>
+                            </div>
+                        </div>
+
+                        {% if sign_in_errors.global is defined %}
+                            <div class="global-error">{{ sign_in_errors.global }}</div>
+                        {% endif %}
+
+                        {% if sign_in_errors.login is defined %}
+                            <div class="global-error" style="background-color: #fef2f2; border-color: #fca5a5; color: #dc2626;">
+                                <strong>Hospital Deactivated</strong><br>
+                                {{ sign_in_errors.login }}
+                            </div>
+                        {% endif %}
+
+                        <div class="actions">
+                            <button type="submit" class="btn">Sign in</button>
+                        </div>
+
+                        <div class="switch-row">
+                            <span>No account yet?</span>
+                            <button type="button" class="switch-link" id="switch-to-signup">Create one</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="pane-signup" class="pane {{ signup_active ? 'active' : '' }}">
+                    <h2 class="auth-title">Create account</h2>
+                    <p class="auth-sub">Join BloodLink and start making a difference.</p>
+
+                    <div class="auth-stepper" aria-hidden="true">
+                        <span id="signup-dot-0" class="step-dot {{ signup_step1_active ? '' : 'active' }}"></span>
+                        <span id="signup-dot-1" class="step-dot {{ signup_step1_active ? 'active' : '' }}"></span>
+                    </div>
+
+                    <form method="post" action="{{ path('auth_sign_up') }}" data-turbo="false">
+                        {% if sign_up_errors.global is defined %}
+                            <div class="global-error">{{ sign_up_errors.global }}</div>
+                        {% endif %}
+
+                        <div id="signup-step-0" class="signup-step {{ signup_step1_active ? '' : 'active' }}">
+                            <div class="auth-row">
+                                <div class="auth-field">
+                                    <label for="first_name">First name</label>
+                                    <input
+                                        id="first_name"
+                                        type="text"
+                                        name="first_name"
+                                        value="{{ sign_up_old.first_name|default('') }}"
+                                        autocomplete="given-name"
+                                        placeholder="First name"
+                                    >
+                                    <div class="error" id="err-first-name">{{ sign_up_errors.first_name|default('') }}</div>
+                                </div>
+
+                                <div class="auth-field">
+                                    <label for="last_name">Last name</label>
+                                    <input
+                                        id="last_name"
+                                        type="text"
+                                        name="last_name"
+                                        value="{{ sign_up_old.last_name|default('') }}"
+                                        autocomplete="family-name"
+                                        placeholder="Last name"
+                                    >
+                                    <div class="error" id="err-last-name">{{ sign_up_errors.last_name|default('') }}</div>
+                                </div>
+                            </div>
+
+                            <div class="auth-field">
+                                <label for="email">Email address</label>
+                                <input
+                                    id="email"
+                                    type="email"
+                                    name="email"
+                                    value="{{ sign_up_old.email|default('') }}"
+                                    autocomplete="email"
+                                    placeholder="name@example.com"
+                                >
+                                <div class="error" id="err-email">{{ sign_up_errors.email|default('') }}</div>
+                            </div>
+
+                            <div class="auth-row">
+                                <div class="auth-field">
+                                    <label for="phone">Phone number</label>
+                                    <input
+                                        id="phone"
+                                        type="tel"
+                                        name="phone"
+                                        value="{{ sign_up_old.phone|default('') }}"
+                                        autocomplete="tel"
+                                        placeholder="+216 00 000 000"
+                                    >
+                                    <div class="error" id="err-phone">{{ sign_up_errors.phone|default('') }}</div>
+                                </div>
+
+                                <div class="auth-field">
+                                    <label for="city">City</label>
+                                    <input
+                                        id="city"
+                                        type="text"
+                                        name="city"
+                                        value="{{ sign_up_old.city|default('') }}"
+                                        autocomplete="address-level2"
+                                        placeholder="Tunis"
+                                    >
+                                    <div class="error" id="err-city">{{ sign_up_errors.city|default('') }}</div>
+                                </div>
+                            </div>
+
+                            <div class="auth-field">
+                                <label for="blood_type_id">Blood type</label>
+                                <select id="blood_type_id" name="blood_type_id">
+                                    <option value="">Select blood type</option>
+                                    {% for bt in blood_types %}
+                                        {% set btId = bt.blood_type_id %}
+                                        <option value="{{ btId }}" {% if sign_up_old.blood_type_id|default('') == btId %}selected{% endif %}>{{ btId }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="error" id="err-blood-type">{{ sign_up_errors.blood_type_id|default('') }}</div>
+                            </div>
+
+                            <div class="actions">
+                                <button type="button" class="btn" id="signup-next">Continue</button>
+                            </div>
+                        </div>
+
+                        <div id="signup-step-1" class="signup-step {{ signup_step1_active ? 'active' : '' }}">
+                            <div class="auth-row">
+                                <div class="auth-field">
+                                    <label for="password">Password</label>
+                                    <input
+                                        id="password"
+                                        type="password"
+                                        name="password"
+                                        autocomplete="new-password"
+                                        placeholder="Minimum 8 characters"
+                                    >
+                                    {% if sign_up_errors.password is defined %}<div class="error">{{ sign_up_errors.password }}</div>{% endif %}
+                                </div>
+
+                                <div class="auth-field">
+                                    <label for="confirm_password">Confirm password</label>
+                                    <input
+                                        id="confirm_password"
+                                        type="password"
+                                        name="confirm_password"
+                                        autocomplete="new-password"
+                                        placeholder="Repeat password"
+                                    >
+                                    {% if sign_up_errors.confirm_password is defined %}<div class="error">{{ sign_up_errors.confirm_password }}</div>{% endif %}
+                                </div>
+                            </div>
+
+                            <div class="auth-field">
+                                <label class="terms" for="terms">
+                                    <input id="terms" type="checkbox" name="terms" value="1" {% if sign_up_old.terms|default(false) %}checked{% endif %}>
+                                    <span>I agree to the Terms of Service and Privacy Policy.</span>
+                                </label>
+                                {% if sign_up_errors.terms is defined %}<div class="error">{{ sign_up_errors.terms }}</div>{% endif %}
+                            </div>
+
+                            <div class="actions">
+                                <button type="submit" class="btn">Create account</button>
+                            </div>
+
+                            <div class="step-back">
+                                <button type="button" id="signup-back">&larr; Back</button>
+                            </div>
+                        </div>
+
+                        <div class="switch-row">
+                            <span>Already have an account?</span>
+                            <button type="button" class="switch-link" id="switch-to-signin">Sign in</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </div>
+{% endblock %}

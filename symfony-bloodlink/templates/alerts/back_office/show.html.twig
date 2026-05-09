@@ -1,0 +1,65 @@
+{% set page_title = 'Donor Alert Detail' %}
+{% set page_description = 'Inspect the donor notification relation, response state, and read lifecycle for this specific alert.' %}
+{% extends 'alerts/layouts/back_office.html.twig' %}
+
+{% block page_actions %}
+    <div class="flex flex-wrap gap-3">
+        <a href="{{ path('dashboard_alerts_edit', {donorAlertId: entry.donorAlertId}) }}" class="inline-flex items-center justify-center rounded-2xl bg-blood-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blood-700">Edit</a>
+        <form method="post" action="{{ path('dashboard_alerts_delete', {donorAlertId: entry.donorAlertId}) }}" data-confirm-message="Delete this donor alert?">
+            <input type="hidden" name="_token" value="{{ csrf_token('delete-donor-alert-' ~ entry.donorAlertId) }}">
+            <button type="submit" class="inline-flex items-center justify-center rounded-2xl border border-rose-200 px-4 py-3 text-sm font-semibold text-rose-600 transition hover:border-rose-400 hover:bg-rose-50">Delete</button>
+        </form>
+        <a href="{{ path('dashboard_alerts_index') }}" class="inline-flex items-center justify-center rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-blood-500 hover:text-blood-600">Back</a>
+    </div>
+{% endblock %}
+
+{% block module_content %}
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <section class="rounded-3xl border border-slate-200 bg-slate-50 p-6">
+            <div class="grid gap-5 md:grid-cols-2">
+                <div class="rounded-2xl border border-slate-200 bg-white p-4 md:col-span-2">
+                    <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Alert relation</p>
+                    <p class="mt-3 text-2xl font-extrabold text-slate-950">{{ entry.alert ? entry.alert.title : 'Missing alert relation' }}</p>
+                    <p class="mt-1 text-sm text-slate-500">{{ entry.alert ? entry.alert.severity : 'N/A' }}</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                    <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Donor relation</p>
+                    <p class="mt-3 text-base font-bold text-slate-950">{{ entry.donor ? entry.donor.firstName ~ ' ' ~ entry.donor.lastName : 'Missing donor relation' }}</p>
+                    <p class="mt-1 text-sm text-slate-500">{{ entry.donor and entry.donor.user ? entry.donor.user.email : 'No donor email' }}</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                    <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Response</p>
+                    <p class="mt-3 inline-flex rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">{{ entry.donorResponse ?: 'NO_RESPONSE' }}</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                    <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Delivery state</p>
+                    <p class="mt-3 text-base font-bold text-slate-950">{{ entry.isNotified ? 'Notification sent' : 'Pending delivery' }}</p>
+                    <p class="mt-1 text-sm text-slate-500">Sent at: {{ entry.notificationSentAt ? entry.notificationSentAt|date('Y-m-d H:i') : 'N/A' }}</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                    <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Read state</p>
+                    <p class="mt-3 text-base font-bold text-slate-950">{{ entry.isRead ? 'Read by donor' : 'Unread' }}</p>
+                    <p class="mt-1 text-sm text-slate-500">Read at: {{ entry.readAt ? entry.readAt|date('Y-m-d H:i') : 'N/A' }}</p>
+                </div>
+            </div>
+        </section>
+
+        <aside class="rounded-3xl border border-slate-200 bg-white p-6">
+            <p class="text-xs font-bold uppercase tracking-[0.18em] text-blood-600">Record identifiers</p>
+            <dl class="mt-4 space-y-4 text-sm text-slate-600">
+                <div>
+                    <dt class="font-semibold text-slate-900">Donor alert UUID</dt>
+                    <dd class="mt-1 break-all">{{ entry.donorAlertId }}</dd>
+                </div>
+                <div>
+                    <dt class="font-semibold text-slate-900">Alert UUID</dt>
+                    <dd class="mt-1 break-all">{{ entry.alert ? entry.alert.alertId : 'N/A' }}</dd>
+                </div>
+                <div>
+                    <dt class="font-semibold text-slate-900">Donor UUID</dt>
+                    <dd class="mt-1 break-all">{{ entry.donor ? entry.donor.userId : 'N/A' }}</dd>
+                </div>
+            </dl>
+        </aside>
+    </div>
+{% endblock %}

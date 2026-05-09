@@ -28,6 +28,39 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+/database_schema.sq### IntelliJ IDEA ###
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+.kotlin
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store
 /database_schema.sql
 /database_migration_inventory_fix.sql
+/database_schema_changes.md
 /.idea/libraries/lib.xml
+/FINAL_IMPLEMENTATION_SUMMARY.md
+/HOSPITAL_SPECIFIC_INVENTORY_VIEW.md

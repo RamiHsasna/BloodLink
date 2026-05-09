@@ -1,0 +1,260 @@
+{% set page_title = 'Donor Health Tips' %}
+{% set page_description = 'Actionable guidance to stay safe, strong, and donation-ready.' %}
+{% extends 'log_management/layouts/front_office.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+    :root {
+        --paper: #fffaf2;
+        --paper-deep: #fff3df;
+        --ink: #1c222e;
+        --muted: #576074;
+        --line: #e9dcc8;
+        --accent: #cc4a28;
+        --accent-deep: #a8371b;
+        --teal: #0f766e;
+        --card-shadow: 0 18px 38px rgba(47, 32, 19, 0.12);
+        --card-shadow-hover: 0 24px 48px rgba(47, 32, 19, 0.18);
+    }
+
+    body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+        color: var(--ink);
+        background:
+            radial-gradient(circle at 9% 12%, #fff0cf 0%, rgba(255, 240, 207, 0) 34%),
+            radial-gradient(circle at 84% 16%, #ffffff 0%, rgba(255, 228, 207, 0) 28%),
+            linear-gradient(180deg, #fffdf9 0%, #fff6ea 100%);
+    }
+
+    .main {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 28px 24px 34px;
+    }
+
+    .hero {
+        position: relative;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 26px;
+        background:
+            linear-gradient(130deg, rgba(255, 235, 209, 0.9), rgba(255, 248, 238, 0.97)),
+            linear-gradient(180deg, #ffffff, #fff7eb);
+        box-shadow: var(--card-shadow);
+        overflow: hidden;
+        margin-bottom: 18px;
+    }
+
+    .hero::before,
+    .hero::after {
+        content: "";
+        position: absolute;
+        border-radius: 999px;
+        pointer-events: none;
+    }
+
+    .hero::before {
+        width: 220px;
+        height: 220px;
+        right: -90px;
+        top: -95px;
+        background: radial-gradient(circle, rgba(204, 74, 40, 0.22), rgba(204, 74, 40, 0));
+    }
+
+    .hero::after {
+        width: 260px;
+        height: 260px;
+        left: -120px;
+        bottom: -120px;
+        background: radial-gradient(circle, rgba(15, 118, 110, 0.17), rgba(15, 118, 110, 0));
+    }
+
+    .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 12px;
+        border-radius: 999px;
+        border: 1px solid #f0cba8;
+        background: #fff4e8;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        color: #7a3d1f;
+        text-transform: uppercase;
+    }
+
+    .hero h1 {
+        margin: 12px 0 8px;
+        font-family: "Sora", "Segoe UI", sans-serif;
+        font-size: clamp(1.9rem, 3vw, 2.7rem);
+        line-height: 1.1;
+        letter-spacing: -0.025em;
+    }
+
+    .hero p {
+        max-width: 760px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 1.02rem;
+        line-height: 1.6;
+    }
+
+    .tips-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 16px;
+    }
+
+    .meta-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        border-radius: 999px;
+        border: 1px solid #efdac0;
+        background: #fff9f0;
+        padding: 7px 12px;
+        color: #5d4b3a;
+        font-size: 0.84rem;
+        font-weight: 600;
+    }
+
+    .meta-pill strong {
+        color: #3b2e22;
+        font-weight: 700;
+    }
+
+    .tips-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .tip-card {
+        position: relative;
+        border: 1px solid var(--line);
+        background:
+            linear-gradient(180deg, #ffffff 0%, #fffaf2 100%);
+        border-radius: 20px;
+        padding: 20px 18px 16px;
+        box-shadow: var(--card-shadow);
+        transition: transform 0.22s ease, box-shadow 0.22s ease;
+        animation: card-rise 0.45s ease both;
+    }
+
+    .tip-card:nth-child(odd) {
+        border-top: 5px solid var(--teal);
+    }
+
+    .tip-card:nth-child(even) {
+        border-top: 5px solid var(--accent);
+    }
+
+    .tip-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--card-shadow-hover);
+    }
+
+    .tip-card h3 {
+        margin: 0 0 12px;
+        font-family: "Sora", "Segoe UI", sans-serif;
+        font-size: 1.28rem;
+        line-height: 1.25;
+        letter-spacing: -0.01em;
+    }
+
+    .tip-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 9px;
+    }
+
+    .tip-list li {
+        position: relative;
+        padding-left: 26px;
+        color: #344154;
+        line-height: 1.52;
+    }
+
+    .tip-list li::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0.52em;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        background: linear-gradient(140deg, var(--accent), var(--accent-deep));
+        box-shadow: inset 0 0 0 4px #fff7ed;
+    }
+
+    .note {
+        margin-top: 16px;
+        border: 1px solid #f1d6b7;
+        border-radius: 14px;
+        padding: 14px 15px;
+        background:
+            linear-gradient(180deg, rgba(255, 250, 240, 0.98), rgba(255, 244, 227, 0.98));
+        color: #5f4122;
+        font-size: 0.95rem;
+        font-weight: 600;
+        box-shadow: 0 8px 20px rgba(113, 70, 17, 0.08);
+    }
+
+    @keyframes card-rise {
+        from {
+            transform: translateY(8px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    @media (max-width: 920px) {
+        .main {
+            padding: 20px 14px 22px;
+        }
+
+        .hero {
+            border-radius: 18px;
+            padding: 19px 16px;
+        }
+
+        .tips-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block module_content %}
+<main class="main">
+        
+
+        <section class="tips-grid">
+            {% for group in tip_groups %}
+                <article class="tip-card">
+                    <h3>{{ group.title }}</h3>
+                    <ul class="tip-list">
+                        {% for tip in group.tips %}
+                            <li>{{ tip }}</li>
+                        {% endfor %}
+                    </ul>
+                </article>
+            {% endfor %}
+        </section>
+
+        <div class="note">
+            Personalized advice still depends on your screening results. Re-run your eligibility check regularly.
+        </div>
+    </main>
+{% endblock %}

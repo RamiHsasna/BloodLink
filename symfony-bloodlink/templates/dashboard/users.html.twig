@@ -1,0 +1,669 @@
+{% set page_title = 'Users Dashboard' %}
+{% set page_description = 'Manage and monitor all registered users in the network.' %}
+{% extends 'dashboard/layouts/back_office.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+<style>
+    :root {
+        --bg: #f1f3f7;
+        --panel: #ffffff;
+        --ink: #0f172a;
+        --subtle: #64748b;
+        --line: #e2e8f0;
+        --nav: #0b1736;
+        --nav-2: #121f45;
+        --brand: #8f1d1f;
+        --brand-2: #b3272a;
+        --ok: #16a34a;
+        --warn: #f59e0b;
+        --danger: #dc2626;
+    }
+    body { margin: 0; font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; background: var(--bg); color: var(--ink); }
+    .shell { min-height: 100vh; display: grid; grid-template-columns: 260px 1fr; }
+
+    .sidebar {
+        background: linear-gradient(180deg, var(--nav), #09122d 65%);
+        color: #e2e8f0;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #19254c;
+    }
+    .brand { padding: 24px 20px; border-bottom: 1px solid #22315f; }
+    .brand h2 { margin: 0; font-size: 29px; font-family: Georgia, "Times New Roman", serif; color: #fff; }
+    .brand p { margin: 4px 0 0; color: #8fa0ce; font-size: 13px; }
+    .menu { padding: 16px 12px; display: grid; gap: 8px; }
+    .menu a { text-decoration: none; color: #c8d3f3; padding: 11px 12px; border-radius: 10px; font-weight: 600; }
+    .menu a.active { background: #1d2c56; color: #fff; border-left: 3px solid #ef4444; padding-left: 9px; }
+    .menu a:hover { background: #16254d; }
+    .profile { margin-top: auto; padding: 16px; border-top: 1px solid #22315f; }
+    .profile .name { margin: 0; font-size: 14px; color: #fff; }
+    .profile .role { margin: 4px 0 10px; color: #8fa0ce; font-size: 12px; }
+    .logout-btn { width: 100%; height: 36px; border: 1px solid #2d3e6f; background: #101d42; color: #dbe5ff; border-radius: 8px; font-weight: 600; }
+
+    .main { padding: 24px; }
+    .head { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 14px; }
+    .head h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 40px; }
+    .head p { margin: 6px 0 0; color: var(--subtle); }
+
+    .flash { border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; font-size: 13px; }
+    .flash.success { background: #edf9f0; border: 1px solid #b6e2c1; color: #1b6a34; }
+    .flash.error { background: #fff1f2; border: 1px solid #fecdd3; color: #9f1239; }
+
+    .add-btn { border: 0; border-radius: 10px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 700; padding: 10px 16px; }
+
+    .filters { display: grid; grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(140px, 1fr)) 120px; gap: 12px; margin-bottom: 14px; }
+    .filters input, .filters select { width: 100%; height: 42px; border: 1px solid #d6deea; border-radius: 10px; padding: 0 12px; background: #fff; }
+    .filters button { border: 0; border-radius: 10px; background: #0f172a; color: #fff; font-weight: 700; }
+
+    .stats { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .stat { background: #fff; border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px; font-size: 14px; }
+    .dot { font-size: 20px; vertical-align: middle; margin-right: 6px; }
+    .dot.green { color: var(--ok); }
+    .dot.orange { color: var(--warn); }
+
+    .list { display: grid; gap: 12px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05); }
+    .card.clickable-user { cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+    .card.clickable-user:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08); border-color: #cfd9ea; }
+    .card.clickable-user:focus-visible { outline: 3px solid #bfdbfe; outline-offset: 2px; }
+    .card-head { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+    .user-name { margin: 0; font-size: 18px; font-weight: 700; }
+    .email { margin: 2px 0 0; color: var(--subtle); font-size: 13px; }
+    .badge { border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 700; }
+    .badge-donor { background: #dcfce7; color: #166534; }
+    .badge-staff { background: #fff7ed; color: #9a3412; }
+    .meta { margin-top: 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; color: #475569; font-size: 13px; }
+
+    .crud-bar { margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end; }
+    .btn-edit { border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8; border-radius: 9px; padding: 8px 12px; font-weight: 700; }
+    .btn-delete { border: 1px solid #fecaca; background: #fff1f2; color: #b91c1c; border-radius: 9px; padding: 8px 12px; font-weight: 700; }
+
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+        width: min(760px, 96vw);
+        max-height: 92vh;
+        overflow: auto;
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        box-shadow: 0 20px 40px rgba(2, 6, 23, 0.25);
+        padding: 16px;
+    }
+    .modal-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+    .modal-head h3 { margin: 0; font-size: 21px; }
+    .modal-close {
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        border-radius: 8px;
+        width: 34px;
+        height: 34px;
+        font-size: 18px;
+        line-height: 1;
+    }
+    .modal-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+    .modal-grid .full { grid-column: 1 / -1; }
+    .field {
+        display: grid;
+        gap: 4px;
+    }
+    .field label { margin: 0; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--subtle); font-weight: 700; }
+    .field input, .field select {
+        height: 40px;
+        border: 1px solid #d6deea;
+        border-radius: 9px;
+        padding: 0 10px;
+        background: #fbfdff;
+    }
+    .subsection {
+        margin-top: 4px;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 10px;
+        display: none;
+    }
+    .subsection.open { display: block; }
+    .subsection h4 { margin: 0 0 8px; font-size: 14px; color: #334155; }
+    .sub-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+    .modal-actions {
+        margin-top: 12px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+    .btn-secondary { border: 1px solid #cbd5e1; background: #fff; color: #334155; border-radius: 9px; padding: 8px 12px; }
+    .btn-primary { border: 0; border-radius: 9px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; font-weight: 700; padding: 8px 12px; }
+
+    .details-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+    .detail-item {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #f8fafc;
+        padding: 10px;
+    }
+    .detail-item.full { grid-column: 1 / -1; }
+    .detail-item .k {
+        margin: 0;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #64748b;
+        font-weight: 700;
+    }
+    .detail-item .v {
+        margin: 6px 0 0;
+        color: #0f172a;
+        font-size: 14px;
+        font-weight: 700;
+        word-break: break-word;
+    }
+
+    .empty { border: 1px dashed #cbd5e1; border-radius: 12px; padding: 28px; text-align: center; color: var(--subtle); background: #fff; }
+
+    @media (max-width: 1100px) {
+        .shell { grid-template-columns: 1fr; }
+        .sidebar { min-height: auto; }
+        .modal-grid, .sub-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 900px) {
+        .filters { grid-template-columns: 1fr; }
+        .meta { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block page_actions %}
+    <button type="button" class="add-btn" id="openAddUserModal">+ Add User</button>
+{% endblock %}
+
+{% block module_content %}
+
+        {% for message in app.flashes('success') %}
+            <div class="flash success">{{ message }}</div>
+        {% endfor %}
+        {% for message in app.flashes('error') %}
+            <div class="flash error">{{ message }}</div>
+        {% endfor %}
+
+        <form class="filters" method="get" action="{{ path('dashboard_users') }}" id="usersFiltersForm">
+            <input type="text" name="q" value="{{ q }}" placeholder="Search users by name, email, or phone...">
+            <select name="type">
+                <option value="ALL" {% if type == 'ALL' %}selected{% endif %}>All User Types</option>
+                <option value="DONOR" {% if type == 'DONOR' %}selected{% endif %}>DONOR</option>
+                <option value="HOSPITAL_STAFF" {% if type == 'HOSPITAL_STAFF' %}selected{% endif %}>HOSPITAL_STAFF</option>
+            </select>
+            <select name="blood_type">
+                <option value="" {% if blood_type == '' %}selected{% endif %}>All Blood Types</option>
+                {% for bt in blood_types %}
+                    <option value="{{ bt|e('html_attr') }}" {% if blood_type == bt %}selected{% endif %}>{{ bt }}</option>
+                {% endfor %}
+            </select>
+            <input type="text" name="city" value="{{ city }}" placeholder="Filter donor city...">
+            <noscript><button type="submit">Apply</button></noscript>
+        </form>
+
+        <div id="usersStatsContainer">
+            {% include 'dashboard/partials/users/_stats.html.twig' with { stats: stats } %}
+        </div>
+
+        <div id="usersListContainer">
+            {% include 'dashboard/partials/users/_list.html.twig' with { users: users } %}
+        </div>
+
+<div id="userModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
+        <div class="modal-head">
+            <h3 id="userModalTitle">Add User</h3>
+            <button type="button" class="modal-close" id="closeUserModal">×</button>
+        </div>
+
+        <form id="userModalForm" method="post" action="{{ path('dashboard_users_create') }}">
+            <div class="modal-grid">
+                <div class="field">
+                    <label for="m_first_name">First Name</label>
+                    <input id="m_first_name" type="text" name="first_name" required>
+                </div>
+                <div class="field">
+                    <label for="m_last_name">Last Name</label>
+                    <input id="m_last_name" type="text" name="last_name" required>
+                </div>
+                <div class="field">
+                    <label for="m_email">Email</label>
+                    <input id="m_email" type="email" name="email" required>
+                </div>
+                <div class="field">
+                    <label for="m_phone">Phone</label>
+                    <input id="m_phone" type="text" name="phone">
+                </div>
+                <div class="field">
+                    <label for="m_password">Password</label>
+                    <input id="m_password" type="text" name="password" required>
+                </div>
+                <div class="field">
+                    <label for="m_user_type">User Type</label>
+                    <select id="m_user_type" name="user_type" required>
+                        <option value="DONOR">DONOR</option>
+                        <option value="HOSPITAL_STAFF">HOSPITAL_STAFF</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="donorFields" class="subsection">
+                <h4>Donor Information</h4>
+                <div class="sub-grid">
+                    <div class="field">
+                        <label for="m_blood_type_id">Blood Type</label>
+                        <select id="m_blood_type_id" name="blood_type_id">
+                            <option value="">Select blood type</option>
+                            {% for bt in blood_types %}
+                                <option value="{{ bt|e('html_attr') }}">{{ bt }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="m_last_donation_date">Last Donation Date</label>
+                        <input id="m_last_donation_date" type="date" name="last_donation_date">
+                    </div>
+                    <div class="field">
+                        <label for="m_donor_city">City</label>
+                        <input id="m_donor_city" type="text" name="donor_city">
+                    </div>
+                    <div class="field">
+                        <label for="m_total_donations">Total Donations</label>
+                        <input id="m_total_donations" type="number" name="total_donations" min="0" value="0">
+                    </div>
+                </div>
+            </div>
+
+            <div id="staffFields" class="subsection">
+                <h4>Hospital Staff Information</h4>
+                <div class="sub-grid">
+                    <div class="field">
+                        <label for="m_staff_role">Role</label>
+                        <select id="m_staff_role" name="staff_role">
+                            <option value="">Select role</option>
+                            <option value="MANAGER">MANAGER</option>
+                            <option value="TECHNICIAN">TECHNICIAN</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="m_hospital_id">Hospital</label>
+                        <select id="m_hospital_id" name="hospital_id">
+                            <option value="">Select hospital</option>
+                            {% for h in hospital_options %}
+                                <option value="{{ h.id|e('html_attr') }}">{{ h.name }} ({{ h.id|slice(0, 8) }}...)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field full">
+                        <label for="m_department">Department</label>
+                        <input id="m_department" type="text" name="department" placeholder="e.g. Emergency">
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" id="cancelUserModal">Cancel</button>
+                <button type="submit" class="btn-primary" id="submitUserModal">Create User</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="userDetailsModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="userDetailsTitle">
+        <div class="modal-head">
+            <h3 id="userDetailsTitle">User Details</h3>
+            <button type="button" class="modal-close" id="closeUserDetailsModal">×</button>
+        </div>
+
+        <div class="details-grid">
+            <div class="detail-item">
+                <p class="k">Name</p>
+                <p class="v" id="d_name">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">User Type</p>
+                <p class="v" id="d_user_type">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">Email</p>
+                <p class="v" id="d_email">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">Phone</p>
+                <p class="v" id="d_phone">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">User ID</p>
+                <p class="v" id="d_user_id">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">Created At</p>
+                <p class="v" id="d_created_at">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">Blood Type</p>
+                <p class="v" id="d_blood_type">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">Last Donation Date</p>
+                <p class="v" id="d_last_donation">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">Donor City</p>
+                <p class="v" id="d_city">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">Total Donations</p>
+                <p class="v" id="d_total_donations">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">Staff Role</p>
+                <p class="v" id="d_staff_role">N/A</p>
+            </div>
+            <div class="detail-item">
+                <p class="k">Staff Hospital ID</p>
+                <p class="v" id="d_staff_hospital">N/A</p>
+            </div>
+            <div class="detail-item full">
+                <p class="k">Staff Department</p>
+                <p class="v" id="d_staff_department">N/A</p>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" id="closeUserDetailsFooter">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const filtersForm = document.getElementById('usersFiltersForm');
+        const statsContainer = document.getElementById('usersStatsContainer');
+        const listContainer = document.getElementById('usersListContainer');
+        let typingTimer = null;
+        let currentRequestController = null;
+
+        function submitFiltersAjax() {
+            if (!filtersForm || !window.fetch || !statsContainer || !listContainer) {
+                if (filtersForm) {
+                    filtersForm.submit();
+                }
+                return;
+            }
+
+            const params = new URLSearchParams(new FormData(filtersForm));
+            const url = filtersForm.action + '?' + params.toString();
+
+            if (currentRequestController !== null) {
+                currentRequestController.abort();
+            }
+
+            currentRequestController = new AbortController();
+
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                signal: currentRequestController.signal
+            })
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch filtered users');
+                    }
+                    return response.json();
+                })
+                .then(function (payload) {
+                    if (typeof payload.statsHtml === 'string') {
+                        statsContainer.innerHTML = payload.statsHtml;
+                    }
+                    if (typeof payload.listHtml === 'string') {
+                        listContainer.innerHTML = payload.listHtml;
+                    }
+
+                    bindUserListInteractions();
+                    window.history.replaceState({}, '', url);
+                })
+                .catch(function (error) {
+                    if (error.name === 'AbortError') {
+                        return;
+                    }
+
+                    filtersForm.submit();
+                });
+        }
+
+        if (filtersForm) {
+            const textInputs = filtersForm.querySelectorAll('input[type="text"]');
+            const selects = filtersForm.querySelectorAll('select');
+
+            textInputs.forEach(function (input) {
+                input.addEventListener('input', function () {
+                    if (typingTimer !== null) {
+                        window.clearTimeout(typingTimer);
+                    }
+                    typingTimer = window.setTimeout(submitFiltersAjax, 300);
+                });
+            });
+
+            selects.forEach(function (select) {
+                select.addEventListener('change', submitFiltersAjax);
+            });
+        }
+
+        const overlay = document.getElementById('userModal');
+        const detailsOverlay = document.getElementById('userDetailsModal');
+        const openAddBtn = document.getElementById('openAddUserModal');
+        const closeBtn = document.getElementById('closeUserModal');
+        const cancelBtn = document.getElementById('cancelUserModal');
+        const detailsCloseBtn = document.getElementById('closeUserDetailsModal');
+        const detailsCloseFooterBtn = document.getElementById('closeUserDetailsFooter');
+        const form = document.getElementById('userModalForm');
+        const title = document.getElementById('userModalTitle');
+        const submitBtn = document.getElementById('submitUserModal');
+        const userType = document.getElementById('m_user_type');
+        const donorFields = document.getElementById('donorFields');
+        const staffFields = document.getElementById('staffFields');
+
+        const detailFields = {
+            name: document.getElementById('d_name'),
+            userType: document.getElementById('d_user_type'),
+            email: document.getElementById('d_email'),
+            phone: document.getElementById('d_phone'),
+            userId: document.getElementById('d_user_id'),
+            createdAt: document.getElementById('d_created_at'),
+            bloodType: document.getElementById('d_blood_type'),
+            lastDonation: document.getElementById('d_last_donation'),
+            city: document.getElementById('d_city'),
+            totalDonations: document.getElementById('d_total_donations'),
+            staffRole: document.getElementById('d_staff_role'),
+            staffHospital: document.getElementById('d_staff_hospital'),
+            staffDepartment: document.getElementById('d_staff_department')
+        };
+
+        function toggleTypeSections() {
+            const type = userType.value;
+            donorFields.classList.toggle('open', type === 'DONOR');
+            staffFields.classList.toggle('open', type === 'HOSPITAL_STAFF');
+        }
+
+        function openModal() {
+            overlay.classList.add('open');
+            overlay.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeModal() {
+            overlay.classList.remove('open');
+            overlay.setAttribute('aria-hidden', 'true');
+        }
+
+        function safeValue(value) {
+            return value && value.trim() !== '' ? value : 'N/A';
+        }
+
+        function openDetailsModal(card) {
+            detailFields.name.textContent = ((card.dataset.firstName || '') + ' ' + (card.dataset.lastName || '')).trim() || 'N/A';
+            detailFields.userType.textContent = safeValue(card.dataset.userType);
+            detailFields.email.textContent = safeValue(card.dataset.email);
+            detailFields.phone.textContent = safeValue(card.dataset.phone);
+            detailFields.userId.textContent = safeValue(card.dataset.userId);
+            detailFields.createdAt.textContent = safeValue(card.dataset.createdAt);
+            detailFields.bloodType.textContent = safeValue(card.dataset.donorBloodTypeId);
+            detailFields.lastDonation.textContent = safeValue(card.dataset.donorLastDonationDate);
+            detailFields.city.textContent = safeValue(card.dataset.donorCity);
+            detailFields.totalDonations.textContent = safeValue(card.dataset.donorTotalDonations);
+            detailFields.staffRole.textContent = safeValue(card.dataset.staffRole);
+            detailFields.staffHospital.textContent = safeValue(card.dataset.staffHospitalId);
+            detailFields.staffDepartment.textContent = safeValue(card.dataset.staffDepartment);
+
+            detailsOverlay.classList.add('open');
+            detailsOverlay.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeDetailsModal() {
+            detailsOverlay.classList.remove('open');
+            detailsOverlay.setAttribute('aria-hidden', 'true');
+        }
+
+        function resetForCreate() {
+            form.reset();
+            form.action = '{{ path('dashboard_users_create') }}';
+            title.textContent = 'Add User';
+            submitBtn.textContent = 'Create User';
+            document.getElementById('m_password').required = true;
+            userType.value = 'DONOR';
+            toggleTypeSections();
+        }
+
+        function fillForEdit(btn) {
+            form.action = '{{ path('dashboard_users_update', { userId: '__ID__' }) }}'.replace('__ID__', btn.dataset.userId);
+            title.textContent = 'Modify User';
+            submitBtn.textContent = 'Save Changes';
+
+            document.getElementById('m_first_name').value = btn.dataset.firstName || '';
+            document.getElementById('m_last_name').value = btn.dataset.lastName || '';
+            document.getElementById('m_email').value = btn.dataset.email || '';
+            document.getElementById('m_phone').value = btn.dataset.phone || '';
+            document.getElementById('m_password').value = '';
+            document.getElementById('m_password').required = false;
+
+            userType.value = btn.dataset.userType || 'DONOR';
+            document.getElementById('m_blood_type_id').value = btn.dataset.donorBloodTypeId || '';
+            document.getElementById('m_last_donation_date').value = btn.dataset.donorLastDonationDate || '';
+            document.getElementById('m_donor_city').value = btn.dataset.donorCity || '';
+            document.getElementById('m_total_donations').value = btn.dataset.donorTotalDonations || '0';
+
+            document.getElementById('m_staff_role').value = btn.dataset.staffRole || '';
+            document.getElementById('m_hospital_id').value = btn.dataset.staffHospitalId || '';
+            document.getElementById('m_department').value = btn.dataset.staffDepartment || '';
+
+            toggleTypeSections();
+        }
+
+        openAddBtn.addEventListener('click', function () {
+            resetForCreate();
+            openModal();
+        });
+
+        function bindUserListInteractions() {
+            document.querySelectorAll('.open-edit-user').forEach(function (btn) {
+                if (btn.dataset.boundEdit === '1') {
+                    return;
+                }
+
+                btn.dataset.boundEdit = '1';
+                btn.addEventListener('click', function () {
+                    fillForEdit(btn);
+                    openModal();
+                });
+            });
+
+            document.querySelectorAll('.open-user-details').forEach(function (card) {
+                if (card.dataset.boundDetails === '1') {
+                    return;
+                }
+
+                card.dataset.boundDetails = '1';
+                card.addEventListener('click', function (e) {
+                    if (e.target.closest('.crud-bar')) {
+                        return;
+                    }
+                    openDetailsModal(card);
+                });
+
+                card.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openDetailsModal(card);
+                    }
+                });
+            });
+
+            document.querySelectorAll('.crud-bar').forEach(function (bar) {
+                if (bar.dataset.boundCrud === '1') {
+                    return;
+                }
+
+                bar.dataset.boundCrud = '1';
+                bar.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                });
+            });
+        }
+
+        bindUserListInteractions();
+
+        closeBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) {
+                closeModal();
+            }
+        });
+
+        detailsCloseBtn.addEventListener('click', closeDetailsModal);
+        detailsCloseFooterBtn.addEventListener('click', closeDetailsModal);
+        detailsOverlay.addEventListener('click', function (e) {
+            if (e.target === detailsOverlay) {
+                closeDetailsModal();
+            }
+        });
+
+        userType.addEventListener('change', toggleTypeSections);
+        toggleTypeSections();
+    })();
+</script>
+{% endblock %}

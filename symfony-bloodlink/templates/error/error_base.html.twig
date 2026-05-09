@@ -1,0 +1,36 @@
+{% extends 'base.html.twig' %}
+
+{% set body_class = 'error-page' %}
+{% set session_payload = app.session is defined ? app.session.get('auth_user') : null %}
+{% set error_home_route = 'auth_index' %}
+{% if session_payload %}
+    {% set error_home_route = session_payload.user_type|default('')|upper == 'DONOR' ? 'dashboard_donor_home' : 'dashboard_users' %}
+{% endif %}
+
+{% block title %}{{ page_title|default('BloodLink Error') }}{% endblock %}
+
+{% block stylesheets %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('styles/normalized-ui.css') }}">
+{% endblock %}
+
+{% block body %}
+    <div class="error-shell">
+        <div class="error-card">
+            <p class="error-kicker">{{ page_code|default('Error') }}</p>
+            <h1 class="error-title">{{ page_title|default('Something went wrong') }}</h1>
+            <p class="error-description">{{ page_description|default('The requested page could not be displayed.') }}</p>
+
+            {% include 'shared/_flash.html.twig' %}
+
+            <div class="error-actions">
+                <a class="shared-button shared-button--primary" href="{{ path(error_home_route) }}">Go back</a>
+                <a class="shared-button shared-button--secondary" href="{{ path('auth_index') }}">Sign in</a>
+            </div>
+
+            {% block error_details %}{% endblock %}
+        </div>
+    </div>
+{% endblock %}

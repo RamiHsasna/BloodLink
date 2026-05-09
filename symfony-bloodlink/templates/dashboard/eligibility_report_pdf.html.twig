@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donor Eligibility Report</title>
+    <style>
+        @page {
+            margin: 56px 34px 36px 34px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            color: #2f3b4a;
+            font-size: 12px;
+            line-height: 1.35;
+            background: #ffffff;
+        }
+
+        .container {
+            width: 100%;
+            padding: 12px 0 0 0;
+        }
+
+        .header {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            border-bottom: 3px solid #9f1f1f;
+            padding-bottom: 8px;
+            margin-bottom: 22px;
+        }
+
+        .header td {
+            border: 0;
+            padding: 4px 0 8px 0;
+            vertical-align: bottom;
+        }
+
+        .header-left {
+            width: 40%;
+        }
+
+        .header-right {
+            width: 60%;
+        }
+
+        .logo {
+            color: #9f1f1f;
+            font-size: 28px;
+            font-weight: bold;
+            line-height: 1.15;
+        }
+
+        .sub-logo {
+            margin-top: 4px;
+            color: #8e98a3;
+            font-size: 11px;
+            letter-spacing: 0.2px;
+        }
+
+        .report-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #555;
+            line-height: 1.2;
+            text-align: right;
+            white-space: normal;
+            word-wrap: break-word;
+        }
+
+        .report-date {
+            margin-top: 6px;
+            text-align: right;
+            color: #8e98a3;
+            font-size: 11px;
+        }
+
+        .section-title {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            background: #f1f1f1;
+            border-left: 6px solid #9f1f1f;
+            color: #344457;
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            padding: 7px 10px;
+        }
+
+        .section-title.first {
+            margin-top: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .data-table {
+            margin-bottom: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #d3d8de;
+            padding: 8px 10px;
+            vertical-align: middle;
+        }
+
+        th {
+            background: #f4f4f4;
+            color: #3b4b5c;
+            text-align: left;
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .label-cell {
+            width: 16%;
+            color: #6f7f8f;
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .value-cell {
+            color: #2f3b4a;
+            font-weight: bold;
+            min-height: 26px;
+        }
+
+        .qa-header {
+            background: #f4f4f4;
+            font-weight: 600;
+            color: #334558;
+            text-transform: none;
+        }
+
+        .yesno {
+            text-align: center;
+            width: 13%;
+            font-family: "Courier New", monospace;
+            font-size: 15px;
+            font-weight: bold;
+            color: #27384a;
+        }
+
+        .disposition {
+            margin-top: 8px;
+            margin-bottom: 10px;
+            font-size: 12px;
+            color: #3a4b5d;
+        }
+
+        .disp-item {
+            display: inline-block;
+            margin-right: 18px;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+
+        .disp-item span {
+            font-weight: normal;
+        }
+
+        .note-label {
+            color: #6f7f8f;
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .note-box {
+            border: 1px solid #d3d8de;
+            min-height: 44px;
+            padding: 7px 10px;
+            color: #33485a;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin-bottom: 24px;
+        }
+
+        .page-two {
+            page-break-before: always;
+            break-before: page;
+            padding-top: 24px;
+        }
+
+        .signatures {
+            margin-top: 26px;
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .signatures td {
+            border: 0;
+            width: 50%;
+            padding: 0 10px;
+            vertical-align: top;
+        }
+
+        .signature {
+            text-align: center;
+            color: #4b5c6e;
+            font-size: 11px;
+        }
+
+        .signature-line {
+            border-top: 2px solid #8d99a6;
+            margin-bottom: 6px;
+            height: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <table class="header">
+            <tr>
+                <td class="header-left">
+                <div class="logo">BloodLink</div>
+                <div class="sub-logo"> BLOOD BANK PLATFORM</div>
+                </td>
+                <td class="header-right">
+                    <div class="report-title">Donor Eligibility Record</div>
+                    <div class="report-date">Generated {{ reportDate }}</div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="section-title first">Personal Details</div>
+        <table class="data-table">
+            <tr>
+                <td class="label-cell">Full Name</td>
+                <td class="value-cell">{{ fullName }}</td>
+                <td class="label-cell">Donor ID</td>
+                <td class="value-cell">{{ donorId }}</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Date of Birth</td>
+                <td class="value-cell">{{ dateOfBirth }}</td>
+                <td class="label-cell">Gender</td>
+                <td class="value-cell">{{ gender }}</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Blood Type</td>
+                <td class="value-cell" colspan="3">{{ bloodType }}</td>
+            </tr>
+        </table>
+
+        <div class="section-title">Physical Assessment</div>
+        <table class="data-table">
+            <tr>
+                <th>Weight (kg)</th>
+                <th>Temperature (C)</th>
+                <th>Blood Pressure</th>
+                <th>Pulse Rate</th>
+                <th>Hemoglobin (g/dL)</th>
+            </tr>
+            <tr>
+                <td>{{ weight }}</td>
+                <td>{{ temperature }}</td>
+                <td>{{ bloodPressure }}</td>
+                <td>{{ pulseRate }}</td>
+                <td>{{ hemoglobin }}</td>
+            </tr>
+        </table>
+
+        <div class="section-title">Eligibility Questionnaire</div>
+        <table class="data-table">
+            <tr>
+                <th class="qa-header">Screening Question</th>
+                <th class="yesno">Yes</th>
+                <th class="yesno">No</th>
+            </tr>
+            {% for item in questionnaireItems %}
+            <tr>
+                <td>{{ item.question }}</td>
+                <td class="yesno">{{ item.yes ? '[X]' : '[ ]' }}</td>
+                <td class="yesno">{{ item.no ? '[X]' : '[ ]' }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        <div class="page-two">
+        <div class="section-title first">Final Disposition</div>
+        <div class="disposition">
+            <div class="disp-item">{{ accepted ? '[X]' : '[ ]' }} ACCEPTED <span>for Donation</span></div>
+            <div class="disp-item">{{ deferredTemporary ? '[X]' : '[ ]' }} DEFERRED <span>(Temporary)</span></div>
+            <div class="disp-item">{{ deferredPermanent ? '[X]' : '[ ]' }} DEFERRED <span>(Permanent)</span></div>
+        </div>
+
+        <div class="note-label">Notes / Reason for Deferral</div>
+        <div class="note-box">{{ reasonsText }}</div>
+
+        <table class="signatures">
+            <tr>
+                <td>
+                    <div class="signature">
+                        <div class="signature-line"></div>
+                        Donor Signature
+                    </div>
+                </td>
+                <td>
+                    <div class="signature">
+                        <div class="signature-line"></div>
+                        Medical Staff Signature
+                    </div>
+                </td>
+            </tr>
+        </table>
+        </div>
+    </div>
+</body>
+</html>
