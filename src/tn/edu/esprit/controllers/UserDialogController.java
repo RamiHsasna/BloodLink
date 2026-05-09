@@ -55,8 +55,7 @@ public class UserDialogController {
     @FXML private ComboBox<String> bloodTypeCombo;
     @FXML private Label bloodTypeError;
     @FXML private DatePicker lastDonationDatePicker;
-    @FXML private TextField latitudeField;
-    @FXML private TextField longitudeField;
+    @FXML private TextField donorCityField;
     @FXML private Spinner<Integer> totalDonationsSpinner;
 
     // Hospital staff-specific fields
@@ -328,50 +327,39 @@ public class UserDialogController {
     }
 
     private void updateDonorWithFormData(String userId, String firstName, String lastName) {
-        try {
-            Donor existingDonor = new Donor();
-            existingDonor.setUserId(userId);
-            Donor currentDonor = serviceDonor.getOne(existingDonor);
+        Donor existingDonor = new Donor();
+        existingDonor.setUserId(userId);
+        Donor currentDonor = serviceDonor.getOne(existingDonor);
 
-            String selectedBloodTypeDisplay = bloodTypeCombo.getValue();
-            String bloodTypeId = null;
-            if (selectedBloodTypeDisplay != null) {
-                for (BloodType bt : bloodTypes) {
-                    if ((bt.getAboType() + bt.getRhFactor()).equals(selectedBloodTypeDisplay)) {
-                        bloodTypeId = bt.getBloodTypeId();
-                        break;
-                    }
+        String selectedBloodTypeDisplay = bloodTypeCombo.getValue();
+        String bloodTypeId = null;
+        if (selectedBloodTypeDisplay != null) {
+            for (BloodType bt : bloodTypes) {
+                if ((bt.getAboType() + bt.getRhFactor()).equals(selectedBloodTypeDisplay)) {
+                    bloodTypeId = bt.getBloodTypeId();
+                    break;
                 }
             }
-
-            LocalDate lastDonationDate = lastDonationDatePicker.getValue();
-
-            Double latitude = null;
-            if (latitudeField.getText() != null && !latitudeField.getText().trim().isEmpty()) {
-                latitude = Double.parseDouble(latitudeField.getText().trim());
-            }
-            Double longitude = null;
-            if (longitudeField.getText() != null && !longitudeField.getText().trim().isEmpty()) {
-                longitude = Double.parseDouble(longitudeField.getText().trim());
-            }
-
-            int totalDonations = totalDonationsSpinner.getValue() != null ? totalDonationsSpinner.getValue() : 0;
-
-            Donor donor = new Donor();
-            donor.setUserId(userId);
-            donor.setFirstName(firstName);
-            donor.setLastName(lastName);
-            donor.setBloodTypeId(bloodTypeId);
-            donor.setLastDonationDate(lastDonationDate);
-            donor.setCurrentlyEligible(currentDonor == null || currentDonor.isCurrentlyEligible());
-            donor.setLatitude(latitude);
-            donor.setLongitude(longitude);
-            donor.setTotalDonations(totalDonations);
-
-            serviceDonor.modifier(donor);
-        } catch (NumberFormatException e) {
-            showAlert(Alert.AlertType.WARNING, "Warning", "Invalid latitude or longitude value. Donor location was not saved.");
         }
+
+        LocalDate lastDonationDate = lastDonationDatePicker.getValue();
+        String city = donorCityField.getText() != null && !donorCityField.getText().trim().isEmpty()
+                ? donorCityField.getText().trim()
+                : null;
+
+        int totalDonations = totalDonationsSpinner.getValue() != null ? totalDonationsSpinner.getValue() : 0;
+
+        Donor donor = new Donor();
+        donor.setUserId(userId);
+        donor.setFirstName(firstName);
+        donor.setLastName(lastName);
+        donor.setBloodTypeId(bloodTypeId);
+        donor.setCity(city);
+        donor.setLastDonationDate(lastDonationDate);
+        donor.setCurrentlyEligible(currentDonor == null || currentDonor.isCurrentlyEligible());
+        donor.setTotalDonations(totalDonations);
+
+        serviceDonor.modifier(donor);
     }
 
     private void loadDonorData(String userId) {
@@ -392,8 +380,7 @@ public class UserDialogController {
         }
 
         lastDonationDatePicker.setValue(donor.getLastDonationDate());
-        latitudeField.setText(donor.getLatitude() != null ? String.valueOf(donor.getLatitude()) : "");
-        longitudeField.setText(donor.getLongitude() != null ? String.valueOf(donor.getLongitude()) : "");
+        donorCityField.setText(donor.getCity() != null ? donor.getCity() : "");
         totalDonationsSpinner.getValueFactory().setValue(donor.getTotalDonations());
     }
 

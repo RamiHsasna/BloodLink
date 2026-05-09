@@ -9,6 +9,7 @@ public class Donor {
     private String firstName;
     private String lastName;
     private String bloodTypeId;
+    private String city;
 
     private LocalDate lastDonationDate;
     private boolean isCurrentlyEligible;
@@ -62,6 +63,9 @@ public class Donor {
 
     public String getBloodTypeId() { return bloodTypeId; }
     public void setBloodTypeId(String bloodTypeId) { this.bloodTypeId = bloodTypeId; }
+
+    public String getCity() { return city; }
+    public void setCity(String city) { this.city = city; }
 
 
 

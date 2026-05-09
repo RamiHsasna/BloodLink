@@ -9,6 +9,7 @@ import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import tn.edu.esprit.entities.UserType;
@@ -18,9 +19,11 @@ import tn.edu.esprit.Tools.DataSource;
 public class ServiceUser implements IService<Users> {
 
     private Connection cnx;
+    private final GeocodingService geocodingService;
 
     public ServiceUser() {
         this.cnx = DataSource.getInstance().getConnection();
+        this.geocodingService = new GeocodingService();
     }
 
     @Override
@@ -209,7 +212,7 @@ public class ServiceUser implements IService<Users> {
         return null;
     }
 
-    public boolean registerDonorAccount(String firstName, String lastName, String email, String phone, String password, String bloodTypeId) {
+    public boolean registerDonorAccount(String firstName, String lastName, String email, String phone, String city, String password, String bloodTypeId) {
         if (email == null || password == null) {
             return false;
         }
@@ -251,7 +254,7 @@ public class ServiceUser implements IService<Users> {
                 ps.executeUpdate();
             }
 
-            syncDonorProfile(user, bloodTypeId);
+            syncDonorProfile(user, bloodTypeId, city);
             cnx.commit();
             return true;
         } catch (SQLException ex) {
@@ -289,10 +292,14 @@ public class ServiceUser implements IService<Users> {
     }
 
     private void syncDonorProfile(Users u) throws SQLException {
-        syncDonorProfile(u, null);
+        syncDonorProfile(u, null, null);
     }
 
     private void syncDonorProfile(Users u, String preferredBloodTypeId) throws SQLException {
+        syncDonorProfile(u, preferredBloodTypeId, null);
+    }
+
+    private void syncDonorProfile(Users u, String preferredBloodTypeId, String preferredCity) throws SQLException {
         if (u == null || u.getId() == null || u.getUserType() != UserType.DONOR) {
             return;
         }
@@ -308,7 +315,25 @@ public class ServiceUser implements IService<Users> {
             bloodTypeId = bloodTypeId.trim();
         }
 
-        String req = "INSERT INTO donors (user_id, first_name, last_name, blood_type_id, is_currently_eligible, total_donations, created_at) VALUES (CAST(? AS uuid), ?, ?, ?, true, 0, NOW())";
+        String city = preferredCity;
+        if (city != null) {
+            city = city.trim();
+            if (city.isEmpty()) {
+                city = null;
+            }
+        }
+
+        Double latitude = null;
+        Double longitude = null;
+        if (city != null) {
+            Optional<GeocodingService.Coordinates> geocoded = geocodingService.geocodeCity(city);
+            if (geocoded.isPresent()) {
+                latitude = geocoded.get().getLatitude();
+                longitude = geocoded.get().getLongitude();
+            }
+        }
+
+        String req = "INSERT INTO donors (user_id, first_name, last_name, blood_type_id, city, latitude, longitude, is_currently_eligible, total_donations, created_at) VALUES (CAST(? AS uuid), ?, ?, ?, ?, ?, ?, true, 0, NOW())";
         try (PreparedStatement ps = cnx.prepareStatement(req)) {
             ps.setString(1, u.getId());
             ps.setString(2, u.getFirst_name());
@@ -317,6 +342,21 @@ public class ServiceUser implements IService<Users> {
                 ps.setString(4, bloodTypeId);
             } else {
                 ps.setNull(4, Types.VARCHAR);
+            }
+            if (city != null) {
+                ps.setString(5, city);
+            } else {
+                ps.setNull(5, Types.VARCHAR);
+            }
+            if (latitude != null) {
+                ps.setDouble(6, latitude);
+            } else {
+                ps.setNull(6, Types.DOUBLE);
+            }
+            if (longitude != null) {
+                ps.setDouble(7, longitude);
+            } else {
+                ps.setNull(7, Types.DOUBLE);
             }
             ps.executeUpdate();
         }

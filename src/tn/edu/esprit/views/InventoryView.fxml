@@ -12,7 +12,7 @@
       stylesheets="@../styles/dashboard.css">
 
     <!-- Page Header -->
-    <HBox styleClass="page-header" alignment="CENTER_LEFT" spacing="16">
+    <HBox styleClass="page-header" alignment="TOP_LEFT" spacing="16">
         <padding>
             <Insets top="28" right="32" bottom="20" left="32"/>
         </padding>
@@ -22,7 +22,19 @@
             <Label text="Blood stock management" styleClass="page-description"/>
         </VBox>
 
-        <!-- Date display -->
+        <!-- Hospital Selection / Display Area -->
+        <VBox spacing="8" HBox.hgrow="ALWAYS" alignment="TOP_LEFT">
+            <!-- For Admin: Hospital Selector Dropdown -->
+            <HBox fx:id="hospitalSelectionBox" spacing="8" alignment="CENTER_LEFT" visible="false" managed="false">
+                <Label text="Select Hospital:" style="-fx-font-size: 12px; -fx-text-fill: #64748b;"/>
+                <ComboBox fx:id="hospitalCombo" prefWidth="200" style="-fx-font-size: 12px;"/>
+            </HBox>
+
+            <!-- Hospital Name Display (for staff and admin) -->
+            <Label fx:id="lblHospitalName" text="" style="-fx-font-size: 13px; -fx-text-fill: #1e293b; -fx-font-weight: bold;"/>
+        </VBox>
+
+        <!-- Date Display -->
         <HBox alignment="CENTER_LEFT" spacing="8" styleClass="inv-date-display">
             <padding>
                 <Insets top="0" right="16" bottom="0" left="0"/>
@@ -30,7 +42,6 @@
             <Label text="📅" styleClass="inv-date-icon"/>
             <Label fx:id="lblCurrentDate" text="" styleClass="inv-date-text"/>
         </HBox>
-
 
     </HBox>
 
