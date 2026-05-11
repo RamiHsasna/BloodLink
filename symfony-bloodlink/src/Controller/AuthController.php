@@ -198,10 +198,33 @@ class AuthController extends AbstractController
 
                 try {
                     $email = (new Email())
-                        ->from('bloodlink.app.noreply@gmail.com')
+                        ->from('bloodlink.supportteam@gmail.com')
                         ->to($emailAddress)
-                        ->subject('Password Reset Request')
-                        ->html("<p>You requested a password reset. Click the link below to set a new password:</p><p><a href='$resetUrl'>$resetUrl</a></p><p>This link expires in 1 hour.</p>");
+                        ->subject('Password Reset Request for BloodLink')
+                        ->html("
+                            <div style=\"font-family:'Segoe UI',Tahoma,sans-serif;color:#333;background-color:#f6f9fc;padding:40px 0;\">
+                                <div style=\"max-width:600px;margin:0 auto;background-color:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);\">
+                                    <div style=\"padding:30px 40px;text-align:left;\">
+                                        <div style=\"display:inline-block;vertical-align:middle;margin-right:10px;width:32px;height:32px;background-color:#c52228;border-radius:50% 50% 50% 0;transform:rotate(-45deg);margin-top:-5px;\"></div>
+                                        <span style=\"color:#c52228;font-size:28px;font-weight:700;display:inline-block;vertical-align:middle;\">BloodLink</span>
+                                    </div>
+                                    <div style=\"padding:0 40px 40px 40px;\">
+                                        <h1 style=\"font-size:22px;font-weight:700;margin:0 0 24px 0;color:#1a1a1a;\">Password Reset Request</h1>
+                                        <div style=\"font-size:16px;line-height:1.6;color:#444444;margin-bottom:30px;\">
+                                            <p>You requested a password reset.</p>
+                                            <p>Click the link below to set a new password.</p>
+                                        </div>
+                                        <div style=\"text-align:center;\">
+                                            <a href=\"$resetUrl\" style=\"background-color:#c52228;color:#ffffff;padding:16px 32px;text-decoration:none;border-radius:8px;font-weight:700;font-size:16px;display:inline-block;\">Reset Your Password</a>
+                                        </div>
+                                    </div>
+                                    <div style=\"padding:0 40px 40px 40px;font-size:14px;color:#666666;line-height:1.5;\">
+                                        <p>Regards,</p>
+                                        <p style=\"margin-top:20px;font-weight:600;color:#333333;\">The BloodLink Team</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ");
 
                     $mailer->send($email);
                 } catch (\Exception $e) {

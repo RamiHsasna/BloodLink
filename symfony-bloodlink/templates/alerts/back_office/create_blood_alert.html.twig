@@ -1,0 +1,98 @@
+{% extends 'alerts/layouts/back_office.html.twig' %}
+
+{% set page_title = 'Create Blood Alert' %}
+{% set page_description = 'Create a new blood alert to notify compatible nearby donors via email. The system will automatically find donors with matching blood types within the specified radius.' %}
+
+{% block page_actions %}
+    <a
+        href="{{ path('dashboard_alerts_index') }}"
+        class="inline-flex items-center justify-center rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-blood-500 hover:text-blood-600"
+    >
+        ← Back to Alerts
+    </a>
+{% endblock %}
+
+{% block module_content %}
+    <div class="audit-form-layout">
+        <section class="audit-form-card">
+            {{ form_start(form, {attr: {class: 'audit-form-stack', id: 'blood-alert-form'}}) }}
+                <div class="audit-form-grid">
+                    {# ── Hospital ── #}
+                    <div class="audit-form-field audit-form-field--full">
+                        {{ form_label(form.hospitalId, null, {label_attr: {class: 'audit-form-label'}}) }}
+                        {{ form_widget(form.hospitalId, {attr: {class: 'audit-form-input'}}) }}
+                        <div class="audit-form-error">{{ form_errors(form.hospitalId) }}</div>
+                    </div>
+
+                    {# ── Title ── #}
+                    <div class="audit-form-field audit-form-field--full">
+                        {{ form_label(form.title, null, {label_attr: {class: 'audit-form-label'}}) }}
+                        {{ form_widget(form.title, {attr: {class: 'audit-form-input'}}) }}
+                        <div class="audit-form-error">{{ form_errors(form.title) }}</div>
+                    </div>
+
+                    {# ── Blood Type ── #}
+                    <div class="audit-form-field">
+                        {{ form_label(form.bloodTypeId, null, {label_attr: {class: 'audit-form-label'}}) }}
+                        {{ form_widget(form.bloodTypeId, {attr: {class: 'audit-form-input'}}) }}
+                        <p class="audit-form-help">Select the blood type needed. Compatible donors will be notified automatically.</p>
+                        <div class="audit-form-error">{{ form_errors(form.bloodTypeId) }}</div>
+                    </div>
+
+                    {# ── Severity ── #}
+                    <div class="audit-form-field">
+                        {{ form_label(form.severity, null, {label_attr: {class: 'audit-form-label'}}) }}
+                        {{ form_widget(form.severity, {attr: {class: 'audit-form-input', id: 'alert-severity-select'}}) }}
+                        <div class="audit-form-error">{{ form_errors(form.severity) }}</div>
+                    </div>
+
+                    {# ── Quantity Needed ── #}
+                    <div class="audit-form-field audit-form-field--full">
+                        {{ form_label(form.quantityNeeded, null, {label_attr: {class: 'audit-form-label'}}) }}
+                        {{ form_widget(form.quantityNeeded, {attr: {class: 'audit-form-input'}}) }}
+                        <p class="audit-form-help">Number of blood units required.</p>
+                        <div class="audit-form-error">{{ form_errors(form.quantityNeeded) }}</div>
+                    </div>
+
+
+                    {# ── Message ── #}
+                    <div class="audit-form-field audit-form-field--full">
+                        {{ form_label(form.message, null, {label_attr: {class: 'audit-form-label'}}) }}
+                        {{ form_widget(form.message, {attr: {class: 'audit-form-input'}}) }}
+                        <p class="audit-form-help">This message will be included in the email sent to compatible donors.</p>
+                        <div class="audit-form-error">{{ form_errors(form.message) }}</div>
+                    </div>
+                </div>
+
+                
+
+                <div class="audit-form-actions" style="margin-top:24px;">
+                    <button type="submit" class="audit-form-submit" id="submit-blood-alert">
+                        🩸 Create Alert & Notify Donors
+                    </button>
+                    <a href="{{ path('dashboard_alerts_index') }}" class="audit-form-secondary">
+                        Cancel
+                    </a>
+                </div>
+            {{ form_end(form) }}
+        </section>
+
+        <aside class="audit-form-aside">
+            <p class="audit-form-kicker">Alert guidance</p>
+            <h2 class="audit-form-aside-title">Blood alert creation</h2>
+            <ul class="audit-form-aside-list">
+                <li><strong>Blood Type:</strong> Choose the type your hospital needs. The system will automatically find compatible donor types (e.g. O- can donate to all types).</li>
+                <li><strong>Severity:</strong> Use <code style="background:#fef2f2;color:#dc2626;padding:1px 6px;border-radius:4px;font-size:12px;">CRITICAL</code> or <code style="background:#fff7ed;color:#ea580c;padding:1px 6px;border-radius:4px;font-size:12px;">URGENT</code> for emergencies to grab donor attention.</li>
+                <li><strong>Proximity:</strong> The system automatically targets compatible donors within a 50 km radius of the hospital using geolocation.</li>
+                <li><strong>Emails:</strong> Each compatible donor within range will receive a personalized email notification.</li>
+            </ul>
+
+            <div style="margin-top:20px;padding:12px 16px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;">
+                <p style="margin:0;font-size:12px;color:#991b1b;font-weight:600;">⚠️ Important</p>
+                <p style="margin:6px 0 0;font-size:12px;color:#7f1d1d;line-height:1.5;">
+                    Emails are sent immediately upon alert creation. Make sure all details are correct before submitting.
+                </p>
+            </div>
+        </aside>
+    </div>
+{% endblock %}

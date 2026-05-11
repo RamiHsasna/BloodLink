@@ -2,16 +2,20 @@
 
 namespace App\Controller;
 
+use App\Entity\Alert;
 use App\Entity\DonorAlert;
 use App\Entity\User;
+use App\Form\AlertType;
 use App\Form\DonorAlertType;
 use App\Repository\DonorAlertRepository;
+use App\Service\AlertService;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
 class AlertsController extends AbstractController
@@ -19,6 +23,7 @@ class AlertsController extends AbstractController
     public function __construct(
         private readonly DonorAlertRepository $donorAlertRepository,
         private readonly EntityManagerInterface $entityManager,
+        private readonly MailerInterface $mailer,
     ) {
     }
 
@@ -56,42 +61,60 @@ class AlertsController extends AbstractController
         ]);
     }
 
-    #[Route('/dashboard/alerts/new', name: 'dashboard_alerts_new', methods: ['GET', 'POST'])]
-    public function new(Request $request): Response
+
+    // ─── BLOOD ALERT CREATION (new feature) ──────────────────────────────────
+
+    #[Route('/dashboard/alerts/create-blood-alert', name: 'dashboard_alerts_create_blood_alert', methods: ['GET', 'POST'])]
+    public function createBloodAlert(Request $request, AlertService $alertService): Response
     {
         if ($guard = $this->denyUnlessBackOffice($request)) {
             return $guard;
         }
 
         $sessionUser = $this->getSessionUser($request);
-        $entry = (new DonorAlert())
-            ->setDonorAlertId($this->generateUuidV4())
-            ->setIsNotified(false)
-            ->setIsRead(false)
-            ->setDonorResponse(DonorAlert::RESPONSE_NO_RESPONSE);
+        $hospitalId = $this->getScopedHospitalId($sessionUser);
 
-        $form = $this->createForm(DonorAlertType::class, $entry, [
+        $alert = new Alert();
+        $form = $this->createForm(AlertType::class, $alert, [
             'allowed_hospital_id' => $this->getScopedHospitalId($sessionUser),
         ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->entityManager->persist($entry);
-            $this->entityManager->flush();
+            try {
+                $staffId = (string) ($sessionUser['id'] ?? '');
+                
+                $hospital = $form->get('hospitalId')->getData();
+                $hospitalId = $hospital ? $hospital->getHospitalId() : null;
 
-            $this->addFlash('success', 'Donor alert created successfully.');
+                if ($hospitalId === null || $hospitalId === '') {
+                    $this->addFlash('error', 'No hospital selected. Please ensure a hospital is chosen for the alert.');
+                    return $this->redirectToRoute('dashboard_alerts_create_blood_alert');
+                }
 
-            return $this->redirectToRoute('dashboard_alerts_show', ['donorAlertId' => $entry->getDonorAlertId()]);
+                $result = $alertService->createAlertAndNotify($alert, $hospitalId, $staffId);
+
+                $this->addFlash('success', sprintf(
+                    'Blood alert created! %d compatible donor(s) found, %d within radius notified, %d email(s) sent.',
+                    $result['total_compatible'],
+                    $result['notified_donors'],
+                    $result['emails_sent'],
+                ));
+
+                return $this->redirectToRoute('dashboard_alerts_index');
+            } catch (\Throwable $e) {
+                $this->addFlash('error', 'Failed to create alert: ' . $e->getMessage());
+            }
         }
 
-        return $this->render('alerts/back_office/form.html.twig', [
+        return $this->render('alerts/back_office/create_blood_alert.html.twig', [
             'session_user' => $sessionUser,
             'form' => $form->createView(),
-            'page_title' => 'Create Donor Alert',
-            'submit_label' => 'Create Donor Alert',
-            'entry' => $entry,
+            'page_title' => 'Create Blood Alert',
         ]);
     }
+
+    // ─── EXISTING ROUTES ─────────────────────────────────────────────────────
 
     #[Route('/dashboard/alerts/{donorAlertId}', name: 'dashboard_alerts_show', methods: ['GET'])]
     public function show(Request $request, string $donorAlertId): Response
@@ -109,34 +132,36 @@ class AlertsController extends AbstractController
         ]);
     }
 
-    #[Route('/dashboard/alerts/{donorAlertId}/edit', name: 'dashboard_alerts_edit', methods: ['GET', 'POST'])]
-    public function edit(Request $request, string $donorAlertId): Response
+    #[Route('/dashboard/alerts/blood-alert/{alertId}/edit', name: 'dashboard_alerts_edit_blood_alert', methods: ['GET', 'POST'])]
+    public function editBloodAlert(Request $request, string $alertId): Response
     {
         if ($guard = $this->denyUnlessBackOffice($request)) {
             return $guard;
         }
 
         $sessionUser = $this->getSessionUser($request);
-        $entry = $this->findDonorAlertOrThrow($donorAlertId, $sessionUser);
+        $alert = $this->alertRepository->find($alertId);
 
-        $form = $this->createForm(DonorAlertType::class, $entry, [
+        if (!$alert) {
+            throw $this->createNotFoundException('Alert not found.');
+        }
+
+        $form = $this->createForm(AlertType::class, $alert, [
             'allowed_hospital_id' => $this->getScopedHospitalId($sessionUser),
         ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $this->entityManager->flush();
-            $this->addFlash('success', 'Donor alert updated successfully.');
+            $this->addFlash('success', 'Blood alert updated successfully.');
 
-            return $this->redirectToRoute('dashboard_alerts_show', ['donorAlertId' => $entry->getDonorAlertId()]);
+            return $this->redirectToRoute('dashboard_alerts_index');
         }
 
-        return $this->render('alerts/back_office/form.html.twig', [
+        return $this->render('alerts/back_office/edit_blood_alert.html.twig', [
             'session_user' => $sessionUser,
             'form' => $form->createView(),
-            'page_title' => 'Edit Donor Alert',
-            'submit_label' => 'Save Changes',
-            'entry' => $entry,
+            'alert' => $alert,
         ]);
     }
 
@@ -207,6 +232,8 @@ class AlertsController extends AbstractController
             'entry' => $entry,
         ]);
     }
+
+    // ─── PRIVATE HELPERS ─────────────────────────────────────────────────────
 
     /**
      * @param array<string, array<int, string>> $allowedValues
