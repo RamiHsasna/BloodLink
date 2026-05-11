@@ -143,7 +143,8 @@ class DonationsController extends AbstractController
 
         $apiKey = $_ENV['ANTHROPIC_API_KEY'] ?? '';
 
-        $ch = curl_init('https://api.anthropic.com/v1/messages');
+        // The key starts with sk-or-v1- which means it's an OpenRouter key
+        $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST           => true,
@@ -151,13 +152,14 @@ class DonationsController extends AbstractController
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_HTTPHEADER     => [
                 'Content-Type: application/json',
-                'x-api-key: ' . $apiKey,
-                'anthropic-version: 2023-06-01',
+                'Authorization: Bearer ' . $apiKey,
+                'HTTP-Referer: http://localhost:8000',
+                'X-Title: BloodLink AI Assistant',
             ],
             CURLOPT_POSTFIELDS => json_encode([
-                'model'      => 'claude-sonnet-4-20250514',
+                'model'    => 'anthropic/claude-3-haiku',
+                'messages' => [['role' => 'user', 'content' => $prompt]],
                 'max_tokens' => 1000,
-                'messages'   => [['role' => 'user', 'content' => $prompt]],
             ]),
         ]);
 
@@ -167,18 +169,19 @@ class DonationsController extends AbstractController
         curl_close($ch);
 
         if (!$response) {
-            return $this->json(['result' => 'cURL failed. Error: ' . $curlError . ' | Key starts with: ' . substr($apiKey, 0, 10)]);
+            return $this->json(['result' => 'Connection failed: ' . $curlError]);
         }
 
         $data = json_decode($response, true);
 
         if (isset($data['error'])) {
-            return $this->json(['result' => 'API error (' . $httpCode . '): ' . ($data['error']['message'] ?? json_encode($data))]);
+            return $this->json(['result' => 'API error (' . $httpCode . '): ' . ($data['error']['message'] ?? json_encode($data['error']))]);
         }
 
-        $text = $data['content'][0]['text'] ?? 'No content. Raw: ' . substr($response, 0, 300);
+        $text = $data['choices'][0]['message']['content'] ?? ('No response. Raw: ' . substr($response, 0, 300));
         return $this->json(['result' => $text]);
     }
+
 
     #[Route('/dashboard/donations/create', name: 'donations_create', methods: ['POST'])]
     public function create(Request $request, Connection $connection): Response
