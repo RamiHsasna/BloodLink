@@ -16,6 +16,7 @@ class HospitalService
     public function __construct(
         private readonly HospitalRepository $hospitalRepository,
         private readonly EntityManagerInterface $entityManager,
+        private readonly GeocodingService $geocodingService,
     ) {}
 
     /**
@@ -70,11 +71,17 @@ class HospitalService
         $hospital->setCity($hospitalData["city"] ?? null);
 
         // Set location
-        if (isset($hospitalData["latitude"])) {
-            $hospital->setLatitude((string) $hospitalData["latitude"]);
-        }
-        if (isset($hospitalData["longitude"])) {
-            $hospital->setLongitude((string) $hospitalData["longitude"]);
+        $coords = $this->geocodingService->geocodeCity($hospitalData["city"] ?? "");
+        if ($coords) {
+            $hospital->setLatitude($coords["latitude"]);
+            $hospital->setLongitude($coords["longitude"]);
+        } else {
+            if (isset($hospitalData["latitude"])) {
+                $hospital->setLatitude((string) $hospitalData["latitude"]);
+            }
+            if (isset($hospitalData["longitude"])) {
+                $hospital->setLongitude((string) $hospitalData["longitude"]);
+            }
         }
 
         // Set contact info
@@ -134,7 +141,16 @@ class HospitalService
         }
         if (isset($updateData["city"])) {
             $hospital->setCity($updateData["city"]);
+            
+            // Re-geocode if city changes
+            $coords = $this->geocodingService->geocodeCity($updateData["city"]);
+            if ($coords) {
+                $hospital->setLatitude($coords["latitude"]);
+                $hospital->setLongitude($coords["longitude"]);
+            }
         }
+        
+        // Allow manual override if provided and geocoding didn't happen or is forced
         if (isset($updateData["latitude"])) {
             $hospital->setLatitude((string) $updateData["latitude"]);
         }

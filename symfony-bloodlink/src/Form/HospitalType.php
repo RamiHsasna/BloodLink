@@ -70,24 +70,6 @@ class HospitalType extends AbstractType
                     new Email(['message' => 'Invalid email format']),
                 ],
             ])
-            ->add('latitude', NumberType::class, [
-                'label' => 'Latitude',
-                'attr' => [
-                    'placeholder' => '-90 to 90',
-                    'step' => '0.00000001',
-                ],
-                'required' => false,
-                'scale' => 8,
-            ])
-            ->add('longitude', NumberType::class, [
-                'label' => 'Longitude',
-                'attr' => [
-                    'placeholder' => '-180 to 180',
-                    'step' => '0.00000001',
-                ],
-                'required' => false,
-                'scale' => 8,
-            ])
             ->add('isActive', CheckboxType::class, [
                 'label' => 'Active',
                 'required' => false,
