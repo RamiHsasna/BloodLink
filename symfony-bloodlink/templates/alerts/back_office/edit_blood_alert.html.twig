@@ -1,0 +1,91 @@
+{% extends 'alerts/layouts/back_office.html.twig' %}
+
+{% set page_title = 'Edit Blood Alert' %}
+{% set page_description = 'Modify the details of an existing blood alert. Please note that changing the blood type or severity will not automatically re-notify already alerted donors.' %}
+
+{% block page_actions %}
+    <a
+        href="{{ path('dashboard_alerts_index') }}"
+        class="inline-flex items-center justify-center rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-blood-500 hover:text-blood-600"
+    >
+        ← Back to Alerts
+    </a>
+{% endblock %}
+
+{% block module_content %}
+    <div class="audit-form-layout">
+        <section class="audit-form-card">
+            {{ form_start(form, {attr: {class: 'audit-form-stack', id: 'edit-blood-alert-form'}}) }}
+                <div class="audit-form-grid">
+                    {# ── Hospital ── #}
+                    <div class="audit-form-field audit-form-field--full">
+                        {{ form_label(form.hospitalId, null, {label_attr: {class: 'audit-form-label'}}) }}
+                        {{ form_widget(form.hospitalId, {attr: {class: 'audit-form-input'}}) }}
+                        <div class="audit-form-error">{{ form_errors(form.hospitalId) }}</div>
+                    </div>
+
+                    {# ── Title ── #}
+                    <div class="audit-form-field audit-form-field--full">
+                        {{ form_label(form.title, null, {label_attr: {class: 'audit-form-label'}}) }}
+                        {{ form_widget(form.title, {attr: {class: 'audit-form-input'}}) }}
+                        <div class="audit-form-error">{{ form_errors(form.title) }}</div>
+                    </div>
+
+                    {# ── Blood Type ── #}
+                    <div class="audit-form-field">
+                        {{ form_label(form.bloodTypeId, null, {label_attr: {class: 'audit-form-label'}}) }}
+                        {{ form_widget(form.bloodTypeId, {attr: {class: 'audit-form-input'}}) }}
+                        <div class="audit-form-error">{{ form_errors(form.bloodTypeId) }}</div>
+                    </div>
+
+                    {# ── Severity ── #}
+                    <div class="audit-form-field">
+                        {{ form_label(form.severity, null, {label_attr: {class: 'audit-form-label'}}) }}
+                        {{ form_widget(form.severity, {attr: {class: 'audit-form-input'}}) }}
+                        <div class="audit-form-error">{{ form_errors(form.severity) }}</div>
+                    </div>
+
+                    {# ── Quantity Needed ── #}
+                    <div class="audit-form-field audit-form-field--full">
+                        {{ form_label(form.quantityNeeded, null, {label_attr: {class: 'audit-form-label'}}) }}
+                        {{ form_widget(form.quantityNeeded, {attr: {class: 'audit-form-input'}}) }}
+                        <div class="audit-form-error">{{ form_errors(form.quantityNeeded) }}</div>
+                    </div>
+
+                    {# ── Message ── #}
+                    <div class="audit-form-field audit-form-field--full">
+                        {{ form_label(form.message, null, {label_attr: {class: 'audit-form-label'}}) }}
+                        {{ form_widget(form.message, {attr: {class: 'audit-form-input'}}) }}
+                        <div class="audit-form-error">{{ form_errors(form.message) }}</div>
+                    </div>
+                </div>
+
+                <div class="audit-form-actions" style="margin-top:24px;">
+                    <button type="submit" class="audit-form-submit">
+                        💾 Save Changes
+                    </button>
+                    <a href="{{ path('dashboard_alerts_index') }}" class="audit-form-secondary">
+                        Cancel
+                    </a>
+                </div>
+            {{ form_end(form) }}
+        </section>
+
+        <aside class="audit-form-aside">
+            <p class="audit-form-kicker">Modification notice</p>
+            <h2 class="audit-form-aside-title">Updating alerts</h2>
+            <ul class="audit-form-aside-list">
+                <li>Editing an alert updates the central information viewed by donors in their portal.</li>
+                <li><strong>Re-notification:</strong> The system does not automatically send new emails when you edit an alert. To notify donors of a major change, consider creating a new alert.</li>
+                <li><strong>Status:</strong> Use this form to correct typos or update the quantity needed as donations come in.</li>
+            </ul>
+
+            <div style="margin-top:20px;padding:12px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
+                <p style="margin:0;font-size:12px;color:#475569;font-weight:600;">ℹ️ Alert Reference</p>
+                <p style="margin:6px 0 0;font-size:11px;color:#64748b;font-family:monospace;word-break:break-all;">
+                    {{ alert.alertId }}
+                </p>
+            </div>
+        </aside>
+    </div>
+{% endblock %}

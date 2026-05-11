@@ -87,20 +87,6 @@ class DonationEventType extends AbstractType
                     'placeholder' => 'Filled after the event progresses',
                 ],
             ])
-            ->add('latitude', TextType::class, [
-                'label' => 'Latitude',
-                'required' => false,
-                'attr' => [
-                    'placeholder' => 'Example: 35.8256',
-                ],
-            ])
-            ->add('longitude', TextType::class, [
-                'label' => 'Longitude',
-                'required' => false,
-                'attr' => [
-                    'placeholder' => 'Example: 10.6360',
-                ],
-            ])
             ->add('description', TextareaType::class, [
                 'label' => 'Description',
                 'required' => false,

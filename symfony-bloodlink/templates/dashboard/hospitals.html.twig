@@ -337,19 +337,10 @@
                     <label for="m_phone">Phone</label>
                     <input id="m_phone" type="tel" name="phone" placeholder="+216 98 123 4567">
                 </div>
-                <div class="field">
+                <div class="field full">
                     <label for="m_email">Email</label>
                     <input id="m_email" type="email" name="email" placeholder="hospital@example.com">
                 </div>
-                <div class="field">
-                    <label for="m_latitude">Latitude</label>
-                    <input id="m_latitude" type="number" name="latitude" placeholder="-90 to 90" step="0.00000001">
-                </div>
-                <div class="field">
-                    <label for="m_longitude">Longitude</label>
-                    <input id="m_longitude" type="number" name="longitude" placeholder="-180 to 180" step="0.00000001">
-                </div>
-
             </div>
 
             <div class="modal-actions">
@@ -447,8 +438,7 @@
             document.getElementById('m_city').value = btn.dataset.city || '';
             document.getElementById('m_phone').value = btn.dataset.phone || '';
             document.getElementById('m_email').value = btn.dataset.email || '';
-            document.getElementById('m_latitude').value = btn.dataset.latitude || '';
-            document.getElementById('m_longitude').value = btn.dataset.longitude || '';
+
         }
 
         openAddBtn.addEventListener('click', function () {

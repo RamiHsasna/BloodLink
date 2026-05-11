@@ -941,7 +941,7 @@ document.addEventListener('keydown', e => {
     }
 });
 
-const todayStr = new Date().toISOString().slice(0, 16);
+var todayStr = new Date().toISOString().slice(0, 16);
 document.getElementById('c-start').min = todayStr;
 document.getElementById('c-start').value = '';
 

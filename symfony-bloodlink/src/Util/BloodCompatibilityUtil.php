@@ -9,41 +9,52 @@ namespace App\Util;
 class BloodCompatibilityUtil
 {
     /**
+     * Map of blood type IDs to compatible donor blood type IDs.
+     * Key = recipient blood_type_id, Value = array of compatible donor blood_type_ids.
+     *
+     * Blood type IDs in the database (e.g., "O+", "AB-", etc.).
+     */
+    private static array $compatibilityMap = [
+        'O-'  => ['O-'],
+        'O+'  => ['O-', 'O+'],
+        'A-'  => ['O-', 'A-'],
+        'A+'  => ['O-', 'O+', 'A-', 'A+'],
+        'B-'  => ['O-', 'B-'],
+        'B+'  => ['O-', 'O+', 'B-', 'B+'],
+        'AB-' => ['O-', 'A-', 'B-', 'AB-'],
+        'AB+' => ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'],
+    ];
+
+    /**
      * Check if a donor's blood type can donate to a recipient's blood type.
      *
-     * @param string $donorBloodType Donor blood type (e.g., "O+", "AB-")
+     * @param string $donorBloodType Donor blood type (e.g., "O+ ", "AB-")
      * @param string $recipientBloodType Recipient blood type
      *
      * @return bool True if donation is compatible
      */
     public static function isCompatible(string $donorBloodType, string $recipientBloodType): bool
     {
-        // TODO: Implement blood type compatibility logic
-        // ABO Compatibility Rules:
-        // - O can donate to all (universal donor)
-        // - A can donate to A and AB
-        // - B can donate to B and AB
-        // - AB can only donate to AB
-        // Rh Compatibility:
-        // - Rh- can donate to both Rh+ and Rh-
-        // - Rh+ can donate only to Rh+
+        $donorNormalized = self::normalizeBloodTypeId($donorBloodType);
+        $recipientNormalized = self::normalizeBloodTypeId($recipientBloodType);
 
-        return true; // Placeholder
+        $compatibleDonors = self::$compatibilityMap[$recipientNormalized] ?? [];
+
+        return in_array($donorNormalized, $compatibleDonors, true);
     }
 
     /**
-     * Get list of compatible blood types for a recipient.
+     * Get list of compatible donor blood type IDs for a recipient.
      *
-     * @param string $recipientBloodType Recipient blood type
+     * @param string $recipientBloodType Recipient blood type (blood_type_id)
      *
-     * @return array List of compatible blood types
+     * @return array List of compatible donor blood_type_ids
      */
     public static function getCompatibleDonorTypes(string $recipientBloodType): array
     {
-        // TODO: Implement logic to return all compatible donor types
-        // Example: For "AB+", return ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"]
+        $normalized = self::normalizeBloodTypeId($recipientBloodType);
 
-        return [];
+        return self::$compatibilityMap[$normalized] ?? [];
     }
 
     /**
@@ -55,10 +66,16 @@ class BloodCompatibilityUtil
      */
     public static function getCompatibleRecipientTypes(string $donorBloodType): array
     {
-        // TODO: Implement logic to return all compatible recipient types
-        // Example: For "O+", return ["O+", "A+", "B+", "AB+"]
+        $donorNormalized = self::normalizeBloodTypeId($donorBloodType);
+        $recipients = [];
 
-        return [];
+        foreach (self::$compatibilityMap as $recipientType => $compatibleDonors) {
+            if (in_array($donorNormalized, $compatibleDonors, true)) {
+                $recipients[] = $recipientType;
+            }
+        }
+
+        return $recipients;
     }
 
     /**
@@ -70,10 +87,9 @@ class BloodCompatibilityUtil
      */
     public static function isValidBloodType(string $bloodType): bool
     {
-        // TODO: Implement validation
-        // Valid types: O+, O-, A+, A-, B+, B-, AB+, AB-
+        $normalized = self::normalizeBloodTypeId($bloodType);
 
-        return true; // Placeholder
+        return isset(self::$compatibilityMap[$normalized]);
     }
 
     /**
@@ -81,13 +97,28 @@ class BloodCompatibilityUtil
      *
      * @param string $bloodType Blood type string
      *
-     * @return array Array with 'abo' and 'rh' keys, or null if invalid
+     * @return array|null Array with 'abo' and 'rh' keys, or null if invalid
      */
     public static function parseBloodType(string $bloodType): ?array
     {
-        // TODO: Implement parsing
-        // Example: "AB+" -> ['abo' => 'AB', 'rh' => '+']
+        $trimmed = trim($bloodType);
 
-        return null; // Placeholder
+        if (preg_match('/^(O|A|B|AB)([+-])$/', $trimmed, $matches)) {
+            return [
+                'abo' => $matches[1],
+                'rh' => $matches[2],
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Normalize a blood type ID to match the 3-character database format.
+     * The DB uses CHAR(3), so "O+" becomes "O+ " (padded with space).
+     */
+    public static function normalizeBloodTypeId(string $bloodTypeId): string
+    {
+        return trim($bloodTypeId);
     }
 }
