@@ -4,6 +4,7 @@
 
 {% block stylesheets %}
     {{ parent() }}
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
 <style>
     :root {
         --brand: #8f1d1f; --brand-2: #b3272a;
@@ -423,24 +424,24 @@
         </div>
         <div class="meta">
             <div class="meta-item">
-                <span class="meta-label">🩸 Blood Type</span>
-                <span class="meta-value">{{ donation.blood_code ?? '—' }}</span>
+                <span class="meta-label">Blood Type</span>
+                <span class="meta-value">{{ donation.blood_code|default('—') }}</span>
             </div>
             <div class="meta-item">
-                <span class="meta-label">📅 Date</span>
+                <span class="meta-label">Date</span>
                 <span class="meta-value">{{ donation.donation_date|date('M d, Y') }}</span>
             </div>
             <div class="meta-item">
-                <span class="meta-label">💧 Volume</span>
-                <span class="meta-value">{{ donation.volume_collected ?? '—' }} mL</span>
+                <span class="meta-label">Volume</span>
+                <span class="meta-value">{{ donation.volume_collected|default('—') }} mL</span>
             </div>
             <div class="meta-item">
-                <span class="meta-label">🔬 Screening</span>
+                <span class="meta-label">Screening</span>
                 <span class="meta-value">{% if donation.screening_passed %}✓ Passed{% else %}✗ Failed{% endif %}</span>
             </div>
             <div class="meta-item">
-                <span class="meta-label">💉 Total Donations</span>
-                <span class="meta-value">{{ donation.donor_total_donations ?? '—' }}</span>
+                <span class="meta-label">Total Donations</span>
+                <span class="meta-value">{{ donation.donor_total_donations|default('—') }}</span>
             </div>
             {% if donation.medical_notes %}
             <div class="meta-item" style="grid-column:1/-1">
@@ -451,11 +452,12 @@
         </div>
         {% if user_type != 'DONOR' %}
         <div class="crud-bar">
-            <button class="btn-crud btn-edit-c" type="button" onclick="openEdit({{ donation|json_encode }})">✎ Edit</button>
-            <button class="btn-crud btn-qr" type="button" onclick="openQr({{ donation|json_encode }})">◉ QR Code</button>
-            <a href="{{ path('donations_pdf', {id: donation.donation_id}) }}" class="btn-crud btn-pdf">📄 Export PDF</a>
+            <button class="btn-crud btn-edit-c" type="button" onclick="window.bl_openEdit({{ donation|json_encode }})">Edit</button>
+            <button class="btn-crud btn-history" type="button" onclick="window.bl_loadHistory('{{ donation.user_id }}', '{{ donation.donor_first_name }} {{ donation.donor_last_name }}')">History</button>
+            <button class="btn-crud btn-qr" type="button" onclick="window.bl_openQr({{ donation|json_encode }})">QR Code</button>
+            <a href="{{ path('donations_pdf', {id: donation.donation_id}) }}" class="btn-crud btn-pdf">PDF</a>
             <form method="POST" action="{{ path('donations_delete', {id: donation.donation_id}) }}" onsubmit="return confirm('Delete this donation?');" style="flex:1;display:flex;">
-                <button class="btn-crud btn-del" style="flex:1;" type="submit">🗑 Delete</button>
+                <button class="btn-crud btn-del" style="flex:1;" type="submit">Delete</button>
             </form>
         </div>
         {% endif %}
@@ -553,7 +555,7 @@
                 </div>
                 <div class="field">
                     <label>Blood Type</label>
-                    <select name="blood_type_id" id="edit-blood-type">
+                    <select name="blood_type_id" id="edit-blood-type" required>
                         <option value="">— Select —</option>
                         {% for bt in blood_types %}
                         <option value="{{ bt.blood_type_id }}">{{ bt.blood_type_id }}</option>
@@ -612,20 +614,76 @@
     </div>
  </div>
 
- <!-- ══ QR MODAL ══ -->
+ <!-- ══ QR & CERTIFICATE MODAL ══ -->
  <div class="modal-bg" id="modal-qr">
-    <div class="modal" style="width:min(440px,96vw)">
+    <div class="modal" style="width:min(900px,96vw)">
         <div class="modal-head">
-            <h3>◉ Donation QR Code</h3>
+            <h3>◉ Digital Donation Certificate</h3>
             <button class="modal-close" onclick="closeQr()" type="button">✕</button>
         </div>
-        <div class="qr-container">
-            <canvas id="qr-canvas"></canvas>
-            <div class="qr-info" id="qr-info"></div>
+        <div class="modal-body" style="grid-template-columns: 1fr 1.2fr; padding: 24px; background: #f1f5f9; gap: 24px;">
+            <!-- Left: QR & Controls -->
+            <div style="background: #fff; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                <style>
+                    .donor-name { font-weight: 700; color: var(--brand); cursor: pointer; display: inline-block; transition: color 0.2s; }
+                    .donor-name:hover { text-decoration: underline; color: #b91c1c; }
+                    .donor-sub { font-size: 12px; color: var(--subtle); margin-top: 2px; }
+
+                    .btn-crud { border: none; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; }
+                    .btn-edit-c { background: #e0f2fe; color: #0369a1; }
+                    .btn-edit-c:hover { background: #bae6fd; }
+                    .btn-qr { background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
+                    .btn-history { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+                    .btn-history:hover { background: #ede9fe; border-color: #c4b5fd; }
+                </style>
+                <div style="background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center;">
+                <div id="qr-display" style="width: 180px; height: 180px;"></div>
+            </div>
+                
+
+            </div>
+
+            <!-- Right: Certificate Preview -->
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <div id="cert-preview-container" style="transform: scale(0.8); transform-origin: top center; margin-bottom: -100px;">
+                    <!-- The certificate will be rendered here via JS -->
+                     <div id="mini-cert-wrapper" style="width: 500px; background: #fff; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.1); font-family: 'Outfit', sans-serif; position: relative; border: 1px solid #e2e8f0;">
+                        <div style="background: linear-gradient(135deg, #8f1d1f, #b3272a); padding: 30px; text-align: center; color: #fff; position: relative;">
+                            <span style="font-weight: 800; font-size: 20px; display: block; letter-spacing: -0.5px;">BloodLink</span>
+                            <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.9; font-weight: 400;">Donation Certificate</span>
+                            <div style="position: absolute; top: 15px; right: 15px; opacity: 0.15; width: 40px; height: 40px;">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+                            </div>
+                        </div>
+                        <div style="padding: 30px; text-align: center; background: #fff;">
+                            <div id="mini-blood-badge" style="width: 80px; height: 80px; background: #fff1f2; border: 2.5px solid #8f1d1f; border-radius: 50%; margin: 0 auto 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 8px 16px rgba(143, 29, 31, 0.1);">
+                                <span id="mini-blood-code" style="font-size: 28px; font-weight: 800; color: #8f1d1f; line-height: 1;">—</span>
+                                <span style="font-size: 8px; text-transform: uppercase; letter-spacing: 1px; color: #8f1d1f; font-weight: 700;">Type</span>
+                            </div>
+                            <span style="font-size: 13px; color: #64748b; font-weight: 400;">This is to certify that</span>
+                            <div id="mini-donor-name" style="font-size: 26px; font-weight: 800; margin: 5px 0; color: #0f172a; letter-spacing: -0.5px;">Donor Name</div>
+                            <span style="font-size: 12px; color: #64748b; display: block; max-width: 300px; margin: 0 auto 15px;">has contributed to saving lives through a successful blood donation.</span>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; padding-top: 20px; border-top: 1px dashed #e2e8f0; text-align: left;">
+                                <div>
+                                    <div style="font-size: 9px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Donation Date</div>
+                                    <div id="mini-date" style="font-size: 13px; font-weight: 600; color: #0f172a;">—</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 9px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Location</div>
+                                    <div id="mini-location" style="font-size: 13px; font-weight: 600; color: #0f172a;">—</div>
+                                </div>
+                            </div>
+                        </div>
+                     </div>
+                </div>
+                <div style="margin-top: auto; display: flex; gap: 10px;">
+                    <button type="button" class="btn btn-brand" style="flex: 1;" onclick="downloadCertImage()">💾 Download Personalized Image</button>
+                    <button type="button" class="btn btn-blue" style="flex: 1;" onclick="saveQr()">💾 Save QR Code</button>
+                </div>
+            </div>
         </div>
         <div class="modal-foot">
             <button type="button" class="btn btn-ghost" onclick="closeQr()">Close</button>
-            <button type="button" class="btn btn-blue" onclick="saveQr()">💾 Save QR</button>
         </div>
     </div>
  </div>
@@ -650,6 +708,7 @@
 {% endif %}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 // ── Donations data for chart ──────────────────────────────────────────────────
@@ -660,12 +719,12 @@ function openCreate() { document.getElementById('modal-create').classList.add('o
 function closeCreate(){ document.getElementById('modal-create').classList.remove('open'); }
 
 function updateDateRange() {
-    const sel   = document.getElementById('event-select');
-    const opt   = sel.options[sel.selectedIndex];
-    const start = opt?.dataset?.start;
-    const end   = opt?.dataset?.end;
-    const input = document.getElementById('donation-date');
-    const hint  = document.getElementById('date-hint');
+    var sel   = document.getElementById('event-select');
+    var opt   = sel.options[sel.selectedIndex];
+    var start = opt?.dataset?.start;
+    var end   = opt?.dataset?.end;
+    var input = document.getElementById('donation-date');
+    var hint  = document.getElementById('date-hint');
     if (start && end) {
         input.min   = start;
         input.max   = end;
@@ -677,68 +736,92 @@ function updateDateRange() {
 }
 
 // ── Edit modal ────────────────────────────────────────────────────────────────
-function openEdit(d) {
+window.bl_openEdit = function(d) {
     document.getElementById('edit-form').action = '/dashboard/donations/' + d.donation_id + '/edit';
-    document.getElementById('edit-donor-display').value = (d.donor_first_name ?? '') + ' ' + (d.donor_last_name ?? '');
-    document.getElementById('edit-blood-type').value    = d.blood_type_id ?? '';
-    document.getElementById('edit-event').value         = d.donation_event_id ?? '';
-    document.getElementById('edit-hospital').value      = d.hospital_id ?? '';
-    document.getElementById('edit-volume').value        = d.volume_collected ?? '';
-    document.getElementById('edit-status').value        = d.status ?? 'COMPLETED';
-    document.getElementById('edit-notes').value         = d.medical_notes ?? '';
+    document.getElementById('edit-donor-display').value = (d.donor_first_name || '') + ' ' + (d.donor_last_name || '');
+    document.getElementById('edit-blood-type').value    = d.blood_type_id || d.blood_code || d.donor_blood_type || '';
+    document.getElementById('edit-event').value         = d.donation_event_id || '';
+    document.getElementById('edit-hospital').value      = d.hospital_id || '';
+    document.getElementById('edit-volume').value        = d.volume_collected || '';
+    document.getElementById('edit-status').value        = d.status || 'COMPLETED';
+    document.getElementById('edit-notes').value         = d.medical_notes || '';
     document.getElementById('screening-edit').checked   = d.screening_passed === true || d.screening_passed === 't' || d.screening_passed === '1';
     if (d.donation_date) document.getElementById('edit-date').value = d.donation_date.replace(' ','T').substring(0,16);
     document.getElementById('modal-edit').classList.add('open');
-}
-function closeEdit(){ document.getElementById('modal-edit').classList.remove('open'); }
+};
+window.bl_closeEdit = function(){ document.getElementById('modal-edit').classList.remove('open'); };
 
 // ── QR modal ──────────────────────────────────────────────────────────────────
-let currentQrData = '';
-function openQr(d) {
-    currentQrData = 'BLOODLINK-DONATION:' + d.donation_id + '\nDONOR:' + (d.donor_first_name ?? '') + ' ' + (d.donor_last_name ?? '') + '\nBLOOD:' + (d.blood_code ?? '') + '\nDATE:' + (d.donation_date ?? '') + '\nSTATUS:' + (d.status ?? '');
+if (typeof window.currentQrData === 'undefined') { window.currentQrData = ''; }
+if (typeof window.currentDonationForQr === 'undefined') { window.currentDonationForQr = null; }
 
-    const canvas = document.getElementById('qr-canvas');
-    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+window.bl_openQr = function(d) {
+    window.currentDonationForQr = d;
+    window.bl_updateQrWithOverride();
 
-    // Use QRCode library
-    const container = document.createElement('div');
-    new QRCode(container, {
-        text: currentQrData,
-        width: 220,
-        height: 220,
-        colorDark: '#0f172a',
-        colorLight: '#ffffff',
-    });
+    document.getElementById('mini-donor-name').textContent = (d.donor_first_name || '') + ' ' + (d.donor_last_name || '');
+    document.getElementById('mini-blood-code').textContent = d.blood_code || d.blood_type_id || '—';
+    document.getElementById('mini-date').textContent = d.donation_date ? new Date(d.donation_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '—';
+    document.getElementById('mini-location').textContent = d.hospital_name || 'Mobile Unit';
 
-    setTimeout(() => {
-        const img = container.querySelector('img') || container.querySelector('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = 220; canvas.height = 220;
-        if (img.tagName === 'CANVAS') {
-            ctx.drawImage(img, 0, 0);
-        } else {
-            const i = new Image();
-            i.onload = () => ctx.drawImage(i, 0, 0);
-            i.src = img.src;
-        }
-    }, 100);
-
-    document.getElementById('qr-info').innerHTML = `
-        <div><strong>Donation ID</strong>${d.donation_id}</div>
-        <div><strong>Donor</strong>${(d.donor_first_name ?? '')} ${(d.donor_last_name ?? '')}</div>
-        <div><strong>Blood Type</strong>${d.blood_code ?? '—'}</div>
-        <div><strong>Status</strong>${d.status ?? '—'}</div>
-        <div><strong>Date</strong>${d.donation_date ? d.donation_date.substring(0,10) : '—'}</div>
-    `;
     document.getElementById('modal-qr').classList.add('open');
+}
+
+window.bl_updateQrWithOverride = function() {
+    var d = window.currentDonationForQr;
+    if (!d) return;
+    
+    // Plain text details so it shows up immediately on phone without browser
+    window.currentQrData = `BLOODLINK DONATION
+--------------------
+DONOR: ${(d.donor_first_name || '')} ${(d.donor_last_name || '')}
+TYPE: ${d.blood_code || d.blood_type_id || '—'}
+DATE: ${d.donation_date ? d.donation_date.substring(0,10) : '—'}
+VOL: ${d.volume_collected || '—'} mL
+ID: ${d.donation_id.substring(0,8)}`;
+
+    const container = document.getElementById('qr-display');
+    if (!container) return;
+    
+    container.innerHTML = '<div style="font-size:10px;color:#94a3b8">Generating...</div>'; 
+    
+    setTimeout(() => {
+        if (typeof QRCode === 'undefined') {
+            container.innerHTML = '<div style="font-size:10px;color:#ef4444">QR Library Error</div>';
+            return;
+        }
+        container.innerHTML = ''; 
+        new QRCode(container, {
+            text: window.currentQrData,
+            width: 180,
+            height: 180,
+            colorDark: '#0f172a',
+            colorLight: '#ffffff'
+        });
+    }, 150);
+};
+
+function downloadCertImage() {
+    const cert = document.getElementById('mini-cert-wrapper');
+    html2canvas(cert, {
+        scale: 2,
+        backgroundColor: '#ffffff'
+    }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'bloodlink-certificate-' + (currentDonationForQr.donation_id.substring(0,8)) + '.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    });
 }
 function closeQr(){ document.getElementById('modal-qr').classList.remove('open'); }
 function saveQr() {
-    const canvas = document.getElementById('qr-canvas');
-    const link = document.createElement('a');
-    link.download = 'donation-qr.png';
-    link.href = canvas.toDataURL();
-    link.click();
+    const container = document.getElementById('qr-display');
+    html2canvas(container).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'donation-qr.png';
+        link.href = canvas.toDataURL();
+        link.click();
+    });
 }
 
 // ── Chart rendering in chat ───────────────────────────────────────────────────
@@ -821,7 +904,7 @@ function renderCharts() {
 }
 
 // ── History modal ─────────────────────────────────────────────────────────────
-function loadHistory(userId, name) {
+window.bl_loadHistory = function(userId, name) {
     document.getElementById('history-title').textContent = name + ' — Donation History';
     document.getElementById('history-profile').innerHTML = '<p style="color:var(--subtle)">Loading...</p>';
     document.getElementById('history-list').innerHTML    = '';
@@ -830,17 +913,17 @@ function loadHistory(userId, name) {
     fetch('/dashboard/donations/donor/' + userId + '/history')
         .then(r => r.json())
         .then(data => {
-            const donor = data.donor ?? {};
+            const donor = data.donor || {};
             document.getElementById('history-profile').innerHTML = `
-                <div class="profile-item"><span class="profile-label">Blood Type</span><span class="profile-value">${donor.blood_type_id ?? '—'}</span></div>
-                <div class="profile-item"><span class="profile-label">Total Donations</span><span class="profile-value">${donor.total_donations ?? 0}</span></div>
-                <div class="profile-item"><span class="profile-label">City</span><span class="profile-value">${donor.city ?? '—'}</span></div>
+                <div class="profile-item"><span class="profile-label">Blood Type</span><span class="profile-value">${donor.blood_type_id || '—'}</span></div>
+                <div class="profile-item"><span class="profile-label">Total Donations</span><span class="profile-value">${donor.total_donations || 0}</span></div>
+                <div class="profile-item"><span class="profile-label">City</span><span class="profile-value">${donor.city || '—'}</span></div>
                 <div class="profile-item"><span class="profile-label">Eligible</span><span class="profile-value">${donor.is_currently_eligible ? '✓ Yes' : '✗ No'}</span></div>
                 <div class="profile-item"><span class="profile-label">Last Donation</span><span class="profile-value">${donor.last_donation_date ? donor.last_donation_date.substring(0,10) : '—'}</span></div>
-                <div class="profile-item"><span class="profile-label">Email</span><span class="profile-value">${donor.email ?? '—'}</span></div>
+                <div class="profile-item"><span class="profile-label">Email</span><span class="profile-value">${donor.email || '—'}</span></div>
             `;
 
-            if (!data.history?.length) {
+            if (!data.history || !data.history.length) {
                 document.getElementById('history-list').innerHTML = '<p style="color:var(--subtle);text-align:center;padding:20px">No donations found.</p>';
                 return;
             }
@@ -853,14 +936,14 @@ function loadHistory(userId, name) {
                         <strong>#${i+1} — ${new Date(h.donation_date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</strong>
                         <div style="display:flex;gap:6px">
                             ${expired ? '<span class="badge badge-expired">⚠ Expired</span>' : ''}
-                            <span class="badge badge-${(h.status||'').toLowerCase()}">${h.status ?? ''}</span>
+                            <span class="badge badge-${(h.status||'').toLowerCase()}">${h.status || ''}</span>
                         </div>
                     </div>
                     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:13px">
-                        <div><span style="color:var(--subtle);font-size:10px;text-transform:uppercase;font-weight:700;display:block">Hospital</span>${h.hospital_name ?? '—'}</div>
-                        <div><span style="color:var(--subtle);font-size:10px;text-transform:uppercase;font-weight:700;display:block">Event</span>${h.event_name ?? '—'}</div>
-                        <div><span style="color:var(--subtle);font-size:10px;text-transform:uppercase;font-weight:700;display:block">Volume</span>${h.volume_collected ?? '—'} mL</div>
-                        <div><span style="color:var(--subtle);font-size:10px;text-transform:uppercase;font-weight:700;display:block">Blood Type</span>${h.blood_code ?? '—'}</div>
+                        <div><span style="color:var(--subtle);font-size:10px;text-transform:uppercase;font-weight:700;display:block">Hospital</span>${h.hospital_name || '—'}</div>
+                        <div><span style="color:var(--subtle);font-size:10px;text-transform:uppercase;font-weight:700;display:block">Event</span>${h.event_name || '—'}</div>
+                        <div><span style="color:var(--subtle);font-size:10px;text-transform:uppercase;font-weight:700;display:block">Volume</span>${h.volume_collected || '—'} mL</div>
+                        <div><span style="color:var(--subtle);font-size:10px;text-transform:uppercase;font-weight:700;display:block">Blood Type</span>${h.blood_code || '—'}</div>
                         <div><span style="color:var(--subtle);font-size:10px;text-transform:uppercase;font-weight:700;display:block">Screening</span>${h.screening_passed ? '✓ Passed' : '✗ Failed'}</div>
                         ${h.medical_notes ? `<div style="grid-column:1/-1"><span style="color:var(--subtle);font-size:10px;text-transform:uppercase;font-weight:700;display:block">Notes</span>${h.medical_notes}</div>` : ''}
                     </div>
@@ -957,7 +1040,7 @@ function appendMessage(role, text, isHtml = false) {
 
     const avatar = document.createElement('div');
     avatar.className = 'msg-avatar';
-    avatar.textContent = role === 'bot' ? '🩸' : '👤';
+    avatar.textContent = role === 'bot' ? '🤖' : '👤';
 
     const bubble = document.createElement('div');
     bubble.className = 'msg-bubble';

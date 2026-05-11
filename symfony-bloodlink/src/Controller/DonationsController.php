@@ -38,7 +38,9 @@ class DonationsController extends AbstractController
         $bloodFilter = trim((string) $request->query->get('blood_type', ''));
 
         $sql = "
-            SELECT d.*,
+            SELECT d.donation_id, d.user_id, d.hospital_id, d.donation_event_id, d.blood_type_id,
+                   d.donation_date, d.volume_collected, d.units_collected, d.status, d.screening_passed,
+                   d.medical_notes, d.created_at,
                    u.first_name                        AS donor_first_name,
                    u.last_name                         AS donor_last_name,
                    u.first_name || ' ' || u.last_name AS donor_name,
@@ -49,7 +51,7 @@ class DonationsController extends AbstractController
                    d.blood_type_id                     AS blood_code,
                    (SELECT COUNT(*) FROM donations d2
                     WHERE d2.user_id = d.user_id
-                    AND d2.donation_date < d.donation_date) AS prior_donations
+                    AND (d2.donation_date < d.donation_date OR (d2.donation_date = d.donation_date AND d2.donation_id < d.donation_id))) AS prior_donations
             FROM donations d
             LEFT JOIN donors dr ON dr.user_id = d.user_id
             LEFT JOIN users u   ON u.user_id  = dr.user_id
@@ -209,7 +211,8 @@ class DonationsController extends AbstractController
             return $this->redirectToRoute('donations_index');
         }
 
-        $donorName = trim((string) $request->request->get('donor_name', ''));
+        $bloodTypeId = $request->request->get('blood_type_id');
+        $donorName   = trim((string) $request->request->get('donor_name', ''));
         $userId    = null;
 
         if ($donorName === '') {
@@ -227,20 +230,35 @@ class DonationsController extends AbstractController
         $lastName  = $parts[1] ?? '';
 
         $donor = $connection->fetchAssociative(
-            "SELECT u.user_id FROM users u
-             JOIN donors dr ON dr.user_id = u.user_id
-             WHERE u.first_name ILIKE :first AND u.last_name ILIKE :last
+            "SELECT u.user_id, dr.user_id AS has_donor_record 
+             FROM users u
+             LEFT JOIN donors dr ON dr.user_id = u.user_id
+             WHERE TRIM(u.first_name) ILIKE :first AND TRIM(u.last_name) ILIKE :last
              LIMIT 1",
             ['first' => $firstName, 'last' => $lastName]
         );
 
         if ($donor) {
             $userId = $donor['user_id'];
+            
+            // If user exists but donor record is missing (due to previous partial failure), create it now
+            if (!$donor['has_donor_record']) {
+                $connection->executeStatement("
+                    INSERT INTO donors (user_id, first_name, last_name, blood_type_id, total_donations, is_currently_eligible, created_at)
+                    VALUES (:id, :first, :last, :bt, 0, true, :now)
+                ", [
+                    'id'    => $userId,
+                    'first' => $firstName,
+                    'last'  => $lastName,
+                    'bt'    => $bloodTypeId,
+                    'now'   => $now,
+                ]);
+            }
         } else {
             $userId = $this->generateUuidV4();
             $connection->executeStatement("
-                INSERT INTO users (user_id, first_name, last_name, email, password_hash, user_type, is_active, created_at, updated_at)
-                VALUES (:id, :first, :last, :email, :pass, 'DONOR', true, :now, :now)
+                INSERT INTO users (user_id, first_name, last_name, email, password_hash, user_type, created_at)
+                VALUES (:id, :first, :last, :email, :pass, 'DONOR', :now)
             ", [
                 'id'    => $userId,
                 'first' => $firstName,
@@ -250,12 +268,13 @@ class DonationsController extends AbstractController
                 'now'   => $now,
             ]);
             $connection->executeStatement("
-                INSERT INTO donors (user_id, first_name, last_name, total_donations, created_at)
-                VALUES (:id, :first, :last, 0, :now)
+                INSERT INTO donors (user_id, first_name, last_name, blood_type_id, total_donations, is_currently_eligible, created_at)
+                VALUES (:id, :first, :last, :bt, 0, true, :now)
             ", [
                 'id'    => $userId,
                 'first' => $firstName,
                 'last'  => $lastName,
+                'bt'    => $bloodTypeId,
                 'now'   => $now,
             ]);
             $this->addFlash('success', "New donor '$donorName' created automatically.");
@@ -622,6 +641,33 @@ HTML;
             'stats'        => $stats,
         ]);
     }
+    #[Route('/donation/view/{id}', name: 'donation_public_view', methods: ['GET'])]
+    public function publicView(string $id, Connection $connection): Response
+    {
+        $donation = $connection->fetchAssociative("
+            SELECT d.*,
+                   u.first_name || ' ' || u.last_name AS donor_name,
+                   dr.blood_type_id                    AS donor_blood_type,
+                   h.name                              AS hospital_name,
+                   de.name                             AS event_name,
+                   d.blood_type_id                     AS blood_code
+            FROM donations d
+            LEFT JOIN donors dr ON dr.user_id = d.user_id
+            LEFT JOIN users u   ON u.user_id  = dr.user_id
+            LEFT JOIN hospital h ON h.hospital_id = d.hospital_id
+            LEFT JOIN donation_events de ON de.event_id = d.donation_event_id
+            WHERE d.donation_id = :id
+        ", ['id' => $id]);
+
+        if (!$donation) {
+            throw $this->createNotFoundException('Donation certificate not found');
+        }
+
+        return $this->render('dashboard/donation_public_certificate.html.twig', [
+            'd' => $donation
+        ]);
+    }
+
     private function generateUuidV4(): string
     {
         $bytes = random_bytes(16);
