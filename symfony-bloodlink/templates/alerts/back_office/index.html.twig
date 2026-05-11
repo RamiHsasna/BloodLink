@@ -3,12 +3,14 @@
 {% extends 'alerts/layouts/back_office.html.twig' %}
 
 {% block page_actions %}
-    <a
-        href="{{ path('dashboard_alerts_new') }}"
-        class="inline-flex items-center justify-center rounded-2xl bg-blood-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blood-700"
-    >
-        New Donor Alert
-    </a>
+    <div class="flex flex-wrap gap-3">
+        <a
+            href="{{ path('dashboard_alerts_create_blood_alert') }}"
+            class="inline-flex items-center justify-center rounded-2xl bg-blood-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blood-700"
+        >
+            🩸 Create Blood Alert
+        </a>
+    </div>
 {% endblock %}
 
 {% block module_content %}
@@ -109,7 +111,9 @@
                             <td class="px-5 py-4">
                                 <div class="flex flex-wrap gap-2">
                                     <a href="{{ path('dashboard_alerts_show', {donorAlertId: entry.donorAlertId}) }}" class="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-blood-500 hover:text-blood-600">View</a>
-                                    <a href="{{ path('dashboard_alerts_edit', {donorAlertId: entry.donorAlertId}) }}" class="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-blood-500 hover:text-blood-600">Edit</a>
+                                    {% if entry.alert %}
+                                        <a href="{{ path('dashboard_alerts_edit_blood_alert', {alertId: entry.alert.alertId}) }}" class="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-blood-500 hover:text-blood-600">Edit</a>
+                                    {% endif %}
                                     <form method="post" action="{{ path('dashboard_alerts_delete', {donorAlertId: entry.donorAlertId}) }}" data-confirm-message="Delete this donor alert?">
                                         <input type="hidden" name="_token" value="{{ csrf_token('delete-donor-alert-' ~ entry.donorAlertId) }}">
                                         <button type="submit" class="rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:border-rose-400 hover:bg-rose-50">Delete</button>

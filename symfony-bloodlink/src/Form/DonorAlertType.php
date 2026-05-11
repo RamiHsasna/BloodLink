@@ -35,61 +35,42 @@ class DonorAlertType extends AbstractType
                     return $qb;
                 },
                 'choice_label' => static function (Alert $alert): string {
-                    return sprintf(
-                        '%s • %s • %s',
-                        $alert->getTitle(),
-                        $alert->getSeverity(),
-                        substr($alert->getAlertId(), 0, 8),
-                    );
+                    return sprintf('%s • %s • %s', $alert->getTitle(), $alert->getSeverity(), substr($alert->getAlertId(), 0, 8));
                 },
                 'placeholder' => 'Choose the alert',
             ])
             ->add('donor', EntityType::class, [
                 'class' => Donor::class,
-                'label' => 'Donor',
-                'query_builder' => static function (EntityRepository $repository) {
-                    return $repository->createQueryBuilder('donor')
-                        ->orderBy('donor.firstName', 'ASC')
-                        ->addOrderBy('donor.lastName', 'ASC');
+                'label' => 'Recipient Donor',
+                'choice_label' => function (Donor $donor) {
+                    return sprintf('%s %s (%s)', $donor->getFirstName(), $donor->getLastName(), $donor->getBloodType() ? $donor->getBloodType()->getBloodTypeId() : 'N/A');
                 },
-                'choice_label' => static function (Donor $donor): string {
-                    $bloodType = $donor->getBloodType();
-
-                    return sprintf(
-                        '%s %s • %s',
-                        $donor->getFirstName(),
-                        $donor->getLastName(),
-                        $bloodType?->getBloodTypeId() ?? 'Unknown blood type',
-                    );
-                },
-                'placeholder' => 'Choose the donor',
+                'placeholder' => 'Select a donor',
             ])
             ->add('donorResponse', ChoiceType::class, [
                 'label' => 'Donor Response',
                 'choices' => DonorAlert::donorResponseChoices(),
                 'required' => false,
-                'placeholder' => false,
-                'empty_data' => DonorAlert::RESPONSE_NO_RESPONSE,
             ])
             ->add('isNotified', CheckboxType::class, [
-                'label' => 'Notification sent',
+                'label' => 'Notification Sent',
                 'required' => false,
-            ])
-            ->add('notificationSentAt', DateTimeType::class, [
-                'label' => 'Notification sent at',
-                'required' => false,
-                'widget' => 'single_text',
-                'input' => 'datetime_immutable',
+                'false_values' => [null, false],
             ])
             ->add('isRead', CheckboxType::class, [
-                'label' => 'Alert read',
+                'label' => 'Read by Donor',
+                'required' => false,
+                'false_values' => [null, false],
+            ])
+            ->add('notificationSentAt', DateTimeType::class, [
+                'label' => 'Notification Sent At',
+                'widget' => 'single_text',
                 'required' => false,
             ])
             ->add('readAt', DateTimeType::class, [
-                'label' => 'Read at',
-                'required' => false,
+                'label' => 'Read At',
                 'widget' => 'single_text',
-                'input' => 'datetime_immutable',
+                'required' => false,
             ]);
     }
 

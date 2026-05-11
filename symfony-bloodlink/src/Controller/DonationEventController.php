@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
+use App\Service\GeocodingService;
 
 class DonationEventController extends AbstractController
 {
@@ -295,8 +296,7 @@ class DonationEventController extends AbstractController
 
     // ─── CREATE ───────────────────────────────────────────────────────────────
     #[Route('/dashboard/donation-events/create', name: 'donation_events_create', methods: ['POST'])]
-    public function create(Request $request, Connection $connection, MailerInterface $mailer): Response
-    {
+    public function create(Request $request, Connection $connection, MailerInterface $mailer, GeocodingService $geocodingService): Response {
         $sessionUser = $request->getSession()->get('auth_user');
         if (!$sessionUser) return $this->redirectToRoute('auth_index');
 
@@ -353,13 +353,19 @@ class DonationEventController extends AbstractController
             return $this->redirectToRoute('donation_events_index');
         }
 
+        $coords = $geocodingService->geocodeCity($location);
+        $lat = $coords ? $coords['latitude'] : null;
+        $lng = $coords ? $coords['longitude'] : null;
+
         $connection->executeStatement("
             INSERT INTO donation_events
                 (event_id, name, description, start_date, end_date, location,
+                 latitude, longitude,
                  target_blood_types, target_collection_units,
                  actual_collection_units, hospital_id, status, created_at, updated_at)
             VALUES
                 (:event_id, :name, :description, :start_date, :end_date, :location,
+                 :latitude, :longitude,
                  :target_blood_types, :target_collection_units,
                  0, :hospital_id, 'PLANNED', :now, :now)
         ", [
@@ -369,6 +375,8 @@ class DonationEventController extends AbstractController
             'start_date'              => $startDate,
             'end_date'                => $endDate,
             'location'                => $location ?: null,
+            'latitude'                => $lat,
+            'longitude'               => $lng,
             'target_blood_types'      => $targetBloodTypes ?: null,
             'target_collection_units' => $request->request->get('target_collection_units') ? (int) $request->request->get('target_collection_units') : null,
             'hospital_id'             => $hospitalId,
@@ -405,20 +413,39 @@ class DonationEventController extends AbstractController
                 $donorBT = (string) $donor['blood_type_id'];
 
                 $email = (new Email())
-                    ->from('bloodlink.app.noreply@gmail.com')
+                    ->from('bloodlink.supportteam@gmail.com')
                     ->to($donorEmail)
-                    ->subject('New Donation Event: ' . $eventName)
+                    ->subject('Nouveau don de sang: ' . $eventName)
                     ->html("
-                        <p>Hello $donorName,</p>
-                        <p>A new blood donation event has been scheduled that matches your blood type (<strong>$donorBT</strong>)!</p>
-                        <hr>
-                        <p><strong>Event:</strong> $eventName</p>
-                        <p><strong>Hospital:</strong> $hospitalName</p>
-                        <p><strong>Location:</strong> $location</p>
-                        <p><strong>Date:</strong> " . (new \DateTimeImmutable($startDate))->format('M d, Y H:i') . "</p>
-                        <hr>
-                        <p>Log in to your dashboard to participate and help save lives.</p>
-                        <p>Regards,<br>The BloodLink Team</p>
+                        <div style=\"font-family:'Segoe UI',Tahoma,sans-serif;color:#333;background-color:#f6f9fc;padding:40px 0;\">
+                            <div style=\"max-width:600px;margin:0 auto;background-color:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);\">
+                                <div style=\"padding:30px 40px;text-align:left;\">
+                                    <div style=\"display:inline-block;vertical-align:middle;margin-right:10px;width:32px;height:32px;background-color:#c52228;border-radius:50% 50% 50% 0;transform:rotate(-45deg);margin-top:-5px;\"></div>
+                                    <span style=\"color:#c52228;font-size:28px;font-weight:700;display:inline-block;vertical-align:middle;\">BloodLink</span>
+                                </div>
+                                <div style=\"padding:0 40px 40px 40px;\">
+                                    <h1 style=\"font-size:22px;font-weight:700;margin:0 0 24px 0;color:#1a1a1a;\">New Donation Event Scheduled</h1>
+                                    <div style=\"font-size:16px;line-height:1.6;color:#444444;margin-bottom:30px;\">
+                                        <p>Hello <strong>$donorName</strong>,</p>
+                                        <p>A new blood donation event has been scheduled that matches your blood type (<strong>$donorBT</strong>)!</p>
+                                        <div style=\"background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin-bottom:24px;\">
+                                            <p style=\"margin:0 0 8px;\"><strong>Event:</strong> $eventName</p>
+                                            <p style=\"margin:0 0 8px;\"><strong>Hospital:</strong> $hospitalName</p>
+                                            <p style=\"margin:0 0 8px;\"><strong>Location:</strong> $location</p>
+                                            <p style=\"margin:0;\"><strong>Date:</strong> " . (new \DateTimeImmutable($startDate))->format('d/m/Y H:i') . "</p>
+                                        </div>
+                                        <p>Log in to your dashboard to participate and help save lives.</p>
+                                    </div>
+                                    <div style=\"text-align:center;\">
+                                        <a href=\"#\" style=\"background-color:#c52228;color:#ffffff;padding:16px 32px;text-decoration:none;border-radius:8px;font-weight:700;font-size:16px;display:inline-block;\">Participate Now</a>
+                                    </div>
+                                </div>
+                                <div style=\"padding:0 40px 40px 40px;font-size:14px;color:#666666;line-height:1.5;\">
+                                    <p>Regards,</p>
+                                    <p style=\"margin-top:20px;font-weight:600;color:#333333;\">BloodLink Team</p>
+                                </div>
+                            </div>
+                        </div>
                     ");
                 
                 $mailer->send($email);
@@ -434,8 +461,7 @@ class DonationEventController extends AbstractController
 
     // ─── EDIT ─────────────────────────────────────────────────────────────────
     #[Route('/dashboard/donation-events/{id}/edit', name: 'donation_events_edit', methods: ['POST'])]
-    public function edit(string $id, Request $request, Connection $connection): Response
-    {
+    public function edit(string $id, Request $request, Connection $connection, GeocodingService $geocodingService): Response {
         $sessionUser = $request->getSession()->get('auth_user');
         if (!$sessionUser) return $this->redirectToRoute('auth_index');
 
@@ -482,6 +508,11 @@ class DonationEventController extends AbstractController
             $status = 'PLANNED';
         }
 
+        $location = (string) $request->request->get('location');
+        $coords = $geocodingService->geocodeCity($location);
+        $lat = $coords ? $coords['latitude'] : null;
+        $lng = $coords ? $coords['longitude'] : null;
+
         $connection->executeStatement("
             UPDATE donation_events SET
                 name                     = :name,
@@ -489,6 +520,8 @@ class DonationEventController extends AbstractController
                 start_date               = :start_date,
                 end_date                 = :end_date,
                 location                 = :location,
+                latitude                 = :latitude,
+                longitude                = :longitude,
                 target_blood_types       = :target_blood_types,
                 target_collection_units  = :target_collection_units,
                 hospital_id              = :hospital_id,
@@ -501,7 +534,9 @@ class DonationEventController extends AbstractController
             'description'             => $request->request->get('description') ?: null,
             'start_date'              => $startDate,
             'end_date'                => $endDate,
-            'location'                => $request->request->get('location') ?: null,
+            'location'                => $location ?: null,
+            'latitude'                => $lat,
+            'longitude'               => $lng,
             'target_blood_types'      => $request->request->get('target_blood_types') ?: null,
             'target_collection_units' => $request->request->get('target_collection_units') ?: null,
             'hospital_id'             => $hospitalId,

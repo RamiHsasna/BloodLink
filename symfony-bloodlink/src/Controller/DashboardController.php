@@ -283,6 +283,7 @@ class DashboardController extends AbstractController {
         Request $request,
         Connection $connection,
         MailerInterface $mailer,
+        GeocodingService $geocodingService,
     ): Response {
         $sessionUser = $request->getSession()->get("auth_user");
         if (!$sessionUser) {
@@ -387,6 +388,7 @@ class DashboardController extends AbstractController {
             if ($userType === "DONOR") {
                 $this->upsertDonorProfile(
                     $connection,
+                    $geocodingService,
                     $userId,
                     $firstName,
                     $lastName,
@@ -441,10 +443,34 @@ class DashboardController extends AbstractController {
                 $body .= "<p>Regards,<br>The BloodLink Team</p>";
 
                 $notificationEmail = (new Email())
-                    ->from('bloodlink.app.noreply@gmail.com')
+                    ->from('bloodlink.supportteam@gmail.com')
                     ->to($email)
-                    ->subject($subject)
-                    ->html($body);
+                    ->subject('<Welcome to BloodLink')
+                    ->html("
+                        <div style=\"font-family:'Segoe UI',Tahoma,sans-serif;color:#333;background-color:#f6f9fc;padding:40px 0;\">
+                            <div style=\"max-width:600px;margin:0 auto;background-color:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);\">
+                                <div style=\"padding:30px 40px;text-align:left;\">
+                                    <div style=\"display:inline-block;vertical-align:middle;margin-right:10px;width:32px;height:32px;background-color:#c52228;border-radius:50% 50% 50% 0;transform:rotate(-45deg);margin-top:-5px;\"></div>
+                                    <span style=\"color:#c52228;font-size:28px;font-weight:700;display:inline-block;vertical-align:middle;\">BloodLink</span>
+                                </div>
+                                <div style=\"padding:0 40px 40px 40px;\">
+                                    <h1 style=\"font-size:22px;font-weight:700;margin:0 0 24px 0;color:#1a1a1a;\">Bienvenue sur la plateforme</h1>
+                                    <div style=\"font-size:16px;line-height:1.6;color:#444444;margin-bottom:30px;\">
+                                        <p>Hello <strong>$firstName</strong>,</p>
+                                        <p>Your account is created successfully , you can now login and continue your activities.</p>
+                                        $body
+                                    </div>
+                                    <div style=\"text-align:center;\">
+                                        <a href=\"#\" style=\"background-color:#c52228;color:#ffffff;padding:16px 32px;text-decoration:none;border-radius:8px;font-weight:700;font-size:16px;display:inline-block;\">Se connecter</a>
+                                    </div>
+                                </div>
+                                <div style=\"padding:0 40px 40px 40px;font-size:14px;color:#666666;line-height:1.5;\">
+                                    <p>Merci pour votre solidarité,</p>
+                                    <p style=\"margin-top:20px;font-weight:600;color:#333333;\">L'équipe BloodLink</p>
+                                </div>
+                            </div>
+                        </div>
+                    ");
                 
                 $mailer->send($notificationEmail);
             } catch (Throwable $e) {
@@ -478,6 +504,7 @@ class DashboardController extends AbstractController {
         Request $request,
         Connection $connection,
         MailerInterface $mailer,
+        GeocodingService $geocodingService,
     ): Response {
         $sessionUser = $request->getSession()->get("auth_user");
         if (!$sessionUser) {
@@ -588,6 +615,7 @@ class DashboardController extends AbstractController {
             if ($userType === "DONOR") {
                 $this->upsertDonorProfile(
                     $connection,
+                    $geocodingService,
                     $userId,
                     $firstName,
                     $lastName,
@@ -624,10 +652,35 @@ class DashboardController extends AbstractController {
                 }
 
                 $notificationEmail = (new Email())
-                    ->from('bloodlink.app.noreply@gmail.com')
+                    ->from('bloodlink.supportteam@gmail.com')
                     ->to($email)
-                    ->subject('Your BloodLink Account Has Been Updated')
-                    ->html("<p>Hello $firstName,</p><p>An administrator has updated your account information on the BloodLink platform.</p>$changesReport<p>If you have any questions or did not expect this change, please contact support.</p><p>Regards,<br>The BloodLink Team</p>");
+                    ->subject('Mise à jour de votre compte BloodLink')
+                    ->html("
+                        <div style=\"font-family:'Segoe UI',Tahoma,sans-serif;color:#333;background-color:#f6f9fc;padding:40px 0;\">
+                            <div style=\"max-width:600px;margin:0 auto;background-color:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);\">
+                                <div style=\"padding:30px 40px;text-align:left;\">
+                                    <div style=\"display:inline-block;vertical-align:middle;margin-right:10px;width:32px;height:32px;background-color:#c52228;border-radius:50% 50% 50% 0;transform:rotate(-45deg);margin-top:-5px;\"></div>
+                                    <span style=\"color:#c52228;font-size:28px;font-weight:700;display:inline-block;vertical-align:middle;\">BloodLink</span>
+                                </div>
+                                <div style=\"padding:0 40px 40px 40px;\">
+                                    <h1 style=\"font-size:22px;font-weight:700;margin:0 0 24px 0;color:#1a1a1a;\">Information de compte mise à jour</h1>
+                                    <div style=\"font-size:16px;line-height:1.6;color:#444444;margin-bottom:30px;\">
+                                        <p>Bonjour <strong>$firstName</strong>,</p>
+                                        <p>Un administrateur a mis à jour les informations de votre compte sur la plateforme BloodLink.</p>
+                                        $changesReport
+                                        <p>Si vous avez des questions ou si vous n'attendiez pas cette modification, veuillez contacter le support.</p>
+                                    </div>
+                                    <div style=\"text-align:center;\">
+                                        <a href=\"#\" style=\"background-color:#c52228;color:#ffffff;padding:16px 32px;text-decoration:none;border-radius:8px;font-weight:700;font-size:16px;display:inline-block;\">Accéder à mon compte</a>
+                                    </div>
+                                </div>
+                                <div style=\"padding:0 40px 40px 40px;font-size:14px;color:#666666;line-height:1.5;\">
+                                    <p>Merci pour votre solidarité,</p>
+                                    <p style=\"margin-top:20px;font-weight:600;color:#333333;\">L'équipe BloodLink</p>
+                                </div>
+                            </div>
+                        </div>
+                    ");
                 
                 $mailer->send($notificationEmail);
             } catch (Throwable $e) {
@@ -694,10 +747,31 @@ class DashboardController extends AbstractController {
                     $firstName = (string) $user['first_name'];
                     
                     $notificationEmail = (new Email())
-                        ->from('bloodlink.app.noreply@gmail.com')
+                        ->from('bloodlink.supportteam@gmail.com')
                         ->to($email)
-                        ->subject('Your BloodLink Account Has Been Deleted')
-                        ->html("<p>Hello $firstName,</p><p>An administrator has deleted your account on the BloodLink platform.</p><p>If you have any questions, please contact support.</p><p>Regards,<br>The BloodLink Team</p>");
+                        ->subject('BloodLink Account Deleted')
+                        ->html("
+                            <div style=\"font-family:'Segoe UI',Tahoma,sans-serif;color:#333;background-color:#f6f9fc;padding:40px 0;\">
+                                <div style=\"max-width:600px;margin:0 auto;background-color:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);\">
+                                    <div style=\"padding:30px 40px;text-align:left;\">
+                                        <div style=\"display:inline-block;vertical-align:middle;margin-right:10px;width:32px;height:32px;background-color:#c52228;border-radius:50% 50% 50% 0;transform:rotate(-45deg);margin-top:-5px;\"></div>
+                                        <span style=\"color:#c52228;font-size:28px;font-weight:700;display:inline-block;vertical-align:middle;\">BloodLink</span>
+                                    </div>
+                                    <div style=\"padding:0 40px 40px 40px;\">
+                                        <h1 style=\"font-size:22px;font-weight:700;margin:0 0 24px 0;color:#1a1a1a;\">Account Closure</h1>
+                                        <div style=\"font-size:16px;line-height:1.6;color:#444444;margin-bottom:30px;\">
+                                            <p>Hello <strong>$firstName</strong>,</p>
+                                            <p>An administrator has deleted your account on the BloodLink platform.</p>
+                                            <p>If you have any questions, please contact our support.</p>
+                                        </div>
+                                    </div>
+                                    <div style=\"padding:0 40px 40px 40px;font-size:14px;color:#666666;line-height:1.5;\">
+                                        <p>Regards,</p>
+                                        <p style=\"margin-top:20px;font-weight:600;color:#333333;\">BloodLink Team</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ");
                     
                     $mailer->send($notificationEmail);
                 } catch (Throwable $e) {
@@ -1561,6 +1635,7 @@ class DashboardController extends AbstractController {
 
     private function upsertDonorProfile(
         Connection $connection,
+        GeocodingService $geocodingService,
         string $userId,
         string $firstName,
         string $lastName,
@@ -1574,9 +1649,11 @@ class DashboardController extends AbstractController {
             [$userId],
         );
 
+        [$lat, $lng] = $this->resolveCoordinatesFromCity($geocodingService, $city ?? '');
+
         if ($exists) {
             $connection->executeStatement(
-                "UPDATE donors SET first_name = ?, last_name = ?, blood_type_id = ?, city = ?, last_donation_date = ?, total_donations = ? WHERE user_id::text = ?",
+                "UPDATE donors SET first_name = ?, last_name = ?, blood_type_id = ?, city = ?, last_donation_date = ?, total_donations = ?, latitude = ?, longitude = ? WHERE user_id::text = ?",
                 [
                     $firstName,
                     $lastName,
@@ -1584,6 +1661,8 @@ class DashboardController extends AbstractController {
                     $city,
                     $lastDonationDate,
                     $totalDonations,
+                    $lat,
+                    $lng,
                     $userId,
                 ],
             );
@@ -1592,7 +1671,7 @@ class DashboardController extends AbstractController {
         }
 
         $connection->executeStatement(
-            "INSERT INTO donors (user_id, first_name, last_name, blood_type_id, city, last_donation_date, is_currently_eligible, total_donations, created_at) VALUES (?::uuid, ?, ?, ?, ?, ?, true, ?, NOW())",
+            "INSERT INTO donors (user_id, first_name, last_name, blood_type_id, city, last_donation_date, is_currently_eligible, total_donations, latitude, longitude, created_at) VALUES (?::uuid, ?, ?, ?, ?, ?, true, ?, ?, ?, NOW())",
             [
                 $userId,
                 $firstName,
@@ -1601,6 +1680,8 @@ class DashboardController extends AbstractController {
                 $city,
                 $lastDonationDate,
                 $totalDonations,
+                $lat,
+                $lng,
             ],
         );
     }
