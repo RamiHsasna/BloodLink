@@ -16,6 +16,7 @@ import tn.edu.esprit.entities.UserType;
 import tn.edu.esprit.entities.Users;
 import tn.edu.esprit.services.AppSession;
 import tn.edu.esprit.services.ServiceDonationsEvent;
+import tn.edu.esprit.services.SessionScopeService;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -33,6 +34,7 @@ public class DonationEventDashboardController {
     @FXML private Button addEventBtn;
 
     private ServiceDonationsEvent serviceDonationEvent;
+    private SessionScopeService sessionScopeService;
     private List<DonationsEvent> allEvents;
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private boolean readOnlyDonor;
@@ -41,7 +43,8 @@ public class DonationEventDashboardController {
     public void initialize() {
         try {
             System.out.println("Initializing DonationEventDashboardController...");
-            serviceDonationEvent = new ServiceDonationsEvent();
+        serviceDonationEvent = new ServiceDonationsEvent();
+        sessionScopeService = new SessionScopeService();
             Users currentUser = AppSession.getCurrentUser();
             readOnlyDonor = currentUser != null && currentUser.getUserType() == UserType.DONOR;
 
@@ -78,6 +81,7 @@ public class DonationEventDashboardController {
             if (allEvents == null) {
                 allEvents = new java.util.ArrayList<>();
             }
+            allEvents = sessionScopeService.filterVisibleDonationEvents(allEvents);
             displayEvents(allEvents);
             updateStats();
         } catch (Exception e) {
@@ -97,6 +101,33 @@ public class DonationEventDashboardController {
             return;
         }
 
+        // ── UPCOMING BANNER ──
+        List<DonationsEvent> upcoming = events.stream()
+                .filter(this::isUpcomingSoon)
+                .collect(Collectors.toList());
+
+        if (!upcoming.isEmpty()) {
+            VBox banner = new VBox(6);
+            banner.setStyle("-fx-background-color: #fff8e1; -fx-background-radius: 10; " +
+                    "-fx-border-color: #f57f17; -fx-border-radius: 10; " +
+                    "-fx-border-width: 1.5; -fx-padding: 14;");
+
+            Label bannerTitle = new Label("🔔 Upcoming Events in the Next 7 Days");
+            bannerTitle.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #e65100;");
+
+            VBox bannerList = new VBox(4);
+            for (DonationsEvent e : upcoming) {
+                Label item = new Label("• " + e.getName() + " — starts " +
+                        e.getStartDate().format(dateFormatter));
+                item.setStyle("-fx-font-size: 13px; -fx-text-fill: #bf360c;");
+                bannerList.getChildren().add(item);
+            }
+
+            banner.getChildren().addAll(bannerTitle, bannerList);
+            eventsContainer.getChildren().add(banner);
+        }
+
+        // ── EVENT CARDS ──
         for (DonationsEvent event : events) {
             eventsContainer.getChildren().add(createEventCard(event));
         }
@@ -106,6 +137,11 @@ public class DonationEventDashboardController {
         VBox card = new VBox(15);
         card.getStyleClass().add("user-card");
         card.setPadding(new Insets(20));
+
+        if (isUpcomingSoon(event)) {
+            card.setStyle("-fx-border-color: #f57f17; -fx-border-width: 2; " +
+                    "-fx-border-radius: 10; -fx-background-radius: 10;");
+        }
 
         // Header with Event Info
         HBox header = new HBox(15);
@@ -167,9 +203,50 @@ public class DonationEventDashboardController {
         // Action Buttons
         card.getChildren().addAll(header, new Separator(), detailsGrid);
 
+// ── PROGRESS BAR ──
+        if (event.getTargetCollectionUnits() != null && event.getTargetCollectionUnits() > 0) {
+            int target = event.getTargetCollectionUnits();
+            int actual = event.getActualCollectionUnits() != null ? event.getActualCollectionUnits() : 0;
+            double progress = Math.min((double) actual / target, 1.0);
+            int percent = (int)(progress * 100);
+
+            VBox progressBox = new VBox(6);
+            progressBox.setPadding(new Insets(4, 0, 0, 0));
+
+            HBox progressHeader = new HBox();
+            progressHeader.setAlignment(Pos.CENTER_LEFT);
+            Label progressLabel = new Label("🩸 Collection Progress");
+            progressLabel.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #4a6278;");
+            Label progressPercent = new Label(actual + " / " + target + " units (" + percent + "%)");
+            progressPercent.setStyle("-fx-font-size: 12px; -fx-text-fill: #4a6278;");
+            HBox.setHgrow(progressLabel, Priority.ALWAYS);
+            progressHeader.getChildren().addAll(progressLabel, progressPercent);
+
+            ProgressBar progressBar = new ProgressBar(progress);
+            progressBar.setMaxWidth(Double.MAX_VALUE);
+            progressBar.setPrefHeight(12);
+            if (percent >= 100) {
+                progressBar.setStyle("-fx-accent: #2e7d32;");
+            } else if (percent >= 60) {
+                progressBar.setStyle("-fx-accent: #f57f17;");
+            } else {
+                progressBar.setStyle("-fx-accent: #e53935;");
+            }
+
+            progressBox.getChildren().addAll(progressHeader, progressBar);
+            card.getChildren().add(progressBox);
+        }
+
         if (!readOnlyDonor) {
             HBox actionButtons = new HBox(10);
             actionButtons.setAlignment(Pos.CENTER_RIGHT);
+
+            Button mapBtn = new Button("📍 View Map");
+            mapBtn.setStyle("-fx-background-color: #e3f2fd; -fx-text-fill: #1565c0; " +
+                    "-fx-font-weight: bold; -fx-background-radius: 8; " +
+                    "-fx-padding: 6 14 6 14; -fx-cursor: hand;");
+            mapBtn.setOnAction(e -> handleShowMap(event));
+            actionButtons.getChildren().add(mapBtn);
 
             Button modifyBtn = new Button("Modify");
             modifyBtn.getStyleClass().add("btn-modify");
@@ -332,5 +409,90 @@ public class DonationEventDashboardController {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+    private boolean isUpcomingSoon(DonationsEvent event) {
+        if (event.getStartDate() == null) return false;
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalDateTime in7Days = now.plusDays(7);
+        return event.getStartDate().isAfter(now) && event.getStartDate().isBefore(in7Days);
+    }
+    private void handleShowMap(DonationsEvent event) {
+        if (event.getLatitude() == null || event.getLongitude() == null) {
+            showAlert("No Location", "This event has no coordinates saved!");
+            return;
+        }
+
+        Stage mapStage = new Stage();
+        mapStage.setTitle("📍 " + event.getName() + " — Location");
+        mapStage.initModality(Modality.APPLICATION_MODAL);
+
+        VBox root = new VBox(0);
+        root.setStyle("-fx-background-color: #f0f4f8;");
+
+        // ── Header ──
+        VBox header = new VBox(4);
+        header.setStyle("-fx-background-color: #1a2535; -fx-padding: 16 20 16 20;");
+
+        Label titleLabel = new Label("📍 " + event.getName());
+        titleLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: white;");
+
+        Label coordsLabel = new Label("Lat: " + event.getLatitude() + "   Lng: " + event.getLongitude());
+        coordsLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #8a9bb0;");
+
+        Label locationLabel = new Label("📍 " + (event.getLocation() != null ? event.getLocation() : "N/A"));
+        locationLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #8a9bb0;");
+
+        header.getChildren().addAll(titleLabel, locationLabel, coordsLabel);
+
+        // ── Map ──
+        javafx.scene.web.WebView webView = new javafx.scene.web.WebView();
+        webView.setPrefSize(620, 450);
+
+        String lat = event.getLatitude().toString();
+        String lng = event.getLongitude().toString();
+
+        String html = "<!DOCTYPE html><html><head>"
+                + "<style>body,html{margin:0;padding:0;width:100%;height:100%;}</style>"
+                + "</head><body>"
+                + "<iframe width='100%' height='100%' frameborder='0' style='border:0' "
+                + "src='https://maps.google.com/maps?q=" + lat + "," + lng
+                + "&z=15&output=embed' allowfullscreen>"
+                + "</iframe>"
+                + "</body></html>";
+
+        webView.getEngine().loadContent(html);
+        VBox.setVgrow(webView, Priority.ALWAYS);
+
+        // ── Footer buttons ──
+        HBox btnRow = new HBox(10);
+        btnRow.setAlignment(Pos.CENTER_RIGHT);
+        btnRow.setStyle("-fx-padding: 12 16 12 16; -fx-background-color: #f0f4f8;");
+
+        Button openBrowserBtn = new Button("🌐 Open in Browser");
+        openBrowserBtn.setStyle("-fx-background-color: #e3f2fd; -fx-text-fill: #1565c0; " +
+                "-fx-font-weight: bold; -fx-background-radius: 8; " +
+                "-fx-padding: 8 16 8 16; -fx-cursor: hand;");
+        openBrowserBtn.setOnAction(e -> {
+            try {
+                java.awt.Desktop.getDesktop().browse(
+                        new java.net.URI("https://maps.google.com/?q=" + lat + "," + lng));
+            } catch (Exception ex) {
+                showAlert("Error", "Could not open browser: " + ex.getMessage());
+            }
+        });
+
+        Button closeBtn = new Button("Close");
+        closeBtn.setStyle("-fx-background-color: #e53935; -fx-text-fill: white; " +
+                "-fx-font-weight: bold; -fx-background-radius: 8; " +
+                "-fx-padding: 8 16 8 16; -fx-cursor: hand;");
+        closeBtn.setOnAction(e -> mapStage.close());
+
+        btnRow.getChildren().addAll(openBrowserBtn, closeBtn);
+
+        root.getChildren().addAll(header, webView, btnRow);
+
+        Scene scene = new Scene(root, 640, 540);
+        mapStage.setScene(scene);
+        mapStage.showAndWait();
     }
 }

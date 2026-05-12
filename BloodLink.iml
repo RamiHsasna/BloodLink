@@ -3,150 +3,17 @@
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
     <content url="file://$MODULE_DIR$">
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/composer" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/doctrine/collections" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/doctrine/dbal" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/doctrine/deprecations" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/doctrine/doctrine-bundle" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/doctrine/doctrine-migrations-bundle" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/doctrine/event-manager" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/doctrine/inflector" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/doctrine/instantiator" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/doctrine/lexer" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/doctrine/migrations" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/doctrine/orm" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/doctrine/persistence" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/doctrine/sql-formatter" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/egulias/email-validator" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/masterminds/html5" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/monolog/monolog" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/myclabs/deep-copy" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/nikic/php-parser" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/phar-io/manifest" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/phar-io/version" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/phpdocumentor/reflection-common" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/phpdocumentor/reflection-docblock" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/phpdocumentor/type-resolver" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/phpstan/phpdoc-parser" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/phpunit/php-code-coverage" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/phpunit/php-file-iterator" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/phpunit/php-invoker" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/phpunit/php-text-template" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/phpunit/php-timer" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/phpunit/phpunit" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/psr/cache" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/psr/clock" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/psr/container" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/psr/event-dispatcher" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/psr/link" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/psr/log" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/sebastian/cli-parser" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/sebastian/code-unit" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/sebastian/code-unit-reverse-lookup" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/sebastian/comparator" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/sebastian/complexity" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/sebastian/diff" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/sebastian/environment" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/sebastian/exporter" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/sebastian/global-state" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/sebastian/lines-of-code" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/sebastian/object-enumerator" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/sebastian/object-reflector" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/sebastian/recursion-context" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/sebastian/type" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/sebastian/version" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/staabm/side-effects-detector" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/asset" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/asset-mapper" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/browser-kit" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/cache" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/cache-contracts" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/clock" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/config" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/console" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/css-selector" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/debug-bundle" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/dependency-injection" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/deprecation-contracts" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/doctrine-bridge" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/doctrine-messenger" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/dom-crawler" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/dotenv" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/error-handler" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/event-dispatcher" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/event-dispatcher-contracts" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/expression-language" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/filesystem" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/finder" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/flex" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/form" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/framework-bundle" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/http-client" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/http-client-contracts" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/http-foundation" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/http-kernel" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/intl" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/mailer" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/maker-bundle" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/messenger" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/mime" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/monolog-bridge" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/monolog-bundle" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/notifier" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/options-resolver" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/password-hasher" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/polyfill-intl-grapheme" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/polyfill-intl-icu" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/polyfill-intl-idn" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/polyfill-intl-normalizer" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/polyfill-mbstring" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/polyfill-php83" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/polyfill-php84" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/process" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/property-access" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/property-info" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/routing" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/runtime" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/security-bundle" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/security-core" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/security-csrf" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/security-http" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/serializer" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/service-contracts" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/stimulus-bundle" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/stopwatch" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/string" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/translation" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/translation-contracts" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/twig-bridge" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/twig-bundle" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/ux-turbo" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/validator" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/var-dumper" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/var-exporter" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/web-link" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/web-profiler-bundle" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/symfony/yaml" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/theseer/tokenizer" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/twig/extra-bundle" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/twig/twig" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/webmozart/assert" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/bacon/bacon-qr-code" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/dasprid/enum" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/dompdf/dompdf" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/dompdf/php-font-lib" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/dompdf/php-svg-lib" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/endroid/qr-code" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/knplabs/knp-snappy" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/knplabs/knp-snappy-bundle" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/sabberworm/php-css-parser" />
-      <excludeFolder url="file://$MODULE_DIR$/symfony-bloodlink/vendor/thecodingmachine/safe" />
+      <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
     </content>
-    <orderEntry type="jdk" jdkName="21" jdkType="JavaSDK" />
+    <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" exported="" name="postgresql-42.7.9" level="project" />
-    <orderEntry type="library" exported="" name="postgresql-42.7.10" level="project" />
+    <orderEntry type="library" name="JavaFX 21.0.2" level="project" />
+    <orderEntry type="library" name="PostgreSQL 42.7.9" level="project" />
+    <orderEntry type="library" name="google.zxing.core" level="project" />
+    <orderEntry type="library" name="google.zxing.javase" level="project" />
+    <orderEntry type="library" name="itextpdf-5.5.13.3" level="project" />
+    <orderEntry type="library" name="itextpdf-5.5.13.4" level="project" />
     <orderEntry type="library" name="lib" level="project" />
-    <orderEntry type="library" name="java" level="project" />
+    <orderEntry type="library" name="postgresql-42.7.9" level="project" />
   </component>
 </module>

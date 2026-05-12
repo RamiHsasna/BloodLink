@@ -8,9 +8,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import tn.edu.esprit.entities.BloodInventory;
@@ -652,46 +654,12 @@ public class InventoryViewController implements Initializable {
 
     @FXML
     private void onUrgentAlert() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Urgent Alert");
-        alert.setHeaderText("Urgent Notification");
-        alert.setContentText(
-            "This feature will send an urgent notification to all eligible donors."
-        );
-        alert.showAndWait();
+        loadDashboardSection("/tn/edu/esprit/views/DashboardAlerts.fxml");
     }
 
     @FXML
     private void onRequestTransfer() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Request Transfer");
-        alert.setHeaderText("Inter-hospital Transfer");
-        alert.setContentText(
-            "This feature will allow you to request a stock transfer from another hospital."
-        );
-        alert.showAndWait();
-    }
-
-    @FXML
-    private void onAddStock() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Add Stock");
-        alert.setHeaderText("Register New Blood Units");
-        alert.setContentText(
-            "This feature will allow you to register new blood units into the inventory."
-        );
-        alert.showAndWait();
-    }
-
-    @FXML
-    private void onGenerateReport() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Generate Report");
-        alert.setHeaderText("Data Export");
-        alert.setContentText(
-            "This feature will allow you to generate and export an inventory report."
-        );
-        alert.showAndWait();
+        loadDashboardSection("/tn/edu/esprit/views/TransferList.fxml");
     }
 
     // ============================================================
@@ -707,5 +675,22 @@ public class InventoryViewController implements Initializable {
         alert.setHeaderText(title);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    private void loadDashboardSection(String fxmlPath) {
+        try {
+            Node contentArea = bloodTypeGrid.getScene() != null
+                ? bloodTypeGrid.getScene().lookup("#contentArea")
+                : null;
+            if (!(contentArea instanceof StackPane)) {
+                showErrorAlert("Navigation Error", "Could not find dashboard content area.");
+                return;
+            }
+            Node view = FXMLLoader.load(getClass().getResource(fxmlPath));
+            ((StackPane) contentArea).getChildren().setAll(view);
+        } catch (Exception exception) {
+            LOGGER.log(Level.SEVERE, "Failed to open dashboard section " + fxmlPath, exception);
+            showErrorAlert("Navigation Error", "Could not open this section: " + exception.getMessage());
+        }
     }
 }

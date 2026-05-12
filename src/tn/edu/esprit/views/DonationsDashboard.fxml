@@ -24,19 +24,38 @@
                 <Insets top="12" right="24" bottom="12" left="24"/>
             </padding>
         </Button>
+        <Button text="📊 View Chart" styleClass="btn-secondary" onAction="#handleViewChart">
+            <padding>
+                <Insets top="12" right="24" bottom="12" left="24"/>
+            </padding>
+        </Button>
+        <Button text="🤖 AI Predict" styleClass="btn-secondary" onAction="#handleAIPrediction">
+            <padding>
+                <Insets top="12" right="24" bottom="12" left="24"/>
+            </padding>
+        </Button>
     </HBox>
 
     <!-- Search and Filter Bar -->
     <HBox spacing="15" alignment="CENTER_LEFT">
         <TextField fx:id="searchField" promptText="Search donations by donor ID, hospital, status..."
-                  styleClass="search-field" HBox.hgrow="ALWAYS" onKeyReleased="#handleSearch">
+                   styleClass="search-field" HBox.hgrow="ALWAYS" onKeyReleased="#handleSearch">
             <padding>
                 <Insets top="10" right="15" bottom="10" left="15"/>
             </padding>
         </TextField>
 
-        <ComboBox fx:id="statusFilter" promptText="All Status" styleClass="filter-combo" prefWidth="180"
-                 onAction="#handleFilter">
+        <ComboBox fx:id="statusFilter" promptText="All Status"
+                  styleClass="filter-combo" prefWidth="180"
+                  onAction="#handleFilter">
+            <padding>
+                <Insets top="10" right="15" bottom="10" left="15"/>
+            </padding>
+        </ComboBox>
+
+        <ComboBox fx:id="bloodTypeFilter" promptText="All Blood Types"
+                  styleClass="filter-combo" prefWidth="180"
+                  onAction="#handleFilter">
             <padding>
                 <Insets top="10" right="15" bottom="10" left="15"/>
             </padding>

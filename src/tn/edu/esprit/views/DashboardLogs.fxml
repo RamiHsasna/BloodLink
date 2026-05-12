@@ -14,29 +14,49 @@
     <!-- Page Header -->
     <VBox spacing="4" styleClass="page-header">
         <Label text="Journaux d'audit" styleClass="page-title"/>
-        <Label text="Gerer les journaux systeme du reseau sanguin." styleClass="page-description"/>
+        <Label text="Gérer les journaux système du réseau sanguin." styleClass="page-description"/>
     </VBox>
 
-    <!-- Toolbar: Section Selector + Search + Filter + Actions -->
-    <HBox alignment="CENTER_LEFT" spacing="12">
-        <ComboBox fx:id="sectionSelector" styleClass="section-selector" prefWidth="220"/>
-        <Region HBox.hgrow="ALWAYS"/>
-        <HBox fx:id="searchWrapper" alignment="CENTER_LEFT" spacing="8" styleClass="search-input-wrapper">
-            <padding>
-                <Insets left="12" right="4" top="2" bottom="2"/>
-            </padding>
-            <Label text="🔍" styleClass="search-icon"/>
-            <TextField fx:id="searchField" promptText="Rechercher..." prefWidth="220" styleClass="search-input"/>
+    <!-- Toolbar -->
+    <VBox spacing="12">
+        <HBox alignment="CENTER_LEFT" spacing="12">
+            <ComboBox fx:id="sectionSelector" styleClass="section-selector" prefWidth="250"/>
+            <HBox fx:id="searchWrapper" alignment="CENTER_LEFT" spacing="8" styleClass="search-input-wrapper" HBox.hgrow="ALWAYS">
+                <padding>
+                    <Insets left="12" right="12" top="2" bottom="2"/>
+                </padding>
+                <TextField fx:id="searchField" promptText="Rechercher dans les journaux..." maxWidth="Infinity" styleClass="search-input" HBox.hgrow="ALWAYS"/>
+            </HBox>
+            <ComboBox fx:id="filterSelector" styleClass="section-selector" prefWidth="180" promptText="Filtrer par..."/>
+            <DatePicker fx:id="dateFrom" promptText="Date de début" prefWidth="180" styleClass="audit-filter-control"/>
+            <DatePicker fx:id="dateTo" promptText="Date de fin" prefWidth="180" styleClass="audit-filter-control"/>
         </HBox>
-        <ComboBox fx:id="filterSelector" styleClass="section-selector" prefWidth="180" promptText="Filtrer par..."/>
-        <Button fx:id="btnRefresh" text="⟳ Rafraichir" onAction="#handleRefresh" styleClass="btn-secondary"/>
-        <Button fx:id="btnAdd" text="+ Ajouter" onAction="#handleAddAction" styleClass="btn-primary"/>
-    </HBox>
+
+        <HBox alignment="CENTER_RIGHT" spacing="12">
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="btnResetFilters" text="Réinitialiser les filtres" onAction="#handleResetFilters" styleClass="audit-toolbar-secondary"/>
+            <Button fx:id="btnRefresh" text="Rafraîchir" onAction="#handleRefresh" styleClass="audit-toolbar-secondary"/>
+            <Button fx:id="btnAiAnalysis" text="Analyse IA" onAction="#handleAiAnalysis" styleClass="audit-toolbar-secondary"/>
+            <Button fx:id="btnAdd" text="Ajouter un journal" onAction="#handleAddAction" styleClass="audit-toolbar-primary"/>
+        </HBox>
+    </VBox>
 
     <!-- Stat Chips Row -->
     <HBox fx:id="statsRow" spacing="12" alignment="CENTER_LEFT">
         <!-- Chips populated dynamically per section -->
     </HBox>
+
+    <VBox fx:id="aiAnalysisCard" spacing="10" styleClass="audit-ai-card" visible="false" managed="false">
+        <HBox alignment="CENTER_LEFT" spacing="12">
+            <VBox spacing="2" HBox.hgrow="ALWAYS">
+                <Label text="Analyse IA des journaux" styleClass="audit-ai-title"/>
+                <Label fx:id="aiAnalysisContextLabel" text="L'analyse portera sur les filtres visibles." styleClass="audit-ai-subtitle" wrapText="true"/>
+            </VBox>
+            <ProgressIndicator fx:id="aiLoadingIndicator" prefWidth="28" prefHeight="28" visible="false" managed="false"/>
+        </HBox>
+        <Label fx:id="aiAnalysisStatusLabel" text="Lancez l'analyse pour obtenir une synthèse des journaux filtrés." styleClass="audit-ai-status" wrapText="true"/>
+        <TextArea fx:id="aiAnalysisOutput" editable="false" focusTraversable="false" wrapText="true" prefRowCount="8" styleClass="audit-ai-output"/>
+    </VBox>
 
     <!-- Main Content: StackPane switches between sections -->
     <StackPane fx:id="contentStack" VBox.vgrow="ALWAYS">
@@ -78,7 +98,7 @@
 
             <HBox spacing="20" VBox.vgrow="ALWAYS">
                 <VBox spacing="8" HBox.hgrow="ALWAYS" style="-fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-padding: 15;">
-                    <Label text="Repartition de la severite des alertes" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #475569;"/>
+                    <Label text="Répartition de la sévérité des alertes" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #475569;"/>
                     <javafx.scene.chart.PieChart fx:id="pieChartSeverity" VBox.vgrow="ALWAYS" legendVisible="true" labelsVisible="true"/>
                 </VBox>
                 <VBox spacing="8" HBox.hgrow="ALWAYS" style="-fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-padding: 15;">

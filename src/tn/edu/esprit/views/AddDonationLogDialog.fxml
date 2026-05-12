@@ -2,39 +2,38 @@
 
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.geometry.Insets?>
-<?import javafx.scene.text.Font?>
 
 <VBox xmlns="http://javafx.com/javafx/17"
-    xmlns:fx="http://javafx.com/fxml/1" fx:controller="tn.edu.esprit.controllers.AddDonationLogDialogController" spacing="15" style="-fx-background-color: white; -fx-padding: 24; -fx-border-radius: 8; -fx-background-radius: 8;">
+    xmlns:fx="http://javafx.com/fxml/1" fx:controller="tn.edu.esprit.controllers.AddDonationLogDialogController" spacing="15" style="-fx-background-color: white; -fx-padding: 24; -fx-border-radius: 8; -fx-background-radius: 8;" prefWidth="680">
 
     <VBox spacing="4">
         <Label text="Enregistrer une action de don" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #1e293b;"/>
-        <Label text="Documenter un changement d'etat pour un don specifique." style="-fx-font-size: 13px; -fx-text-fill: #64748b;"/>
+        <Label text="Documenter un changement d'état pour un don spécifique." style="-fx-font-size: 13px; -fx-text-fill: #64748b;"/>
     </VBox>
 
     <Separator />
 
     <VBox spacing="8">
         <Label text="ID du don" style="-fx-font-weight: bold; -fx-text-fill: #334155;"/>
-        <TextField fx:id="txtDonationId" promptText="Saisir l'UUID ou la reference du don" styleClass="form-input"/>
+        <ComboBox fx:id="cbDonation" promptText="Sélectionner un don" maxWidth="Infinity" styleClass="form-input"/>
         <Label fx:id="lblDonationIdError" textFill="#ef4444" visible="false" managed="false" style="-fx-font-size: 11px;"/>
+        <Label fx:id="lblStatusDetection" visible="false" managed="false" wrapText="true" styleClass="form-hint"/>
     </VBox>
 
     <VBox spacing="8">
-        <Label text="Nouvel etat / action" style="-fx-font-weight: bold; -fx-text-fill: #334155;"/>
-        <ComboBox fx:id="cbAction" promptText="Selectionner une action..." maxWidth="Infinity" styleClass="form-input"/>
+        <Label text="Action du journal" style="-fx-font-weight: bold; -fx-text-fill: #334155;"/>
+        <ComboBox fx:id="cbAction" promptText="Choisir une action" maxWidth="Infinity" styleClass="form-input"/>
         <Label fx:id="lblActionError" textFill="#ef4444" visible="false" managed="false" style="-fx-font-size: 11px;"/>
     </VBox>
 
     <HBox spacing="15">
         <VBox spacing="8" HBox.hgrow="ALWAYS">
-            <Label text="Statut precedent (optionnel)" style="-fx-font-weight: bold; -fx-text-fill: #334155;"/>
-            <TextField fx:id="txtPreviousStatus" promptText="Ex.: PENDING, APPROVED" styleClass="form-input"/>
+            <Label text="Statut actuel" style="-fx-font-weight: bold; -fx-text-fill: #334155;"/>
+            <ComboBox fx:id="cbPreviousStatus" promptText="Choisir un statut" maxWidth="Infinity" styleClass="form-input"/>
         </VBox>
         <VBox spacing="8" HBox.hgrow="ALWAYS">
-            <Label text="Nouveau statut (optionnel)" style="-fx-font-weight: bold; -fx-text-fill: #334155;"/>
-            <TextField fx:id="txtNewStatus" promptText="Ex.: APPROVED, COMPLETED" styleClass="form-input"/>
+            <Label text="Statut après action" style="-fx-font-weight: bold; -fx-text-fill: #334155;"/>
+            <ComboBox fx:id="cbNewStatus" promptText="Choisir le statut suivant" maxWidth="Infinity" styleClass="form-input"/>
         </VBox>
     </HBox>
 
@@ -47,6 +46,6 @@
         <Label fx:id="lblStatusMessage" visible="false" managed="false" style="-fx-font-weight: bold; -fx-padding: 0 10 0 0;"/>
         <Region HBox.hgrow="ALWAYS"/>
         <Button text="Annuler" fx:id="btnCancel" onAction="#handleCancel" style="-fx-background-color: transparent; -fx-border-color: #cbd5e1; -fx-border-radius: 4; -fx-text-fill: #475569; -fx-padding: 8 16; -fx-cursor: hand;"/>
-        <Button text="Enregistrer le journal" fx:id="btnSubmit" onAction="#handleSubmit" style="-fx-background-color: #3b82f6; -fx-text-fill: white; -fx-border-radius: 4; -fx-background-radius: 4; -fx-font-weight: bold; -fx-padding: 8 16; -fx-cursor: hand;"/>
+        <Button text="Enregistrer le journal" fx:id="btnSubmit" onAction="#handleSubmit" style="-fx-background-color: #2563eb; -fx-text-fill: white; -fx-border-radius: 4; -fx-background-radius: 4; -fx-font-weight: bold; -fx-padding: 8 16; -fx-cursor: hand;"/>
     </HBox>
 </VBox>
