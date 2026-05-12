@@ -5,5 +5,6 @@ public enum TransfertStatus {
     APPROVED,
     IN_TRANSIT,
     DELIVERED,
-    CANCELLED
+    CANCELLED,
+    DENIED,
 }

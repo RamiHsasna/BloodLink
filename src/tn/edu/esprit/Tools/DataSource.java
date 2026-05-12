@@ -8,6 +8,7 @@ package tn.edu.esprit.Tools;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import tn.edu.esprit.services.AppConfig;
 
 /**
  *
@@ -18,16 +19,15 @@ public class DataSource {
     private Connection cnx;
     private static DataSource instance;
 
-    //private String url = "jdbc:mysql://localhost:3306/esprit"; mysql connector
-    // private String url = "jdbc:postgresql://localhost:5432/esprit"; //postgresql connector
-    private String url =
-        "jdbc:postgresql://<configured-at-runtime>";
-    private String user = "<configured-at-runtime>";
-    private String password = "<configured-at-runtime>";
+    private String url = AppConfig.get("BLOODLINK_DB_URL", "DB_URL", "DATABASE_URL");
+    private String user = AppConfig.get("BLOODLINK_DB_USER", "DB_USER", "PGUSER");
+    private String password = AppConfig.get("BLOODLINK_DB_PASSWORD", "DB_PASSWORD", "PGPASSWORD");
 
     private DataSource() {
         try {
-            // cnx = DriverManager.getConnection(url, user, password);
+            if (url == null || user == null || password == null) {
+                throw new SQLException("Missing database configuration. Set BLOODLINK_DB_URL, BLOODLINK_DB_USER, and BLOODLINK_DB_PASSWORD.");
+            }
             cnx = DriverManager.getConnection(url, user, password);
             System.out.println("Connected to DB !");
         } catch (SQLException ex) {

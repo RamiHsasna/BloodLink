@@ -17,6 +17,8 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import tn.edu.esprit.entities.Alert;
 import tn.edu.esprit.entities.AlertSeverity;
+import tn.edu.esprit.entities.Hospital;
+import tn.edu.esprit.entities.Donor;
 import tn.edu.esprit.entities.DonorAlert;
 import tn.edu.esprit.entities.DonorResponse;
 import tn.edu.esprit.entities.UserType;
@@ -26,12 +28,20 @@ import tn.edu.esprit.services.AlertServiceImpl;
 import tn.edu.esprit.services.AppSession;
 import tn.edu.esprit.services.DonorAlertService;
 import tn.edu.esprit.services.DonorAlertServiceImpl;
+import tn.edu.esprit.services.HospitalServiceImpl;
+import tn.edu.esprit.services.SessionScopeService;
+import tn.edu.esprit.services.ServiceDonor;
 
 import java.net.URL;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.ResourceBundle;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -52,8 +62,22 @@ public class DashboardAlertsController implements Initializable {
     @FXML
     private VBox containerAlerts;
 
+    private static final Map<String, Set<String>> BLOOD_COMPATIBILITY_MAP = Map.of(
+    "O-", Set.of("O-", "O+", "A-", "A+", "B-", "B+", "AB-", "AB+"),
+    "O+", Set.of("O+", "A+", "B+", "AB+"),
+    "A-", Set.of("A-", "A+", "AB-", "AB+"),
+    "A+", Set.of("A+", "AB+"),
+    "B-", Set.of("B-", "B+", "AB-", "AB+"),
+    "B+", Set.of("B+", "AB+"),
+    "AB-", Set.of("AB-", "AB+"),
+    "AB+", Set.of("AB+")
+);
+
     private AlertService alertService;
     private DonorAlertService donorAlertService;
+    private ServiceDonor donorService;
+    private HospitalServiceImpl hospitalService;
+    private SessionScopeService sessionScopeService;
 
     private ObservableList<Alert> allAlerts;
     private ObservableList<DonorAlert> allDonorAlerts;
@@ -63,6 +87,9 @@ public class DashboardAlertsController implements Initializable {
     public void initialize(URL url, ResourceBundle resourceBundle) {
         alertService = new AlertServiceImpl();
         donorAlertService = new DonorAlertServiceImpl();
+        donorService = new ServiceDonor();
+        hospitalService = new HospitalServiceImpl();
+        sessionScopeService = new SessionScopeService();
 
         Users currentUser = AppSession.getCurrentUser();
         readOnlyDonor = currentUser != null && currentUser.getUserType() == UserType.DONOR;
@@ -119,8 +146,97 @@ public class DashboardAlertsController implements Initializable {
     // ==================== DATA ====================
 
     private void loadData() {
-        allAlerts = FXCollections.observableArrayList(alertService.getAll());
-        allDonorAlerts = FXCollections.observableArrayList(donorAlertService.getAll());
+        List<Alert> alerts = alertService.getAll();
+        if (readOnlyDonor) {
+            Users currentUser = AppSession.getCurrentUser();
+            Donor donor = resolveCurrentDonor(currentUser);
+            alerts = filterAlertsForDonor(alerts, donor);
+        } else {
+            alerts = sessionScopeService.filterVisibleAlerts(alerts);
+        }
+        allAlerts = FXCollections.observableArrayList(alerts);
+        Set<String> visibleAlertIds = alerts.stream()
+                .map(Alert::getAlertId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        allDonorAlerts = FXCollections.observableArrayList(
+                donorAlertService.getAll().stream()
+                        .filter(da -> visibleAlertIds.contains(da.getAlertId()))
+                        .collect(Collectors.toList()));
+    }
+
+    private Donor resolveCurrentDonor(Users currentUser) {
+        if (currentUser == null || currentUser.getId() == null || currentUser.getId().trim().isEmpty()) {
+            return null;
+        }
+        Donor probe = new Donor();
+        probe.setUserId(currentUser.getId());
+        return donorService.getOne(probe);
+    }
+
+    private List<Alert> filterAlertsForDonor(List<Alert> alerts, Donor donor) {
+        if (donor == null || donor.getLatitude() == null || donor.getLongitude() == null) {
+            return Collections.emptyList();
+        }
+        Double donorLat = donor.getLatitude();
+        Double donorLon = donor.getLongitude();
+        String donorBloodType = donor.getBloodTypeId();
+        return alerts.stream()
+                .filter(alert -> isBloodTypeCompatible(donorBloodType, alert != null ? alert.getBloodTypeId() : null))
+                .filter(alert -> isAlertInRange(alert, donorLat, donorLon))
+                .collect(Collectors.toList());
+    }
+
+    private boolean isBloodTypeCompatible(String donorBloodType, String requiredBloodType) {
+        String donorType = donorBloodType != null ? donorBloodType.trim().toUpperCase() : "";
+        String requiredType = requiredBloodType != null ? requiredBloodType.trim().toUpperCase() : "";
+        if (donorType.isEmpty() || requiredType.isEmpty()) {
+            return false;
+        }
+        Set<String> compatibleRecipients = BLOOD_COMPATIBILITY_MAP.get(donorType);
+
+        return compatibleRecipients != null && compatibleRecipients.contains(requiredType);
+    }
+
+    private boolean isAlertInRange(Alert alert, double donorLat, double donorLon) {
+        if (alert == null) {
+            return false;
+        }
+        int radiusKm = alert.getTargetRadiusKm();
+        if (radiusKm <= 0) {
+            return true;
+        }
+        String hospitalId = alert.getHospitalId();
+        if (hospitalId == null || hospitalId.trim().isEmpty()) {
+            return false;
+        }
+        Hospital hospital = resolveHospital(hospitalId);
+        if (hospital == null || hospital.getLatitude() == null || hospital.getLongitude() == null) {
+            return false;
+        }
+        double hospitalLat = hospital.getLatitude().doubleValue();
+        double hospitalLon = hospital.getLongitude().doubleValue();
+        double distanceKm = haversineKm(hospitalLat, hospitalLon, donorLat, donorLon);
+        return distanceKm <= radiusKm;
+    }
+
+    private Hospital resolveHospital(String hospitalId) {
+        try {
+            return hospitalService.getHospitalById(UUID.fromString(hospitalId.trim()));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private double haversineKm(double lat1, double lon1, double lat2, double lon2) {
+        final double earthRadiusKm = 6371.0;
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lonDistance = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return earthRadiusKm * c;
     }
 
     // ==================== RENDERING ====================

@@ -3,6 +3,7 @@ package tn.edu.esprit.controllers;
 import javafx.animation.PauseTransition;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -32,14 +33,18 @@ import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.text.Normalizer;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class DashboardLogsController implements Initializable {
 
     // Section names
     private static final String SEC_DONATION_LOGS = "Journaux de dons";
     private static final String SEC_TRANSFER_LOGS = "Journaux de transferts";
-    private static final String SEC_DONOR_RESPONSES = "Reponses des donneurs";
+    private static final String SEC_DONOR_RESPONSES = "Réponses des donneurs";
     private static final String SEC_STATISTICS = "Statistiques";
 
     @FXML
@@ -49,13 +54,31 @@ public class DashboardLogsController implements Initializable {
     @FXML
     private TextField searchField;
     @FXML
+    private DatePicker dateFrom;
+    @FXML
+    private DatePicker dateTo;
+    @FXML
     private Button btnRefresh;
+    @FXML
+    private Button btnResetFilters;
+    @FXML
+    private Button btnAiAnalysis;
     @FXML
     private Button btnAdd;
     @FXML
     private HBox statsRow;
     @FXML
     private StackPane contentStack;
+    @FXML
+    private VBox aiAnalysisCard;
+    @FXML
+    private Label aiAnalysisContextLabel;
+    @FXML
+    private Label aiAnalysisStatusLabel;
+    @FXML
+    private TextArea aiAnalysisOutput;
+    @FXML
+    private ProgressIndicator aiLoadingIndicator;
 
     // Card containers
     @FXML
@@ -83,6 +106,10 @@ public class DashboardLogsController implements Initializable {
     private BloodTransferRequestLogService transferLogService;
     private AlertService alertService;
     private DonorAlertService donorAlertService;
+    private AuditLogAIService auditLogAIService;
+    private SessionScopeService sessionScopeService;
+    private ServiceDonation donationService;
+    private TransfertServiceImpl transferService;
 
     // Source lists
     private ObservableList<DonationLog> allDonationLogs;
@@ -98,13 +125,76 @@ public class DashboardLogsController implements Initializable {
         transferLogService = new BloodTransferRequestLogServiceImpl();
         alertService = new AlertServiceImpl();
         donorAlertService = new DonorAlertServiceImpl();
+        auditLogAIService = new AuditLogAIService();
+        sessionScopeService = new SessionScopeService();
+        donationService = new ServiceDonation();
+        transferService = new TransfertServiceImpl();
+
+        if (!sessionScopeService.canAccessAuditLogs()) {
+            showAuditAccessDenied();
+            return;
+        }
 
         setupSectionSelector();
         setupFilterSelector();
+        setupDateFilters();
         setupSearchListener();
+        initializeAiCard();
         loadData();
         loadCharts();
         renderCurrentSection();
+    }
+
+    private void showAuditAccessDenied() {
+        if (sectionSelector != null) {
+            sectionSelector.setDisable(true);
+        }
+        if (filterSelector != null) {
+            filterSelector.setDisable(true);
+        }
+        if (searchField != null) {
+            searchField.setDisable(true);
+        }
+        if (dateFrom != null) {
+            dateFrom.setDisable(true);
+        }
+        if (dateTo != null) {
+            dateTo.setDisable(true);
+        }
+        if (btnRefresh != null) {
+            btnRefresh.setDisable(true);
+        }
+        if (btnResetFilters != null) {
+            btnResetFilters.setDisable(true);
+        }
+        if (btnAiAnalysis != null) {
+            btnAiAnalysis.setDisable(true);
+        }
+        if (btnAdd != null) {
+            btnAdd.setDisable(true);
+            btnAdd.setVisible(false);
+            btnAdd.setManaged(false);
+        }
+        if (statsRow != null) {
+            statsRow.getChildren().clear();
+        }
+        if (containerDonationLogs != null) {
+            containerDonationLogs.getChildren().setAll(
+                    buildEmptyState("Accès administrateur requis",
+                            "Les journaux d'audit sont réservés aux administrateurs et au personnel hospitalier autorisé."));
+        }
+        if (scrollDonationLogs != null) {
+            scrollDonationLogs.setVisible(true);
+        }
+        if (scrollTransferLogs != null) {
+            scrollTransferLogs.setVisible(false);
+        }
+        if (scrollDonorAlerts != null) {
+            scrollDonorAlerts.setVisible(false);
+        }
+        if (containerStats != null) {
+            containerStats.setVisible(false);
+        }
     }
 
     // ==================== SECTION NAVIGATION ====================
@@ -123,6 +213,7 @@ public class DashboardLogsController implements Initializable {
             updateFilterOptions();
             renderCurrentSection();
             updateAddButtonVisibility();
+            markAiAnalysisStale();
         });
 
         updateAddButtonVisibility();
@@ -131,8 +222,40 @@ public class DashboardLogsController implements Initializable {
     private void setupFilterSelector() {
         if (filterSelector == null)
             return;
-        filterSelector.setOnAction(e -> renderCurrentSection());
+        filterSelector.setOnAction(e -> {
+            renderCurrentSection();
+            markAiAnalysisStale();
+        });
         updateFilterOptions();
+    }
+
+    private void setupDateFilters() {
+        if (dateFrom != null) {
+            dateFrom.setOnAction(e -> {
+                renderCurrentSection();
+                markAiAnalysisStale();
+            });
+        }
+        if (dateTo != null) {
+            dateTo.setOnAction(e -> {
+                renderCurrentSection();
+                markAiAnalysisStale();
+            });
+        }
+    }
+
+    private void initializeAiCard() {
+        if (aiAnalysisCard != null) {
+            aiAnalysisCard.setManaged(false);
+            aiAnalysisCard.setVisible(false);
+        }
+        if (aiLoadingIndicator != null) {
+            aiLoadingIndicator.setManaged(false);
+            aiLoadingIndicator.setVisible(false);
+        }
+        if (aiAnalysisOutput != null) {
+            aiAnalysisOutput.setText("");
+        }
     }
 
     private void updateFilterOptions() {
@@ -145,23 +268,23 @@ public class DashboardLogsController implements Initializable {
         switch (idx) {
             case 0:
                 for (DonationLogAction action : DonationLogAction.values()) {
-                    options.add(action.name());
+                    options.add(formatDonationAction(action));
                 }
                 filterSelector.setPromptText("Filtrer par action");
                 break;
             case 1:
                 for (TransferLogAction action : TransferLogAction.values()) {
-                    options.add(action.name());
+                    options.add(formatTransferAction(action));
                 }
                 filterSelector.setPromptText("Filtrer par action");
                 break;
             case 2:
                 for (DonorResponse resp : DonorResponse.values()) {
-                    options.add(resp.name());
+                    options.add(formatDonorResponse(resp));
                 }
-                options.add("LU");
-                options.add("NON_LU");
-                filterSelector.setPromptText("Filtrer par reponse");
+                options.add("Lus");
+                options.add("Non lus");
+                filterSelector.setPromptText("Filtrer par réponse");
                 break;
             default:
                 filterSelector.setPromptText("Filtrer par...");
@@ -171,6 +294,7 @@ public class DashboardLogsController implements Initializable {
         filterSelector.setItems(options);
         filterSelector.getSelectionModel().selectFirst();
         filterSelector.setVisible(idx < 3);
+        filterSelector.setManaged(idx < 3);
     }
 
     private String getActiveFilter() {
@@ -208,15 +332,17 @@ public class DashboardLogsController implements Initializable {
         if (btnAdd == null)
             return;
         int idx = getCurrentSectionIndex();
-        // Afficher le bouton ajouter pour les 2 premieres sections
-        btnAdd.setVisible(idx >= 0 && idx <= 1);
+        // Afficher le bouton ajouter pour les 2 premières sections
+        boolean showAdd = sessionScopeService != null && sessionScopeService.isAdmin() && idx >= 0 && idx <= 1;
+        btnAdd.setVisible(showAdd);
+        btnAdd.setManaged(showAdd);
 
         switch (idx) {
             case 0:
-                btnAdd.setText("+ Journal de don");
+                btnAdd.setText("Ajouter un journal de don");
                 break;
             case 1:
-                btnAdd.setText("+ Journal de transfert");
+                btnAdd.setText("Ajouter un journal de transfert");
                 break;
             default:
                 break;
@@ -238,6 +364,45 @@ public class DashboardLogsController implements Initializable {
         if (donorAlertService != null) {
             allDonorAlerts = FXCollections.observableArrayList(donorAlertService.getAll());
         }
+        applyAuditScope();
+    }
+
+    private void applyAuditScope() {
+        if (sessionScopeService == null || sessionScopeService.isAdmin()) {
+            return;
+        }
+
+        Set<String> visibleDonationIds = sessionScopeService
+                .filterVisibleDonations(donationService.getAll())
+                .stream()
+                .map(Donations::getDonationId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        allDonationLogs = FXCollections.observableArrayList(allDonationLogs.stream()
+                .filter(log -> visibleDonationIds.contains(log.getDonationId()))
+                .collect(Collectors.toList()));
+
+        @SuppressWarnings("unchecked")
+        List<BloodTransferRequest> visibleTransfers = sessionScopeService
+                .filterVisibleTransfers((List<BloodTransferRequest>) transferService.getAllTransferts());
+        Set<Integer> visibleTransferIds = visibleTransfers
+                .stream()
+                .map(BloodTransferRequest::getTransferId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        allTransferLogs = FXCollections.observableArrayList(allTransferLogs.stream()
+                .filter(log -> visibleTransferIds.contains(log.getTransferId()))
+                .collect(Collectors.toList()));
+
+        List<tn.edu.esprit.entities.Alert> visibleAlerts = sessionScopeService.filterVisibleAlerts(allAlerts);
+        Set<String> visibleAlertIds = visibleAlerts.stream()
+                .map(tn.edu.esprit.entities.Alert::getAlertId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        allAlerts = FXCollections.observableArrayList(visibleAlerts);
+        allDonorAlerts = FXCollections.observableArrayList(allDonorAlerts.stream()
+                .filter(alert -> visibleAlertIds.contains(alert.getAlertId()))
+                .collect(Collectors.toList()));
     }
 
     // ==================== CARD RENDERING ====================
@@ -251,42 +416,51 @@ public class DashboardLogsController implements Initializable {
 
         switch (idx) {
             case 0:
-                renderDonationLogCards(search, activeFilter);
+                renderDonationLogCards(getFilteredDonationLogs(search, activeFilter));
                 break;
             case 1:
-                renderTransferLogCards(search, activeFilter);
+                renderTransferLogCards(getFilteredTransferLogs(search, activeFilter));
                 break;
             case 2:
-                renderDonorAlertCards(search, activeFilter);
+                renderDonorAlertCards(getFilteredDonorAlerts(search, activeFilter));
                 break;
-            case 3: /* statistiques deja chargees */
+            case 3: /* statistiques déjà chargées */
                 break;
         }
         updateStats(idx);
     }
 
     // --- Donation Log Cards ---
-    private void renderDonationLogCards(String search, String activeFilter) {
-        if (containerDonationLogs == null || allDonationLogs == null)
-            return;
-        containerDonationLogs.getChildren().clear();
-
+    private List<DonationLog> getFilteredDonationLogs(String search, String activeFilter) {
         List<DonationLog> filtered = filterList(allDonationLogs, search, log -> safeContains(log.getLogId(), search)
                 || safeContains(log.getDonationId(), search)
                 || safeContains(log.getAction() != null ? log.getAction().name() : "", search)
+                || safeContains(formatDonationAction(log.getAction()), search)
                 || safeContains(log.getPreviousStatus(), search)
+                || safeContains(formatStatusLabel(log.getPreviousStatus()), search)
                 || safeContains(log.getNewStatus(), search)
+                || safeContains(formatStatusLabel(log.getNewStatus()), search)
                 || safeContains(log.getNotes(), search));
 
         if (activeFilter != null) {
             filtered = filtered.stream()
-                    .filter(log -> log.getAction() != null && log.getAction().name().equals(activeFilter))
-                    .collect(java.util.stream.Collectors.toList());
+                    .filter(log -> log.getAction() != null && formatDonationAction(log.getAction()).equals(activeFilter))
+                    .collect(Collectors.toList());
         }
+
+        return filtered.stream()
+                .filter(log -> matchesDateRange(log.getCreatedAt()))
+                .collect(Collectors.toList());
+    }
+
+    private void renderDonationLogCards(List<DonationLog> filtered) {
+        if (containerDonationLogs == null || allDonationLogs == null)
+            return;
+        containerDonationLogs.getChildren().clear();
 
         if (filtered.isEmpty()) {
             containerDonationLogs.getChildren()
-                    .add(buildEmptyState("Aucun journal de don", "Les journaux de dons apparaitront ici."));
+                    .add(buildEmptyState("Aucun journal de don", "Les journaux de dons apparaîtront ici."));
             return;
         }
 
@@ -300,7 +474,7 @@ public class DashboardLogsController implements Initializable {
         card.getStyleClass().add("log-card");
 
         // En-tete: badge action + ID
-        Label actionBadge = createBadge(log.getAction() != null ? log.getAction().name() : "—");
+        Label actionBadge = createBadge(log.getAction() != null ? formatDonationAction(log.getAction()) : "—");
         Label title = new Label("Don #" + truncateId(log.getDonationId()));
         title.getStyleClass().add("log-card-title");
         Label date = new Label(formatTimestamp(log.getCreatedAt()));
@@ -333,7 +507,10 @@ public class DashboardLogsController implements Initializable {
 
         Region footerSpacer = new Region();
         HBox.setHgrow(footerSpacer, javafx.scene.layout.Priority.ALWAYS);
-        HBox footer = new HBox(8, footerSpacer, btnEdit, btnDelete);
+        HBox footer = new HBox(8, footerSpacer);
+        if (sessionScopeService != null && sessionScopeService.isAdmin()) {
+            footer.getChildren().addAll(btnEdit, btnDelete);
+        }
         footer.setAlignment(Pos.CENTER_RIGHT);
         footer.getStyleClass().add("log-card-footer");
 
@@ -342,28 +519,37 @@ public class DashboardLogsController implements Initializable {
     }
 
     // --- Transfer Log Cards ---
-    private void renderTransferLogCards(String search, String activeFilter) {
-        if (containerTransferLogs == null || allTransferLogs == null)
-            return;
-        containerTransferLogs.getChildren().clear();
-
+    private List<BloodTransferRequestLog> getFilteredTransferLogs(String search, String activeFilter) {
         List<BloodTransferRequestLog> filtered = filterList(allTransferLogs, search,
                 log -> safeContains(log.getLogId(), search)
-                        || String.valueOf(log.getTransferId()).contains(search.toLowerCase())
+                        || safeContains(String.valueOf(log.getTransferId()), search)
                         || safeContains(log.getAction() != null ? log.getAction().name() : "", search)
+                        || safeContains(formatTransferAction(log.getAction()), search)
                         || safeContains(log.getPreviousStatus(), search)
+                        || safeContains(formatStatusLabel(log.getPreviousStatus()), search)
                         || safeContains(log.getNewStatus(), search)
+                        || safeContains(formatStatusLabel(log.getNewStatus()), search)
                         || safeContains(log.getNotes(), search));
 
         if (activeFilter != null) {
             filtered = filtered.stream()
-                    .filter(log -> log.getAction() != null && log.getAction().name().equals(activeFilter))
-                    .collect(java.util.stream.Collectors.toList());
+                    .filter(log -> log.getAction() != null && formatTransferAction(log.getAction()).equals(activeFilter))
+                    .collect(Collectors.toList());
         }
+
+        return filtered.stream()
+                .filter(log -> matchesDateRange(log.getCreatedAt()))
+                .collect(Collectors.toList());
+    }
+
+    private void renderTransferLogCards(List<BloodTransferRequestLog> filtered) {
+        if (containerTransferLogs == null || allTransferLogs == null)
+            return;
+        containerTransferLogs.getChildren().clear();
 
         if (filtered.isEmpty()) {
             containerTransferLogs.getChildren()
-                    .add(buildEmptyState("Aucun journal de transfert", "Les journaux de transferts apparaitront ici."));
+                    .add(buildEmptyState("Aucun journal de transfert", "Les journaux de transfert apparaîtront ici."));
             return;
         }
 
@@ -376,7 +562,7 @@ public class DashboardLogsController implements Initializable {
         VBox card = new VBox(10);
         card.getStyleClass().add("log-card");
 
-        Label actionBadge = createBadge(log.getAction() != null ? log.getAction().name() : "—");
+        Label actionBadge = createBadge(log.getAction() != null ? formatTransferAction(log.getAction()) : "—");
         Label title = new Label("Transfert #" + log.getTransferId());
         title.getStyleClass().add("log-card-title");
         Label date = new Label(formatTimestamp(log.getCreatedAt()));
@@ -388,7 +574,7 @@ public class DashboardLogsController implements Initializable {
         header.getStyleClass().add("log-card-header");
 
         HBox statusRow = buildStatusTransition(log.getPreviousStatus(), log.getNewStatus());
-        HBox changedByRow = buildDetailRow("Modifie par", truncateId(log.getChangedBy()));
+        HBox changedByRow = buildDetailRow("Modifié par", truncateId(log.getChangedBy()));
         HBox notesRow = buildDetailRow("Notes", log.getNotes() != null ? log.getNotes() : "—");
         VBox body = new VBox(6, statusRow, changedByRow, notesRow);
         body.getStyleClass().add("log-card-body");
@@ -407,7 +593,10 @@ public class DashboardLogsController implements Initializable {
 
         Region footerSpacer = new Region();
         HBox.setHgrow(footerSpacer, javafx.scene.layout.Priority.ALWAYS);
-        HBox footer = new HBox(8, footerSpacer, btnEdit, btnDelete);
+        HBox footer = new HBox(8, footerSpacer);
+        if (sessionScopeService != null && sessionScopeService.isAdmin()) {
+            footer.getChildren().addAll(btnEdit, btnDelete);
+        }
         footer.setAlignment(Pos.CENTER_RIGHT);
         footer.getStyleClass().add("log-card-footer");
 
@@ -416,32 +605,39 @@ public class DashboardLogsController implements Initializable {
     }
 
     // --- Donor Alert Cards ---
-    private void renderDonorAlertCards(String search, String activeFilter) {
+    private List<DonorAlert> getFilteredDonorAlerts(String search, String activeFilter) {
+        List<DonorAlert> filtered = filterList(allDonorAlerts, search, da -> safeContains(da.getDonorAlertId(), search)
+                || safeContains(da.getAlertId(), search)
+                || safeContains(da.getDonorId(), search)
+                || safeContains(da.getDonorResponse() != null ? da.getDonorResponse().name() : "", search)
+                || safeContains(formatDonorResponse(da.getDonorResponse()), search));
+
+        if (activeFilter != null) {
+            if (activeFilter.equals("Lus")) {
+                filtered = filtered.stream().filter(DonorAlert::isRead).collect(Collectors.toList());
+            } else if (activeFilter.equals("Non lus")) {
+                filtered = filtered.stream().filter(da -> !da.isRead()).collect(Collectors.toList());
+            } else {
+                filtered = filtered.stream()
+                        .filter(da -> da.getDonorResponse() != null
+                                && formatDonorResponse(da.getDonorResponse()).equals(activeFilter))
+                        .collect(Collectors.toList());
+            }
+        }
+
+        return filtered.stream()
+                .filter(da -> matchesDateRange(extractDonorAlertTimestamp(da)))
+                .collect(Collectors.toList());
+    }
+
+    private void renderDonorAlertCards(List<DonorAlert> filtered) {
         if (containerDonorAlerts == null || allDonorAlerts == null)
             return;
         containerDonorAlerts.getChildren().clear();
 
-        List<DonorAlert> filtered = filterList(allDonorAlerts, search, da -> safeContains(da.getDonorAlertId(), search)
-                || safeContains(da.getAlertId(), search)
-                || safeContains(da.getDonorId(), search)
-                || safeContains(da.getDonorResponse() != null ? da.getDonorResponse().name() : "", search));
-
-        if (activeFilter != null) {
-            if (activeFilter.equals("LU")) {
-                filtered = filtered.stream().filter(da -> da.isRead()).collect(java.util.stream.Collectors.toList());
-            } else if (activeFilter.equals("NON_LU")) {
-                filtered = filtered.stream().filter(da -> !da.isRead()).collect(java.util.stream.Collectors.toList());
-            } else {
-                filtered = filtered.stream()
-                        .filter(da -> da.getDonorResponse() != null
-                                && da.getDonorResponse().name().equals(activeFilter))
-                        .collect(java.util.stream.Collectors.toList());
-            }
-        }
-
         if (filtered.isEmpty()) {
             containerDonorAlerts.getChildren()
-                    .add(buildEmptyState("Aucune reponse de donneur", "Les reponses des donneurs apparaitront ici."));
+                    .add(buildEmptyState("Aucune réponse de donneur", "Les réponses des donneurs apparaîtront ici."));
             return;
         }
 
@@ -454,9 +650,9 @@ public class DashboardLogsController implements Initializable {
         VBox card = new VBox(10);
         card.getStyleClass().add("log-card");
 
-        String responseText = "EN_ATTENTE";
+        String responseText = formatDonorResponse(DonorResponse.NO_RESPONSE);
         if (da.getDonorResponse() != null && da.getDonorResponse() != DonorResponse.NO_RESPONSE) {
-            responseText = da.getDonorResponse().name();
+            responseText = formatDonorResponse(da.getDonorResponse());
         }
         Label responseBadge = createBadge(responseText);
         Label readBadge = new Label(da.isRead() ? "Lu" : "Non lu");
@@ -470,9 +666,9 @@ public class DashboardLogsController implements Initializable {
         header.setAlignment(Pos.CENTER_LEFT);
         header.getStyleClass().add("log-card-header");
 
-        HBox alertRefRow = buildDetailRow("Ref alerte", truncateId(da.getAlertId()));
+        HBox alertRefRow = buildDetailRow("Réf. alerte", truncateId(da.getAlertId()));
         HBox donorRow = buildDetailRow("Donneur", truncateId(da.getDonorId()));
-        HBox sentRow = buildDetailRow("Envoye le", formatTimestamp(da.getNotificationSentAt()));
+        HBox sentRow = buildDetailRow("Envoyé le", formatTimestamp(da.getNotificationSentAt()));
         HBox readRow = buildDetailRow("Lu le", formatTimestamp(da.getReadAt()));
         VBox body = new VBox(6, alertRefRow, donorRow, sentRow, readRow);
         body.getStyleClass().add("log-card-body");
@@ -502,43 +698,55 @@ public class DashboardLogsController implements Initializable {
             return;
         statsRow.getChildren().clear();
 
+        String search = searchField != null ? searchField.getText() : "";
+        String activeFilter = getActiveFilter();
+        List<DonationLog> filteredDonationLogs = getFilteredDonationLogs(search, sectionIdx == 0 ? activeFilter : null);
+        List<BloodTransferRequestLog> filteredTransferLogs = getFilteredTransferLogs(search, sectionIdx == 1 ? activeFilter : null);
+        List<DonorAlert> filteredDonorAlerts = getFilteredDonorAlerts(search, sectionIdx == 2 ? activeFilter : null);
+
         switch (sectionIdx) {
             case 0:
                 statsRow.getChildren().addAll(
-                        buildStatChip("📋", String.valueOf(allDonationLogs != null ? allDonationLogs.size() : 0),
-                                "Total journaux"),
-                        buildStatChip("✅", countByAction(allDonationLogs), "Collectes"),
-                        buildStatChip("❌", countByRejection(allDonationLogs), "Rejetes"));
+                        buildStatChip("📋", String.valueOf(filteredDonationLogs.size()),
+                                "Total des journaux"),
+                        buildStatChip("✅", countByAction(filteredDonationLogs), "Collectes"),
+                        buildStatChip("❌", countByRejection(filteredDonationLogs), "Rejets"));
                 break;
             case 1:
                 statsRow.getChildren().addAll(
-                        buildStatChip("🔄", String.valueOf(allTransferLogs != null ? allTransferLogs.size() : 0),
+                        buildStatChip("🔄", String.valueOf(filteredTransferLogs.size()),
                                 "Total transferts"),
-                        buildStatChip("✅", countApproved(allTransferLogs), "Approuves"),
-                        buildStatChip("❌", countCancelled(allTransferLogs), "Annules"));
+                        buildStatChip("✅", countApproved(filteredTransferLogs), "Approuvés"),
+                        buildStatChip("❌", countCancelled(filteredTransferLogs), "Annulés"));
                 break;
             case 2:
-                int total = allDonorAlerts != null ? allDonorAlerts.size() : 0;
+                int total = filteredDonorAlerts.size();
                 int read = 0, positive = 0;
-                if (allDonorAlerts != null) {
-                    for (DonorAlert da : allDonorAlerts) {
-                        if (da.isRead())
-                            read++;
-                        if (da.getDonorResponse() == DonorResponse.INTERESTED)
-                            positive++;
+                for (DonorAlert da : filteredDonorAlerts) {
+                    if (da.isRead()) {
+                        read++;
+                    }
+                    if (da.getDonorResponse() == DonorResponse.INTERESTED) {
+                        positive++;
                     }
                 }
                 statsRow.getChildren().addAll(
                         buildStatChip("📬", String.valueOf(total), "Notifications"),
                         buildStatChip("👁", String.valueOf(read), "Lectures"),
-                        buildStatChip("💚", String.valueOf(positive), "Interesses"));
+                        buildStatChip("💚", String.valueOf(positive), "Intéressés"));
+                break;
+            case 3:
+                statsRow.getChildren().addAll(
+                        buildStatChip("📋", String.valueOf(getFilteredDonationLogs(search, null).size()), "Dons filtrés"),
+                        buildStatChip("🔄", String.valueOf(getFilteredTransferLogs(search, null).size()), "Transferts filtrés"),
+                        buildStatChip("📬", String.valueOf(getFilteredDonorAlerts(search, null).size()), "Réponses filtrées"));
                 break;
             default:
                 break;
         }
     }
 
-    private String countByAction(ObservableList<DonationLog> logs) {
+    private String countByAction(List<DonationLog> logs) {
         if (logs == null)
             return "0";
         long count = logs.stream().filter(l -> l.getAction() != null && l.getAction().name().equals("COLLECTED"))
@@ -546,7 +754,7 @@ public class DashboardLogsController implements Initializable {
         return String.valueOf(count);
     }
 
-    private String countByRejection(ObservableList<DonationLog> logs) {
+    private String countByRejection(List<DonationLog> logs) {
         if (logs == null)
             return "0";
         long count = logs.stream().filter(l -> l.getAction() != null && l.getAction().name().equals("REJECTED"))
@@ -554,7 +762,7 @@ public class DashboardLogsController implements Initializable {
         return String.valueOf(count);
     }
 
-    private String countApproved(ObservableList<BloodTransferRequestLog> logs) {
+    private String countApproved(List<BloodTransferRequestLog> logs) {
         if (logs == null)
             return "0";
         long count = logs.stream().filter(l -> l.getAction() != null && l.getAction().name().equals("APPROVED"))
@@ -562,7 +770,7 @@ public class DashboardLogsController implements Initializable {
         return String.valueOf(count);
     }
 
-    private String countCancelled(ObservableList<BloodTransferRequestLog> logs) {
+    private String countCancelled(List<BloodTransferRequestLog> logs) {
         if (logs == null)
             return "0";
         long count = logs.stream().filter(l -> l.getAction() != null && l.getAction().name().equals("CANCELLED"))
@@ -592,7 +800,10 @@ public class DashboardLogsController implements Initializable {
             return;
         PauseTransition debounce = new PauseTransition(Duration.millis(250));
         searchField.textProperty().addListener((obs, oldVal, newVal) -> {
-            debounce.setOnFinished(e -> renderCurrentSection());
+            debounce.setOnFinished(e -> {
+                renderCurrentSection();
+                markAiAnalysisStale();
+            });
             debounce.playFromStart();
         });
     }
@@ -602,24 +813,24 @@ public class DashboardLogsController implements Initializable {
     private Label createBadge(String text) {
         Label badge = new Label(text);
         badge.getStyleClass().add("badge");
-        String normalized = text.toLowerCase();
-        if (normalized.contains("approved") || normalized.contains("completed")
-                || normalized.contains("collected") || normalized.contains("delivered")
-                || normalized.contains("interested") || normalized.contains("confirmed")
-                || normalized.contains("released")) {
+        String normalized = normalizeForBadge(text);
+        if (normalized.contains("approuve") || normalized.contains("termine")
+                || normalized.contains("collecte") || normalized.contains("livre")
+                || normalized.contains("interesse") || normalized.contains("confirme")
+                || normalized.contains("libere")) {
             badge.getStyleClass().add("badge-success");
-        } else if (normalized.contains("pending") || normalized.contains("warning")
-                || normalized.contains("screening") || normalized.contains("in_transit")
-                || normalized.contains("dispatched") || normalized.contains("not_interested")
-                || normalized.contains("already_donated")) {
+        } else if (normalized.contains("en attente") || normalized.contains("avertissement")
+                || normalized.contains("depistage") || normalized.contains("transit")
+                || normalized.contains("expedition") || normalized.contains("non interesse")
+                || normalized.contains("deja donne")) {
             badge.getStyleClass().add("badge-warning");
-        } else if (normalized.contains("rejected") || normalized.contains("failed")
-                || normalized.contains("urgent") || normalized.contains("critical")
-                || normalized.contains("cancelled") || normalized.contains("expired")
-                || normalized.contains("discarded")) {
+        } else if (normalized.contains("rejete") || normalized.contains("refuse")
+                || normalized.contains("urgent") || normalized.contains("critique")
+                || normalized.contains("annule") || normalized.contains("expire")
+                || normalized.contains("detruit")) {
             badge.getStyleClass().add("badge-critical");
-        } else if (normalized.contains("info") || normalized.contains("created")
-                || normalized.contains("requested")) {
+        } else if (normalized.contains("info") || normalized.contains("cree")
+                || normalized.contains("demande")) {
             badge.getStyleClass().add("badge-info");
         } else {
             badge.getStyleClass().add("badge-neutral");
@@ -628,10 +839,10 @@ public class DashboardLogsController implements Initializable {
     }
 
     private HBox buildStatusTransition(String previous, String current) {
-        Label prevLabel = createBadge(previous != null ? previous : "—");
+        Label prevLabel = createBadge(previous != null ? formatStatusLabel(previous) : "—");
         Label arrow = new Label("→");
         arrow.getStyleClass().add("log-status-arrow");
-        Label newLabel = createBadge(current != null ? current : "—");
+        Label newLabel = createBadge(current != null ? formatStatusLabel(current) : "—");
         Label label = new Label("Statut");
         label.getStyleClass().add("log-card-detail-label");
         HBox row = new HBox(8, label, prevLabel, arrow, newLabel);
@@ -691,7 +902,225 @@ public class DashboardLogsController implements Initializable {
     private boolean safeContains(String value, String search) {
         if (search == null || search.isEmpty())
             return true;
-        return value != null && value.toLowerCase().contains(search.toLowerCase());
+        if (value == null) {
+            return false;
+        }
+        return normalizeForBadge(value).contains(normalizeForBadge(search));
+    }
+
+    private boolean matchesDateRange(Timestamp timestamp) {
+        LocalDate from = dateFrom != null ? dateFrom.getValue() : null;
+        LocalDate to = dateTo != null ? dateTo.getValue() : null;
+        if (from == null && to == null) {
+            return true;
+        }
+        if (timestamp == null) {
+            return false;
+        }
+
+        LocalDate value = timestamp.toLocalDateTime().toLocalDate();
+        if (from != null && value.isBefore(from)) {
+            return false;
+        }
+        if (to != null && value.isAfter(to)) {
+            return false;
+        }
+        return true;
+    }
+
+    private Timestamp extractDonorAlertTimestamp(DonorAlert alert) {
+        if (alert == null) {
+            return null;
+        }
+        return alert.getNotificationSentAt() != null ? alert.getNotificationSentAt() : alert.getReadAt();
+    }
+
+    private String buildAnalysisContext() {
+        int idx = getCurrentSectionIndex();
+        String sectionName = switch (idx) {
+            case 0 -> SEC_DONATION_LOGS;
+            case 1 -> SEC_TRANSFER_LOGS;
+            case 2 -> SEC_DONOR_RESPONSES;
+            default -> SEC_STATISTICS;
+        };
+
+        String search = searchField != null && !searchField.getText().isBlank()
+                ? searchField.getText().trim()
+                : "aucune recherche";
+        String filter = getActiveFilter() != null ? getActiveFilter() : "tous";
+        String range = formatDateRange();
+
+        return "Section: " + sectionName
+                + " | Recherche: " + search
+                + " | Filtre: " + filter
+                + " | Période: " + range;
+    }
+
+    private String formatDateRange() {
+        LocalDate from = dateFrom != null ? dateFrom.getValue() : null;
+        LocalDate to = dateTo != null ? dateTo.getValue() : null;
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        if (from == null && to == null) {
+            return "toutes les dates";
+        }
+        if (from != null && to != null) {
+            return "du " + from.format(formatter) + " au " + to.format(formatter);
+        }
+        if (from != null) {
+            return "à partir du " + from.format(formatter);
+        }
+        return "jusqu'au " + to.format(formatter);
+    }
+
+    private String formatDonationAction(DonationLogAction action) {
+        if (action == null) {
+            return "—";
+        }
+        return switch (action) {
+            case CREATED -> "Création du don";
+            case SCREENING_STARTED -> "Dépistage lancé";
+            case SCREENING_PASSED -> "Dépistage validé";
+            case SCREENING_FAILED -> "Dépistage refusé";
+            case COLLECTED -> "Collecte effectuée";
+            case REJECTED -> "Don rejeté";
+            case QUARANTINED -> "Mise en quarantaine";
+            case RELEASED -> "Libération du don";
+            case USED -> "Don utilisé";
+            case EXPIRED -> "Don expiré";
+            case DISCARDED -> "Don détruit";
+        };
+    }
+
+    private String formatTransferAction(TransferLogAction action) {
+        if (action == null) {
+            return "—";
+        }
+        return switch (action) {
+            case REQUESTED -> "Demande créée";
+            case APPROVED -> "Demande approuvée";
+            case REJECTED -> "Demande rejetée";
+            case DISPATCHED -> "Expédition lancée";
+            case IN_TRANSIT -> "Transfert en transit";
+            case RECEIVED -> "Réception confirmée";
+            case CONFIRMED -> "Livraison confirmée";
+            case CANCELLED -> "Transfert annulé";
+            case EXPIRED -> "Demande expirée";
+        };
+    }
+
+    private String formatDonorResponse(DonorResponse response) {
+        if (response == null) {
+            return "Aucune réponse";
+        }
+        return switch (response) {
+            case INTERESTED -> "Intéressé";
+            case NOT_INTERESTED -> "Non intéressé";
+            case ALREADY_DONATED -> "Déjà donné";
+            case NO_RESPONSE -> "Aucune réponse";
+        };
+    }
+
+    private String formatAlertSeverity(AlertSeverity severity) {
+        if (severity == null) {
+            return "Inconnu";
+        }
+        return switch (severity) {
+            case INFO -> "Information";
+            case WARNING -> "Avertissement";
+            case URGENT -> "Urgent";
+            case CRITICAL -> "Critique";
+        };
+    }
+
+    private String formatStatusLabel(String status) {
+        if (status == null || status.isBlank()) {
+            return "—";
+        }
+
+        return switch (status.trim().toUpperCase(Locale.ROOT)) {
+            case "CREATED" -> "Créé";
+            case "SCREENING", "SCREENING_STARTED" -> "Dépistage en cours";
+            case "SCREENING_PASSED" -> "Dépistage validé";
+            case "SCREENING_FAILED" -> "Dépistage refusé";
+            case "COMPLETED", "COLLECTED" -> "Terminé";
+            case "REJECTED" -> "Rejeté";
+            case "QUARANTINED" -> "En quarantaine";
+            case "RELEASED" -> "Libéré";
+            case "USED" -> "Utilisé";
+            case "EXPIRED" -> "Expiré";
+            case "DISCARDED" -> "Détruit";
+            case "PENDING" -> "En attente";
+            case "APPROVED" -> "Approuvé";
+            case "IN_TRANSIT" -> "En transit";
+            case "DELIVERED", "RECEIVED", "CONFIRMED" -> "Livré";
+            case "CANCELLED" -> "Annulé";
+            case "NO_RESPONSE" -> "Aucune réponse";
+            case "INTERESTED" -> "Intéressé";
+            case "NOT_INTERESTED" -> "Non intéressé";
+            case "ALREADY_DONATED" -> "Déjà donné";
+            default -> humanizeValue(status);
+        };
+    }
+
+    private String humanizeValue(String value) {
+        if (value == null || value.isBlank()) {
+            return "—";
+        }
+
+        String[] parts = value.trim().replace('-', '_').split("_");
+        StringBuilder builder = new StringBuilder();
+        for (String part : parts) {
+            if (part.isBlank()) {
+                continue;
+            }
+            if (!builder.isEmpty()) {
+                builder.append(' ');
+            }
+            builder.append(part.substring(0, 1).toUpperCase(Locale.ROOT))
+                    .append(part.substring(1).toLowerCase(Locale.ROOT));
+        }
+        return builder.toString();
+    }
+
+    private String normalizeForBadge(String value) {
+        if (value == null) {
+            return "";
+        }
+        String normalized = Normalizer.normalize(value, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
+        return normalized.toLowerCase(Locale.ROOT)
+                .replace('_', ' ')
+                .replace('-', ' ');
+    }
+
+    private void markAiAnalysisStale() {
+        if (aiAnalysisCard == null || !aiAnalysisCard.isVisible()) {
+            return;
+        }
+        if (aiAnalysisContextLabel != null) {
+            aiAnalysisContextLabel.setText(buildAnalysisContext());
+        }
+        if (aiAnalysisStatusLabel != null) {
+            aiAnalysisStatusLabel.setText("Les filtres ont changé. Relancez l'analyse pour mettre à jour la synthèse.");
+        }
+    }
+
+    private void setAiCardVisible(boolean visible) {
+        if (aiAnalysisCard == null) {
+            return;
+        }
+        aiAnalysisCard.setVisible(visible);
+        aiAnalysisCard.setManaged(visible);
+    }
+
+    private void setAiLoading(boolean loading) {
+        if (aiLoadingIndicator != null) {
+            aiLoadingIndicator.setVisible(loading);
+            aiLoadingIndicator.setManaged(loading);
+        }
+        if (btnAiAnalysis != null) {
+            btnAiAnalysis.setDisable(loading);
+        }
     }
 
     // ==================== CRUD HANDLERS ====================
@@ -718,8 +1147,8 @@ public class DashboardLogsController implements Initializable {
             return;
         }
 
-        btnRefresh.setDisable(true);
-        String originalText = btnRefresh.getText() != null ? btnRefresh.getText() : "Rafraichir";
+            btnRefresh.setDisable(true);
+        String originalText = btnRefresh.getText() != null ? btnRefresh.getText() : "Rafraîchir";
         btnRefresh.setText("Chargement...");
 
         PauseTransition restoreState = new PauseTransition(Duration.millis(500));
@@ -730,9 +1159,95 @@ public class DashboardLogsController implements Initializable {
 
         try {
             refreshData();
+            markAiAnalysisStale();
         } finally {
             restoreState.play();
         }
+    }
+
+    @FXML
+    void handleResetFilters(ActionEvent event) {
+        if (searchField != null) {
+            searchField.clear();
+        }
+        if (filterSelector != null && !filterSelector.getItems().isEmpty()) {
+            filterSelector.getSelectionModel().selectFirst();
+        }
+        if (dateFrom != null) {
+            dateFrom.setValue(null);
+        }
+        if (dateTo != null) {
+            dateTo.setValue(null);
+        }
+        renderCurrentSection();
+        markAiAnalysisStale();
+    }
+
+    @FXML
+    void handleAiAnalysis(ActionEvent event) {
+        String search = searchField != null ? searchField.getText() : "";
+        String activeFilter = getActiveFilter();
+        int sectionIdx = getCurrentSectionIndex();
+
+        List<DonationLog> donationLogs = sectionIdx == 1 || sectionIdx == 2
+                ? List.of()
+                : getFilteredDonationLogs(search, sectionIdx == 0 ? activeFilter : null);
+        List<BloodTransferRequestLog> transferLogs = sectionIdx == 0 || sectionIdx == 2
+                ? List.of()
+                : getFilteredTransferLogs(search, sectionIdx == 1 ? activeFilter : null);
+        List<DonorAlert> donorAlerts = sectionIdx == 0 || sectionIdx == 1
+                ? List.of()
+                : getFilteredDonorAlerts(search, sectionIdx == 2 ? activeFilter : null);
+
+        String context = buildAnalysisContext()
+                + " | Volume: "
+                + donationLogs.size() + " dons, "
+                + transferLogs.size() + " transferts, "
+                + donorAlerts.size() + " réponses";
+
+        setAiCardVisible(true);
+        setAiLoading(true);
+        if (aiAnalysisContextLabel != null) {
+            aiAnalysisContextLabel.setText(context);
+        }
+        if (aiAnalysisStatusLabel != null) {
+            aiAnalysisStatusLabel.setText("Analyse en cours...");
+        }
+        if (aiAnalysisOutput != null) {
+            aiAnalysisOutput.setText("");
+        }
+
+        Task<String> task = new Task<>() {
+            @Override
+            protected String call() {
+                return auditLogAIService.analyzeAuditLogs(donationLogs, transferLogs, donorAlerts, context);
+            }
+        };
+
+        task.setOnSucceeded(workerStateEvent -> {
+            setAiLoading(false);
+            if (aiAnalysisStatusLabel != null) {
+                aiAnalysisStatusLabel.setText("Synthèse générée à partir des filtres actuellement visibles.");
+            }
+            if (aiAnalysisOutput != null) {
+                aiAnalysisOutput.setText(task.getValue());
+            }
+        });
+
+        task.setOnFailed(workerStateEvent -> {
+            setAiLoading(false);
+            if (aiAnalysisStatusLabel != null) {
+                aiAnalysisStatusLabel.setText("L'analyse IA a échoué. Un résumé local peut toujours être relancé.");
+            }
+            if (aiAnalysisOutput != null) {
+                Throwable error = task.getException();
+                aiAnalysisOutput.setText(error != null ? error.getMessage() : "Analyse indisponible.");
+            }
+        });
+
+        Thread thread = new Thread(task, "bloodlink-audit-ai");
+        thread.setDaemon(true);
+        thread.start();
     }
 
     public void refreshData() {
@@ -761,7 +1276,7 @@ public class DashboardLogsController implements Initializable {
             stage.showAndWait();
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("Erreur", "Impossible de charger la fenetre de modification: " + e.getMessage());
+            showAlert("Erreur", "Impossible de charger la fenêtre de modification : " + e.getMessage());
         }
     }
 
@@ -785,7 +1300,7 @@ public class DashboardLogsController implements Initializable {
             stage.showAndWait();
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("Erreur", "Impossible de charger la fenetre de modification: " + e.getMessage());
+            showAlert("Erreur", "Impossible de charger la fenêtre de modification : " + e.getMessage());
         }
     }
 
@@ -794,7 +1309,7 @@ public class DashboardLogsController implements Initializable {
     private void handleDeleteDonationLog(DonationLog log) {
         Optional<ButtonType> result = showConfirmation(
                 "Supprimer journal de don",
-                "Voulez-vous vraiment supprimer cette entree de journal de don ?\nID journal: " + log.getLogId());
+                "Voulez-vous vraiment supprimer cette entrée de journal de don ?\nID journal: " + log.getLogId());
         if (result.isPresent() && result.get() == ButtonType.OK) {
             try {
                 donationLogService.supprimer(log.getLogId());
@@ -808,7 +1323,7 @@ public class DashboardLogsController implements Initializable {
     private void handleDeleteTransferLog(BloodTransferRequestLog log) {
         Optional<ButtonType> result = showConfirmation(
                 "Supprimer journal de transfert",
-                "Voulez-vous vraiment supprimer cette entree de journal de transfert ?\nID journal: "
+                "Voulez-vous vraiment supprimer cette entrée de journal de transfert ?\nID journal: "
                         + log.getLogId());
         if (result.isPresent() && result.get() == ButtonType.OK) {
             try {
@@ -884,7 +1399,7 @@ public class DashboardLogsController implements Initializable {
             stage.showAndWait();
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("Erreur", "Impossible de charger la fenetre: " + e.getMessage());
+            showAlert("Erreur", "Impossible de charger la fenêtre : " + e.getMessage());
         }
     }
 
@@ -920,7 +1435,7 @@ public class DashboardLogsController implements Initializable {
             List<tn.edu.esprit.entities.Alert> alerts = alertService.getAll();
             Map<String, Integer> severityCounts = new HashMap<>();
             for (tn.edu.esprit.entities.Alert a : alerts) {
-                String sev = a.getSeverity() != null ? a.getSeverity().name() : "INCONNU";
+                String sev = formatAlertSeverity(a.getSeverity());
                 severityCounts.put(sev, severityCounts.getOrDefault(sev, 0) + 1);
             }
 
@@ -929,9 +1444,9 @@ public class DashboardLogsController implements Initializable {
                 pieData.add(new PieChart.Data(entry.getKey() + " (" + entry.getValue() + ")", entry.getValue()));
             }
             pieChartSeverity.setData(pieData);
-            pieChartSeverity.setTitle("Repartition des severites");
+            pieChartSeverity.setTitle("Répartition des sévérités");
         } catch (Exception e) {
-            System.err.println("Echec du chargement du graphique camembert: " + e.getMessage());
+            System.err.println("Échec du chargement du graphique camembert : " + e.getMessage());
         }
     }
 
@@ -942,7 +1457,7 @@ public class DashboardLogsController implements Initializable {
             List<DonationLog> logs = donationLogService.getAll();
             Map<String, Integer> actionCounts = new HashMap<>();
             for (DonationLog log : logs) {
-                String action = log.getAction() != null ? log.getAction().name() : "INCONNU";
+                String action = formatDonationAction(log.getAction());
                 actionCounts.put(action, actionCounts.getOrDefault(action, 0) + 1);
             }
 
@@ -954,7 +1469,7 @@ public class DashboardLogsController implements Initializable {
             barChartDonations.getData().clear();
             barChartDonations.getData().add(series);
         } catch (Exception e) {
-            System.err.println("Echec du chargement de l'histogramme: " + e.getMessage());
+            System.err.println("Échec du chargement de l'histogramme : " + e.getMessage());
         }
     }
 
@@ -963,7 +1478,7 @@ public class DashboardLogsController implements Initializable {
     @FXML
     void handleExportCSV(ActionEvent event) {
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Exporter les donnees en CSV");
+        chooser.setTitle("Exporter les données en CSV");
         chooser.setInitialFileName("bloodlink_export.csv");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Fichiers CSV", "*.csv"));
 
@@ -976,22 +1491,22 @@ public class DashboardLogsController implements Initializable {
             return;
 
         try (PrintWriter pw = new PrintWriter(new FileWriter(file))) {
-            pw.println("Section,ID,Action/Severite,Statut/Details,Notes,Horodatage");
+            pw.println("Section,ID,Action/Sévérité,Statut/Détails,Notes,Horodatage");
 
             for (DonationLog log : donationLogService.getAll()) {
-                pw.println("Journal Don,"
+                pw.println("Journal de don,"
                         + esc(log.getLogId()) + ","
-                        + esc(log.getAction() != null ? log.getAction().name() : "") + ","
-                        + esc(log.getPreviousStatus()) + " → " + esc(log.getNewStatus()) + ","
+                        + esc(formatDonationAction(log.getAction())) + ","
+                        + esc(formatStatusLabel(log.getPreviousStatus())) + " → " + esc(formatStatusLabel(log.getNewStatus())) + ","
                         + esc(log.getNotes()) + ","
                         + esc(log.getCreatedAt() != null ? log.getCreatedAt().toString() : ""));
             }
 
             for (BloodTransferRequestLog log : transferLogService.getAll()) {
-                pw.println("Journal Transfert,"
+                pw.println("Journal de transfert,"
                         + esc(log.getLogId()) + ","
-                        + esc(log.getAction() != null ? log.getAction().name() : "") + ","
-                        + esc(log.getPreviousStatus()) + " → " + esc(log.getNewStatus()) + ","
+                        + esc(formatTransferAction(log.getAction())) + ","
+                        + esc(formatStatusLabel(log.getPreviousStatus())) + " → " + esc(formatStatusLabel(log.getNewStatus())) + ","
                         + esc(log.getNotes()) + ","
                         + esc(log.getCreatedAt() != null ? log.getCreatedAt().toString() : ""));
             }
@@ -999,24 +1514,24 @@ public class DashboardLogsController implements Initializable {
             for (tn.edu.esprit.entities.Alert a : alertService.getAll()) {
                 pw.println("Alerte,"
                         + esc(a.getAlertId()) + ","
-                        + esc(a.getSeverity() != null ? a.getSeverity().name() : "") + ","
+                        + esc(formatAlertSeverity(a.getSeverity())) + ","
                         + esc(a.getTitle()) + ","
                         + esc(a.getMessage()) + ","
                         + esc(a.getCreatedAt() != null ? a.getCreatedAt().toString() : ""));
             }
 
             for (DonorAlert da : donorAlertService.getAll()) {
-                pw.println("Alerte Donneur,"
+                pw.println("Alerte donneur,"
                         + esc(da.getDonorAlertId()) + ","
                         + esc(da.getAlertId()) + ","
                         + esc(da.getDonorId()) + ","
-                        + esc(da.getDonorResponse() != null ? da.getDonorResponse().name() : "NO_RESPONSE") + ","
+                        + esc(formatDonorResponse(da.getDonorResponse())) + ","
                         + esc(da.getNotificationSentAt() != null ? da.getNotificationSentAt().toString() : ""));
             }
 
-            showAlert("Export reussi", "CSV exporte vers :\n" + file.getAbsolutePath());
+            showAlert("Export réussi", "CSV exporté vers :\n" + file.getAbsolutePath());
         } catch (Exception e) {
-            showAlert("Export echoue", "Erreur: " + e.getMessage());
+            showAlert("Export échoué", "Erreur : " + e.getMessage());
         }
     }
 
@@ -1045,9 +1560,9 @@ public class DashboardLogsController implements Initializable {
                 donRows.add(new String[] {
                         d.getLogId() != null ? d.getLogId() : "",
                         d.getDonationId() != null ? d.getDonationId() : "",
-                        d.getAction() != null ? d.getAction().name() : "",
-                        d.getPreviousStatus() != null ? d.getPreviousStatus() : "",
-                        d.getNewStatus() != null ? d.getNewStatus() : ""
+                        formatDonationAction(d.getAction()),
+                        d.getPreviousStatus() != null ? formatStatusLabel(d.getPreviousStatus()) : "",
+                        d.getNewStatus() != null ? formatStatusLabel(d.getNewStatus()) : ""
                 });
             }
 
@@ -1056,9 +1571,9 @@ public class DashboardLogsController implements Initializable {
                 trRows.add(new String[] {
                         t.getLogId() != null ? t.getLogId() : "",
                         String.valueOf(t.getTransferId()),
-                        t.getAction() != null ? t.getAction().name() : "",
-                        t.getPreviousStatus() != null ? t.getPreviousStatus() : "",
-                        t.getNewStatus() != null ? t.getNewStatus() : ""
+                        formatTransferAction(t.getAction()),
+                        t.getPreviousStatus() != null ? formatStatusLabel(t.getPreviousStatus()) : "",
+                        t.getNewStatus() != null ? formatStatusLabel(t.getNewStatus()) : ""
                 });
             }
 
@@ -1067,7 +1582,7 @@ public class DashboardLogsController implements Initializable {
             for (tn.edu.esprit.entities.Alert a : alerts) {
                 alRows.add(new String[] {
                         a.getTitle() != null ? a.getTitle() : "",
-                        a.getSeverity() != null ? a.getSeverity().name() : "",
+                        formatAlertSeverity(a.getSeverity()),
                         a.getBloodTypeId() != null ? a.getBloodTypeId() : "",
                         String.valueOf(a.getQuantityNeeded()),
                         a.isResolved() ? "OUI" : "NON"
@@ -1081,10 +1596,10 @@ public class DashboardLogsController implements Initializable {
             new tn.edu.esprit.services.PdfReportGenerator()
                     .generateReport(file, donRows, trRows, alRows, resolvedCount, criticalCount);
 
-            showAlert("Export reussi", "Rapport PDF enregistre dans :\n" + file.getAbsolutePath());
+            showAlert("Export réussi", "Rapport PDF enregistré dans :\n" + file.getAbsolutePath());
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("Export echoue", "Erreur: " + e.getMessage());
+            showAlert("Export échoué", "Erreur : " + e.getMessage());
         }
     }
 

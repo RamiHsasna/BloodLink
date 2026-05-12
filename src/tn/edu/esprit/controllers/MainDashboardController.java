@@ -148,8 +148,7 @@ public class MainDashboardController implements Initializable {
     @FXML
     private void onNavBloodTypes() {
         setActiveNav(navBloodTypes);
-        // TODO: loadView("/tn/edu/esprit/views/BloodTypeList.fxml");
-        System.out.println("Blood Types view not yet implemented.");
+        loadView("/tn/edu/esprit/views/BloodTypeDashboard.fxml");
     }
 
     @FXML
@@ -210,10 +209,23 @@ public class MainDashboardController implements Initializable {
             Node view = loader.load();
             contentArea.getChildren().clear();
             contentArea.getChildren().add(view);
-        } catch (IOException e) {
+        } catch (Exception e) {
             System.err.println("Failed to load view: " + fxmlPath);
             e.printStackTrace();
+            showFailedView(fxmlPath, e);
         }
+    }
+
+    private void showFailedView(String fxmlPath, Exception exception) {
+        VBox panel = new VBox(8);
+        panel.getStyleClass().add("logs-empty-state");
+        Label title = new Label("Unable to load this section");
+        title.getStyleClass().add("logs-empty-title");
+        Label details = new Label(fxmlPath + "\n" + (exception.getMessage() != null ? exception.getMessage() : exception.getClass().getSimpleName()));
+        details.getStyleClass().add("logs-empty-subtitle");
+        details.setWrapText(true);
+        panel.getChildren().addAll(title, details);
+        contentArea.getChildren().setAll(panel);
     }
 
     /**
@@ -249,7 +261,7 @@ public class MainDashboardController implements Initializable {
         setNavVisibility(navUsers, false);
         setNavVisibility(navHospitals, false);
         setNavVisibility(navBloodTypes, false);
-        setNavVisibility(navAuditLogs, false);
+        setNavVisibility(navAuditLogs, currentUser != null && currentUser.getUserType() == UserType.HOSPITAL_STAFF);
 
         // Default: hospital staff set requested modules.
         setNavVisibility(navDonations, true);

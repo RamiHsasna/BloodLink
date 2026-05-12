@@ -16,8 +16,14 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import tn.edu.esprit.entities.BloodTransferRequest;
 import tn.edu.esprit.entities.Hospital;
+import tn.edu.esprit.entities.HospitalStaff;
 import tn.edu.esprit.entities.TransfertStatus;
+import tn.edu.esprit.entities.UserType;
+import tn.edu.esprit.entities.Users;
+import tn.edu.esprit.services.AppSession;
 import tn.edu.esprit.services.HospitalServiceImpl;
+import tn.edu.esprit.services.ServiceHospitalStaff;
+import tn.edu.esprit.services.SessionScopeService;
 import tn.edu.esprit.services.TransfertServiceImpl;
 
 public class TransferListController implements Initializable {
@@ -62,9 +68,14 @@ public class TransferListController implements Initializable {
         new TransfertServiceImpl();
     private final HospitalServiceImpl hospitalService =
         new HospitalServiceImpl();
+    private final ServiceHospitalStaff hospitalStaffService =
+        new ServiceHospitalStaff();
+    private final SessionScopeService sessionScopeService =
+        new SessionScopeService();
 
     private List<BloodTransferRequest> allTransfers;
     private Map<UUID, Hospital> hospitalCache = new HashMap<>();
+    private UUID currentUserHospitalId;
 
     private static final String[] BLOOD_TYPES = {
         "A+",
@@ -87,6 +98,16 @@ public class TransferListController implements Initializable {
         // Build hospital lookup cache
         loadHospitalCache();
 
+        // Get current user's hospital ID for permission checks
+        Users currentUser = AppSession.getCurrentUser();
+        if (
+            currentUser != null &&
+            currentUser.getUserType() == UserType.HOSPITAL_STAFF
+        ) {
+            // Try to get hospital ID from current user - will be null for system admins
+            currentUserHospitalId = null; // Will be determined on-demand via transfer's approving_hospital_id
+        }
+
         // Populate status filter
         cbStatusFilter.getItems().add("All statuses");
         cbStatusFilter.getItems().add("Pending");
@@ -94,6 +115,7 @@ public class TransferListController implements Initializable {
         cbStatusFilter.getItems().add("In Transit");
         cbStatusFilter.getItems().add("Delivered");
         cbStatusFilter.getItems().add("Cancelled");
+        cbStatusFilter.getItems().add("Denied");
         cbStatusFilter.setValue("All statuses");
 
         // Populate blood type filter
@@ -108,7 +130,9 @@ public class TransferListController implements Initializable {
 
     @SuppressWarnings("unchecked")
     public void refreshData() {
-        allTransfers = transferService.getAllTransferts();
+        allTransfers = sessionScopeService.filterVisibleTransfers(
+            transferService.getAllTransferts()
+        );
         // Sort by most recent first
         allTransfers.sort((a, b) -> {
             Timestamp ta = a.getRequestedAt();
@@ -196,6 +220,8 @@ public class TransferListController implements Initializable {
                 return status == TransfertStatus.DELIVERED;
             case "Cancelled":
                 return status == TransfertStatus.CANCELLED;
+            case "Declined":
+                return status == TransfertStatus.DENIED;
             default:
                 return true;
         }
@@ -363,18 +389,48 @@ public class TransferListController implements Initializable {
                 "-fx-padding: 3 10 3 10; -fx-min-width: 36; -fx-alignment: center;"
         );
 
-        // Quantity badge
-        String qtyText =
-            (transfer.getQuantityUnitsRequested() != null
-                ? transfer.getQuantityUnitsRequested()
-                : 0) +
-            " u.";
-        Label qtyBadge = new Label(qtyText);
-        qtyBadge.setStyle(
-            "-fx-background-color: #f1f5f9; -fx-background-radius: 8; " +
+        // Quantity badge - show approved quantity if available, otherwise requested
+        String qtyText;
+        String qtyBadgeStyle;
+
+        if (
+            transfer.getQuantityUnitsApproved() != null &&
+            transfer.getQuantityUnitsApproved() > 0
+        ) {
+            // Show approved quantity
+            qtyText = transfer.getQuantityUnitsApproved() + " u.";
+
+            // Highlight partial approvals with orange/amber color
+            if (
+                transfer.getQuantityUnitsRequested() != null &&
+                transfer.getQuantityUnitsApproved() <
+                transfer.getQuantityUnitsRequested()
+            ) {
+                qtyBadgeStyle =
+                    "-fx-background-color: #fed7aa; -fx-background-radius: 8; " +
+                    "-fx-text-fill: #b45309; -fx-font-size: 12px; -fx-font-weight: bold; " +
+                    "-fx-padding: 3 10 3 10;";
+            } else {
+                qtyBadgeStyle =
+                    "-fx-background-color: #f1f5f9; -fx-background-radius: 8; " +
+                    "-fx-text-fill: #334155; -fx-font-size: 12px; -fx-font-weight: bold; " +
+                    "-fx-padding: 3 10 3 10;";
+            }
+        } else {
+            // No approval yet, show requested quantity
+            qtyText =
+                (transfer.getQuantityUnitsRequested() != null
+                    ? transfer.getQuantityUnitsRequested()
+                    : 0) +
+                " u.";
+            qtyBadgeStyle =
+                "-fx-background-color: #f1f5f9; -fx-background-radius: 8; " +
                 "-fx-text-fill: #334155; -fx-font-size: 12px; -fx-font-weight: bold; " +
-                "-fx-padding: 3 10 3 10;"
-        );
+                "-fx-padding: 3 10 3 10;";
+        }
+
+        Label qtyBadge = new Label(qtyText);
+        qtyBadge.setStyle(qtyBadgeStyle);
 
         topRow
             .getChildren()
@@ -493,54 +549,101 @@ public class TransferListController implements Initializable {
         actionsRow.setSpacing(8);
         actionsRow.setPadding(new Insets(10, 20, 14, 20));
 
-        // Only show edit/delete for PENDING or APPROVED transfers
-        if (
-            transfer.getStatus() == TransfertStatus.PENDING ||
-            transfer.getStatus() == TransfertStatus.APPROVED
-        ) {
+        // Get current user for permission checking
+        Users currentUser = AppSession.getCurrentUser();
+
+        // Show edit button only if user has permission
+        if (canEdit(transfer, currentUser)) {
             Button btnEdit = new Button("\u270F  Edit");
             btnEdit.getStyleClass().add("btn-card-edit");
             btnEdit.setOnAction(e -> onEditTransfer(transfer));
+            actionsRow.getChildren().add(btnEdit);
+        }
 
+        // Show delete button only if user has permission to cancel
+        if (canCancel(transfer, currentUser)) {
             Button btnDelete = new Button("\uD83D\uDDD1  Delete");
             btnDelete.getStyleClass().add("btn-card-delete");
             btnDelete.setOnAction(e -> onDeleteTransfer(transfer));
-
-            actionsRow.getChildren().addAll(btnEdit, btnDelete);
+            actionsRow.getChildren().add(btnDelete);
         }
 
-        // Status action buttons based on current state
+        // Status action buttons based on current state and permissions
         if (transfer.getStatus() == TransfertStatus.PENDING) {
-            Button btnApprove = new Button("\u2705 Approve");
-            btnApprove.setStyle(
-                "-fx-background-color: #dcfce7; -fx-text-fill: #15803d; -fx-font-size: 12px; " +
-                    "-fx-font-weight: bold; -fx-padding: 6 14; -fx-background-radius: 8; -fx-cursor: hand;"
-            );
-            btnApprove.setOnAction(e -> onApproveTransfer(transfer));
+            // Show approve button only for approving staff and admins
+            if (canApprove(transfer, currentUser)) {
+                Button btnApprove = new Button("\u2705 Approve");
+                btnApprove.setStyle(
+                    "-fx-background-color: #dcfce7; -fx-text-fill: #15803d; -fx-font-size: 12px; " +
+                        "-fx-font-weight: bold; -fx-padding: 6 14; -fx-background-radius: 8; -fx-cursor: hand;"
+                );
+                btnApprove.setOnAction(e -> onApproveTransferDialog(transfer));
+                actionsRow.getChildren().add(btnApprove);
+            }
 
-            Button btnCancel = new Button("\u274C Cancel");
-            btnCancel.setStyle(
-                "-fx-background-color: #fee2e2; -fx-text-fill: #dc2626; -fx-font-size: 12px; " +
-                    "-fx-font-weight: bold; -fx-padding: 6 14; -fx-background-radius: 8; -fx-cursor: hand;"
-            );
-            btnCancel.setOnAction(e -> onCancelTransfer(transfer));
-            actionsRow.getChildren().addAll(btnApprove, btnCancel);
-        } else if (transfer.getStatus() == TransfertStatus.APPROVED) {
-            Button btnShip = new Button("\uD83D\uDE9A In Transit");
-            btnShip.setStyle(
-                "-fx-background-color: #dbeafe; -fx-text-fill: #1d4ed8; -fx-font-size: 12px; " +
-                    "-fx-font-weight: bold; -fx-padding: 6 14; -fx-background-radius: 8; -fx-cursor: hand;"
-            );
-            btnShip.setOnAction(e -> onMarkInTransit(transfer));
-            actionsRow.getChildren().add(btnShip);
-        } else if (transfer.getStatus() == TransfertStatus.IN_TRANSIT) {
-            Button btnDeliver = new Button("\uD83D\uDCE6 Mark Delivered");
-            btnDeliver.setStyle(
-                "-fx-background-color: #dcfce7; -fx-text-fill: #15803d; -fx-font-size: 12px; " +
-                    "-fx-font-weight: bold; -fx-padding: 6 14; -fx-background-radius: 8; -fx-cursor: hand;"
-            );
-            btnDeliver.setOnAction(e -> onMarkDelivered(transfer));
-            actionsRow.getChildren().add(btnDeliver);
+            // Show decline button only for approving staff and admins
+            if (canApprove(transfer, currentUser)) {
+                Button btnDecline = new Button("\u26A0  Decline");
+                btnDecline.setStyle(
+                    "-fx-background-color: #fecaca; -fx-text-fill: #7f1d1d; -fx-font-size: 12px; " +
+                        "-fx-font-weight: bold; -fx-padding: 6 14; -fx-background-radius: 8; -fx-cursor: hand;"
+                );
+                btnDecline.setOnAction(e -> onDeclineTransferDialog(transfer));
+                actionsRow.getChildren().add(btnDecline);
+            }
+
+            // Show cancel button only for requesting staff and admins
+            if (canCancel(transfer, currentUser)) {
+                Button btnCancel = new Button("\u274C Cancel");
+                btnCancel.setStyle(
+                    "-fx-background-color: #fee2e2; -fx-text-fill: #dc2626; -fx-font-size: 12px; " +
+                        "-fx-font-weight: bold; -fx-padding: 6 14; -fx-background-radius: 8; -fx-cursor: hand;"
+                );
+                btnCancel.setOnAction(e -> onCancelTransfer(transfer));
+                actionsRow.getChildren().add(btnCancel);
+            }
+        } else if (
+            transfer.getStatus() == TransfertStatus.APPROVED ||
+            transfer.getStatus() == TransfertStatus.IN_TRANSIT
+        ) {
+            // Show in transit button only for approving staff and admins (from APPROVED state)
+            if (
+                transfer.getStatus() == TransfertStatus.APPROVED &&
+                canMarkInTransit(transfer, currentUser)
+            ) {
+                Button btnShip = new Button("\uD83D\uDE9A In Transit");
+                btnShip.setStyle(
+                    "-fx-background-color: #dbeafe; -fx-text-fill: #1d4ed8; -fx-font-size: 12px; " +
+                        "-fx-font-weight: bold; -fx-padding: 6 14; -fx-background-radius: 8; -fx-cursor: hand;"
+                );
+                btnShip.setOnAction(e -> onMarkInTransit(transfer));
+                actionsRow.getChildren().add(btnShip);
+            }
+
+            // Show deliver button only for authorized users (from IN_TRANSIT state)
+            if (
+                transfer.getStatus() == TransfertStatus.IN_TRANSIT &&
+                canMarkDelivered(transfer, currentUser)
+            ) {
+                Button btnDeliver = new Button("\uD83D\uDCE6 Mark Delivered");
+                btnDeliver.setStyle(
+                    "-fx-background-color: #dcfce7; -fx-text-fill: #15803d; -fx-font-size: 12px; " +
+                        "-fx-font-weight: bold; -fx-padding: 6 14; -fx-background-radius: 8; -fx-cursor: hand;"
+                );
+                btnDeliver.setOnAction(e -> onMarkDelivered(transfer));
+                actionsRow.getChildren().add(btnDeliver);
+            }
+
+            // Show cancel button for APPROVED or IN_TRANSIT state (for requesting staff or admins)
+            if (canCancel(transfer, currentUser)) {
+                Button btnCancel = new Button("\u274C Cancel");
+                btnCancel.setStyle(
+                    "-fx-background-color: #fee2e2; -fx-text-fill: #dc2626; -fx-font-size: 12px; " +
+                        "-fx-font-weight: bold; -fx-padding: 6 14; -fx-background-radius: 8; -fx-cursor: hand;"
+                );
+                btnCancel.setOnAction(e -> onCancelTransfer(transfer));
+                actionsRow.getChildren().add(btnCancel);
+            }
         }
 
         card.getChildren().addAll(body, divider, actionsRow);
@@ -562,10 +665,11 @@ public class TransferListController implements Initializable {
         return chip;
     }
 
-    // ==================== STATUS HELPERS ====================
-
     private String getStatusText(TransfertStatus status) {
-        if (status == null) return "—";
+        if (status == null) {
+            return "Unknown";
+        }
+
         switch (status) {
             case PENDING:
                 return "Pending";
@@ -577,6 +681,8 @@ public class TransferListController implements Initializable {
                 return "Delivered";
             case CANCELLED:
                 return "Cancelled";
+            case DENIED:
+                return "Denied";
             default:
                 return status.name();
         }
@@ -595,6 +701,8 @@ public class TransferListController implements Initializable {
                 return "#dcfce7";
             case CANCELLED:
                 return "#fee2e2";
+            case DENIED:
+                return "#fecaca";
             default:
                 return "#f3f4f6";
         }
@@ -613,6 +721,8 @@ public class TransferListController implements Initializable {
                 return "#15803d";
             case CANCELLED:
                 return "#dc2626";
+            case DENIED:
+                return "#7f1d1d";
             default:
                 return "#6b7280";
         }
@@ -631,26 +741,30 @@ public class TransferListController implements Initializable {
                 return "#22c55e";
             case CANCELLED:
                 return "#ef4444";
+            case DENIED:
+                return "#dc2626";
             default:
                 return "#9ca3af";
         }
     }
 
     private String getCardLeftBorderColor(TransfertStatus status) {
-        if (status == null) return "#e2e8f0";
+        if (status == null) return "#d1d5db";
         switch (status) {
             case PENDING:
                 return "#eab308";
             case APPROVED:
                 return "#3b82f6";
             case IN_TRANSIT:
-                return "#6366f1";
+                return "#818cf8";
             case DELIVERED:
                 return "#22c55e";
             case CANCELLED:
                 return "#ef4444";
+            case DENIED:
+                return "#dc2626";
             default:
-                return "#e2e8f0";
+                return "#d1d5db";
         }
     }
 
@@ -686,63 +800,449 @@ public class TransferListController implements Initializable {
         }
     }
 
-    private void onApproveTransfer(BloodTransferRequest transfer) {
-        transfer.setStatus(TransfertStatus.APPROVED);
-        transfer.setApprovedAt(new Timestamp(System.currentTimeMillis()));
-        if (
-            transfer.getQuantityUnitsApproved() == null ||
-            transfer.getQuantityUnitsApproved() == 0
-        ) {
-            transfer.setQuantityUnitsApproved(
+    private void onApproveTransferDialog(BloodTransferRequest transfer) {
+        try {
+            // Validate transfer ID exists
+            if (transfer == null || transfer.getTransferId() == null) {
+                showError(
+                    "Error: Transfer ID is missing. Cannot proceed with approval."
+                );
+                return;
+            }
+
+            // Fetch fresh transfer data from database
+            Integer transferId = transfer.getTransferId();
+            BloodTransferRequest currentTransfer =
+                (BloodTransferRequest) transferService.getTransfertById(
+                    transferId
+                );
+
+            if (currentTransfer == null) {
+                showError(
+                    "Error: Transfer not found in database. It may have been deleted."
+                );
+                return;
+            }
+
+            // Validate transfer is still in PENDING status
+            if (currentTransfer.getStatus() != TransfertStatus.PENDING) {
+                showError(
+                    "Error: Transfer is no longer in PENDING status. Current status: " +
+                        currentTransfer.getStatus()
+                );
+                return;
+            }
+
+            transfer = currentTransfer;
+
+            // Create approval dialog
+            Dialog<Integer> dialog = new Dialog<>();
+            dialog.setTitle("Approve Transfer Request");
+            dialog.setHeaderText("Approve Blood Transfer Request");
+
+            // Create content
+            VBox content = new VBox(15);
+            content.setPadding(new Insets(20));
+
+            // Hospital info
+            Label lblReqHospital = new Label(
+                "Requesting Hospital: " +
+                    getHospitalName(transfer.getRequestingHospitalId())
+            );
+            lblReqHospital.setStyle(
+                "-fx-font-weight: bold; -fx-font-size: 12px;"
+            );
+
+            Label lblBloodType = new Label(
+                "Blood Type: " + transfer.getBloodTypeId()
+            );
+            lblBloodType.setStyle(
+                "-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: #dc2626;"
+            );
+
+            Label lblQuantityRequested = new Label(
+                "Quantity Requested: " +
+                    transfer.getQuantityUnitsRequested() +
+                    " units"
+            );
+            lblQuantityRequested.setStyle("-fx-font-size: 12px;");
+
+            // Quantity selection
+            Label lblQuantityToApprove = new Label("Quantity to Approve:");
+            lblQuantityToApprove.setStyle(
+                "-fx-font-weight: bold; -fx-font-size: 12px;"
+            );
+
+            Spinner<Integer> spApprovedQuantity = new Spinner<>(
+                1,
+                transfer.getQuantityUnitsRequested(),
                 transfer.getQuantityUnitsRequested()
             );
-        }
-        try {
-            transferService.modifier(transfer);
-            refreshData();
+            spApprovedQuantity.setPrefWidth(100);
+            spApprovedQuantity.setEditable(true);
+
+            Label lblQuantityInfo = new Label(
+                "Note: You can approve a quantity equal to or less than the requested amount."
+            );
+            lblQuantityInfo.setStyle(
+                "-fx-font-size: 11px; -fx-text-fill: #64748b; -fx-wrap-text: true;"
+            );
+            lblQuantityInfo.setWrapText(true);
+
+            // Reason display
+            Label lblReason = new Label(
+                "Reason: " +
+                    (transfer.getReason() != null
+                        ? transfer.getReason()
+                        : "No reason specified")
+            );
+            lblReason.setStyle("-fx-font-size: 11px; -fx-text-fill: #64748b;");
+            lblReason.setWrapText(true);
+
+            // Notes field
+            Label lblNotesLabel = new Label("Approval Notes (optional):");
+            lblNotesLabel.setStyle(
+                "-fx-font-weight: bold; -fx-font-size: 12px;"
+            );
+
+            TextArea taApprovalNotes = new TextArea();
+            taApprovalNotes.setPrefRowCount(3);
+            taApprovalNotes.setWrapText(true);
+            taApprovalNotes.setStyle("-fx-control-inner-background: #f8fafc;");
+
+            content
+                .getChildren()
+                .addAll(
+                    lblReqHospital,
+                    lblBloodType,
+                    lblQuantityRequested,
+                    new Separator(),
+                    lblQuantityToApprove,
+                    spApprovedQuantity,
+                    lblQuantityInfo,
+                    lblReason,
+                    new Separator(),
+                    lblNotesLabel,
+                    taApprovalNotes
+                );
+
+            dialog.getDialogPane().setContent(content);
+            dialog
+                .getDialogPane()
+                .getButtonTypes()
+                .addAll(ButtonType.OK, ButtonType.CANCEL);
+
+            // Set result converter to extract spinner value when OK is clicked
+            dialog.setResultConverter(dialogButton -> {
+                if (dialogButton == ButtonType.OK) {
+                    return spApprovedQuantity.getValue();
+                }
+                return null;
+            });
+
+            // Handle result
+            Optional<Integer> result = dialog.showAndWait();
+            if (result.isPresent()) {
+                Integer approvedQuantity = result.get();
+
+                // Update the transfer with approval data
+                transfer.setStatus(TransfertStatus.APPROVED);
+                transfer.setQuantityUnitsApproved(approvedQuantity);
+                transfer.setApprovingStaffId(
+                    AppSession.getCurrentUser().getId()
+                );
+                transfer.setApprovedAt(
+                    new Timestamp(System.currentTimeMillis())
+                );
+
+                // Preserve existing notes or add new ones
+                String newNotes = taApprovalNotes.getText().trim();
+                if (!newNotes.isEmpty()) {
+                    transfer.setNotes(newNotes);
+                }
+
+                System.out.println(
+                    "Approving transfer ID: " +
+                        transfer.getTransferId() +
+                        " with approved quantity: " +
+                        approvedQuantity
+                );
+
+                transferService.modifier(transfer);
+                refreshData();
+            }
         } catch (Exception e) {
             showError("Error during approval: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void onDeclineTransferDialog(BloodTransferRequest transfer) {
+        try {
+            // Validate transfer ID exists
+            if (transfer == null || transfer.getTransferId() == null) {
+                showError(
+                    "Error: Transfer ID is missing. Cannot proceed with decline."
+                );
+                return;
+            }
+
+            // Fetch fresh transfer data from database
+            Integer transferId = transfer.getTransferId();
+            BloodTransferRequest currentTransfer =
+                (BloodTransferRequest) transferService.getTransfertById(
+                    transferId
+                );
+
+            if (currentTransfer == null) {
+                showError(
+                    "Error: Transfer not found in database. It may have been deleted."
+                );
+                return;
+            }
+
+            // Validate transfer is still in PENDING status
+            if (currentTransfer.getStatus() != TransfertStatus.PENDING) {
+                showError(
+                    "Error: Transfer is no longer in PENDING status. Current status: " +
+                        currentTransfer.getStatus()
+                );
+                return;
+            }
+
+            transfer = currentTransfer;
+
+            // Create decline dialog
+            Dialog<String> dialog = new Dialog<>();
+            dialog.setTitle("Decline Transfer Request");
+            dialog.setHeaderText("Decline Blood Transfer Request");
+
+            // Create content
+            VBox content = new VBox(15);
+            content.setPadding(new Insets(20));
+
+            // Hospital info
+            Label lblReqHospital = new Label(
+                "Requesting Hospital: " +
+                    getHospitalName(transfer.getRequestingHospitalId())
+            );
+            lblReqHospital.setStyle(
+                "-fx-font-weight: bold; -fx-font-size: 12px;"
+            );
+
+            Label lblBloodType = new Label(
+                "Blood Type: " + transfer.getBloodTypeId()
+            );
+            lblBloodType.setStyle(
+                "-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: #dc2626;"
+            );
+
+            Label lblQuantityRequested = new Label(
+                "Quantity Requested: " +
+                    transfer.getQuantityUnitsRequested() +
+                    " units"
+            );
+            lblQuantityRequested.setStyle("-fx-font-size: 12px;");
+
+            // Reason display
+            Label lblReason = new Label(
+                "Request Reason: " +
+                    (transfer.getReason() != null
+                        ? transfer.getReason()
+                        : "No reason specified")
+            );
+            lblReason.setStyle("-fx-font-size: 11px; -fx-text-fill: #64748b;");
+            lblReason.setWrapText(true);
+
+            // Decline reason field
+            Label lblDeclineReasonLabel = new Label(
+                "Reason for Declining (required):"
+            );
+            lblDeclineReasonLabel.setStyle(
+                "-fx-font-weight: bold; -fx-font-size: 12px;"
+            );
+
+            TextArea taDeclineReason = new TextArea();
+            taDeclineReason.setPrefRowCount(4);
+            taDeclineReason.setWrapText(true);
+            taDeclineReason.setStyle("-fx-control-inner-background: #f8fafc;");
+
+            content
+                .getChildren()
+                .addAll(
+                    lblReqHospital,
+                    lblBloodType,
+                    lblQuantityRequested,
+                    lblReason,
+                    new Separator(),
+                    lblDeclineReasonLabel,
+                    taDeclineReason
+                );
+
+            dialog.getDialogPane().setContent(content);
+            dialog
+                .getDialogPane()
+                .getButtonTypes()
+                .addAll(ButtonType.OK, ButtonType.CANCEL);
+
+            // Set result converter to extract decline reason when OK is clicked
+            dialog.setResultConverter(dialogButton -> {
+                if (dialogButton == ButtonType.OK) {
+                    String reason = taDeclineReason.getText().trim();
+                    if (reason.isEmpty()) {
+                        showError(
+                            "Please provide a reason for declining the request."
+                        );
+                        return null;
+                    }
+                    return reason;
+                }
+                return null;
+            });
+
+            // Handle result
+            Optional<String> result = dialog.showAndWait();
+            if (result.isPresent()) {
+                String declineReason = result.get();
+
+                if (declineReason == null || declineReason.isEmpty()) {
+                    return;
+                }
+
+                // Update the transfer with decline data
+                transfer.setStatus(TransfertStatus.DENIED);
+                transfer.setApprovingStaffId(
+                    AppSession.getCurrentUser().getId()
+                );
+                transfer.setNotes("Declined: " + declineReason);
+
+                System.out.println(
+                    "Declining transfer ID: " +
+                        transfer.getTransferId() +
+                        " with reason: " +
+                        declineReason
+                );
+
+                transferService.modifier(transfer);
+                refreshData();
+            }
+        } catch (Exception e) {
+            showError("Error during decline: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     private void onCancelTransfer(BloodTransferRequest transfer) {
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Cancel Transfer");
-        confirm.setHeaderText("Confirm Cancellation");
-        confirm.setContentText(
-            "Are you sure you want to cancel this transfer request?"
-        );
-
-        Optional<ButtonType> result = confirm.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            transfer.setStatus(TransfertStatus.CANCELLED);
-            try {
-                transferService.modifier(transfer);
-                refreshData();
-            } catch (Exception e) {
-                showError("Error during cancellation: " + e.getMessage());
+        try {
+            if (transfer == null || transfer.getTransferId() == null) {
+                showError("Error: Transfer ID is missing. Cannot cancel.");
+                return;
             }
+
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.setTitle("Cancel Transfer");
+            confirm.setHeaderText("Confirm Cancellation");
+            confirm.setContentText(
+                "Are you sure you want to cancel this transfer request? This action cannot be undone."
+            );
+
+            Optional<ButtonType> result = confirm.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                // Fetch fresh data to ensure we have the latest state
+                BloodTransferRequest currentTransfer =
+                    (BloodTransferRequest) transferService.getTransfertById(
+                        transfer.getTransferId()
+                    );
+
+                if (currentTransfer == null) {
+                    showError("Error: Transfer not found in database.");
+                    return;
+                }
+
+                currentTransfer.setStatus(TransfertStatus.CANCELLED);
+                transferService.modifier(currentTransfer);
+                refreshData();
+            }
+        } catch (Exception e) {
+            showError("Error during cancellation: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     private void onMarkInTransit(BloodTransferRequest transfer) {
-        transfer.setStatus(TransfertStatus.IN_TRANSIT);
         try {
-            transferService.modifier(transfer);
+            if (transfer == null || transfer.getTransferId() == null) {
+                showError(
+                    "Error: Transfer ID is missing. Cannot mark as in transit."
+                );
+                return;
+            }
+
+            // Fetch fresh data to ensure we have the latest state
+            BloodTransferRequest currentTransfer =
+                (BloodTransferRequest) transferService.getTransfertById(
+                    transfer.getTransferId()
+                );
+
+            if (currentTransfer == null) {
+                showError("Error: Transfer not found in database.");
+                return;
+            }
+
+            if (currentTransfer.getStatus() != TransfertStatus.APPROVED) {
+                showError(
+                    "Error: Transfer must be in APPROVED status to mark as in transit. Current status: " +
+                        currentTransfer.getStatus()
+                );
+                return;
+            }
+
+            currentTransfer.setStatus(TransfertStatus.IN_TRANSIT);
+            transferService.modifier(currentTransfer);
             refreshData();
         } catch (Exception e) {
             showError("Error marking as in transit: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     private void onMarkDelivered(BloodTransferRequest transfer) {
-        transfer.setStatus(TransfertStatus.DELIVERED);
-        transfer.setActualDeliveryAt(new Timestamp(System.currentTimeMillis()));
         try {
-            transferService.modifier(transfer);
+            if (transfer == null || transfer.getTransferId() == null) {
+                showError(
+                    "Error: Transfer ID is missing. Cannot mark as delivered."
+                );
+                return;
+            }
+
+            // Fetch fresh data to ensure we have the latest state
+            BloodTransferRequest currentTransfer =
+                (BloodTransferRequest) transferService.getTransfertById(
+                    transfer.getTransferId()
+                );
+
+            if (currentTransfer == null) {
+                showError("Error: Transfer not found in database.");
+                return;
+            }
+
+            if (currentTransfer.getStatus() != TransfertStatus.IN_TRANSIT) {
+                showError(
+                    "Error: Transfer must be in IN_TRANSIT status to mark as delivered. Current status: " +
+                        currentTransfer.getStatus()
+                );
+                return;
+            }
+
+            currentTransfer.setStatus(TransfertStatus.DELIVERED);
+            currentTransfer.setActualDeliveryAt(
+                new Timestamp(System.currentTimeMillis())
+            );
+            transferService.modifier(currentTransfer);
             refreshData();
         } catch (Exception e) {
             showError("Error confirming delivery: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -797,8 +1297,214 @@ public class TransferListController implements Initializable {
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Error");
-        alert.setHeaderText(null);
+        alert.setHeaderText("Error");
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    // ==================== ROLE-BASED PERMISSION HELPERS ====================
+
+    /**
+     * Check if current user is the requesting staff member
+     */
+    private boolean isRequestingStaff(
+        BloodTransferRequest transfer,
+        Users user
+    ) {
+        if (transfer == null || user == null) {
+            return false;
+        }
+        return (
+            transfer.getRequestingStaffId() != null &&
+            transfer.getRequestingStaffId().equals(user.getId())
+        );
+    }
+
+    /**
+     * Check if current user is the approving staff member
+     */
+    private boolean isApprovingStaff(
+        BloodTransferRequest transfer,
+        Users user
+    ) {
+        if (transfer == null || user == null) {
+            return false;
+        }
+
+        // System admin is always considered approving staff
+        if (isSystemAdmin(user)) {
+            return true;
+        }
+
+        // For PENDING transfers, check if user's hospital is the approving hospital
+        if (
+            transfer.getStatus() == TransfertStatus.PENDING &&
+            transfer.getApprovingHospitalId() != null
+        ) {
+            UUID userHospitalId = getCurrentUserHospitalId();
+            if (userHospitalId == null) {
+                return false;
+            }
+            return userHospitalId.equals(transfer.getApprovingHospitalId());
+        }
+
+        // For approved transfers, check if user is the one who approved
+        if (transfer.getApprovingStaffId() != null) {
+            return transfer.getApprovingStaffId().equals(user.getId());
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if current user is a system admin
+     */
+    private boolean isSystemAdmin(Users user) {
+        if (user == null) {
+            return false;
+        }
+        return user.getUserType() == UserType.ADMIN;
+    }
+
+    /**
+     * Check if current user can approve a transfer
+     */
+    private boolean canApprove(BloodTransferRequest transfer, Users user) {
+        if (transfer == null || user == null) {
+            return false;
+        }
+        // Cannot approve if you're the one who requested it
+        if (isRequestingStaff(transfer, user)) {
+            return false;
+        }
+        // Only PENDING transfers can be approved
+        if (transfer.getStatus() != TransfertStatus.PENDING) {
+            return false;
+        }
+        // Only approving staff from the receiving hospital can approve
+        return isApprovingStaff(transfer, user);
+    }
+
+    /**
+     * Check if current user can edit a transfer
+     */
+    private boolean canEdit(BloodTransferRequest transfer, Users user) {
+        if (transfer == null || user == null) {
+            return false;
+        }
+        // Only PENDING transfers can be edited
+        if (transfer.getStatus() != TransfertStatus.PENDING) {
+            return false;
+        }
+        // Requesting staff can edit PENDING (they created it)
+        if (isRequestingStaff(transfer, user)) {
+            return true;
+        }
+        // System admin can edit PENDING
+        if (isSystemAdmin(user)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Check if current user can cancel a transfer
+     */
+    private boolean canCancel(BloodTransferRequest transfer, Users user) {
+        if (transfer == null || user == null) {
+            return false;
+        }
+        // Cannot cancel DELIVERED, DENIED, or already CANCELLED transfers
+        if (
+            transfer.getStatus() == TransfertStatus.DELIVERED ||
+            transfer.getStatus() == TransfertStatus.DENIED ||
+            transfer.getStatus() == TransfertStatus.CANCELLED
+        ) {
+            return false;
+        }
+        // Requesting staff (who created it) can cancel at any stage (PENDING, APPROVED, IN_TRANSIT)
+        if (isRequestingStaff(transfer, user)) {
+            return true;
+        }
+        // System admin can cancel anything (except DELIVERED/DENIED/CANCELLED)
+        if (isSystemAdmin(user)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Check if current user can mark transfer as in transit
+     */
+    private boolean canMarkInTransit(
+        BloodTransferRequest transfer,
+        Users user
+    ) {
+        if (transfer == null || user == null) {
+            return false;
+        }
+        // Only APPROVED transfers can be marked in transit
+        if (transfer.getStatus() != TransfertStatus.APPROVED) {
+            return false;
+        }
+        // Approving staff or system admin can mark in transit
+        return isApprovingStaff(transfer, user) || isSystemAdmin(user);
+    }
+
+    /**
+     * Check if current user can mark transfer as delivered
+     */
+    private boolean canMarkDelivered(
+        BloodTransferRequest transfer,
+        Users user
+    ) {
+        if (transfer == null || user == null) {
+            return false;
+        }
+        // Only IN_TRANSIT transfers can be marked delivered
+        if (transfer.getStatus() != TransfertStatus.IN_TRANSIT) {
+            return false;
+        }
+        // Both requesting hospital staff and approving hospital staff can mark as delivered, or admin
+        return (
+            isRequestingStaff(transfer, user) ||
+            isApprovingStaff(transfer, user) ||
+            isSystemAdmin(user)
+        );
+    }
+
+    /**
+     * Get the current user's hospital ID for permission checking
+     * Returns null if user is a system admin or hospital info cannot be found
+     */
+    private UUID getCurrentUserHospitalId() {
+        Users currentUser = AppSession.getCurrentUser();
+        if (currentUser == null) {
+            return null;
+        }
+
+        try {
+            // Create a HospitalStaff object with the user ID to query
+            HospitalStaff searchStaff = new HospitalStaff();
+            searchStaff.setId(currentUser.getId());
+
+            // Get the staff record for this user
+            HospitalStaff staff = hospitalStaffService.getOne(searchStaff);
+
+            if (staff != null && staff.getHospitalId() != null) {
+                try {
+                    return UUID.fromString(staff.getHospitalId());
+                } catch (IllegalArgumentException e) {
+                    // Invalid UUID format
+                    return null;
+                }
+            }
+        } catch (Exception e) {
+            System.err.println(
+                "Error getting user hospital ID: " + e.getMessage()
+            );
+        }
+
+        return null;
     }
 }
