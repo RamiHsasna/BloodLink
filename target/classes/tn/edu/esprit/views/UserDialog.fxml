@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+<?import javafx.geometry.Pos?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="tn.edu.esprit.controllers.UserDialogController"
+      styleClass="dialog-container" spacing="20" prefWidth="600">
+
+    <padding>
+        <Insets top="30" right="40" bottom="30" left="40"/>
+    </padding>
+
+    <!-- Header -->
+    <VBox spacing="5">
+        <Text fx:id="dialogTitle" text="Add User" styleClass="dialog-title"/>
+        <Text text="Register a new user in the BloodLink network." styleClass="dialog-subtitle"/>
+    </VBox>
+
+    <!-- Form -->
+    <ScrollPane fitToWidth="true" styleClass="form-scroll">
+        <VBox spacing="20">
+            <!-- First Name -->
+            <VBox spacing="4">
+                <HBox spacing="2"><Label text="First Name" styleClass="form-label"/><Label text="*" styleClass="required-asterisk"/></HBox>
+                <TextField fx:id="firstNameField" promptText="e.g. John" styleClass="form-field">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </TextField>
+                <Label fx:id="firstNameError" styleClass="field-error-label" managed="false" visible="false"/>
+            </VBox>
+
+            <!-- Last Name -->
+            <VBox spacing="4">
+                <HBox spacing="2"><Label text="Last Name" styleClass="form-label"/><Label text="*" styleClass="required-asterisk"/></HBox>
+                <TextField fx:id="lastNameField" promptText="e.g. Doe" styleClass="form-field">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </TextField>
+                <Label fx:id="lastNameError" styleClass="field-error-label" managed="false" visible="false"/>
+            </VBox>
+
+            <!-- Email -->
+            <VBox spacing="4">
+                <HBox spacing="2"><Label text="Email" styleClass="form-label"/><Label text="*" styleClass="required-asterisk"/></HBox>
+                <TextField fx:id="emailField" promptText="e.g. john.doe@example.com" styleClass="form-field">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </TextField>
+                <Label fx:id="emailError" styleClass="field-error-label" managed="false" visible="false"/>
+            </VBox>
+
+            <!-- Phone -->
+            <VBox spacing="4">
+                <HBox spacing="2"><Label text="Phone" styleClass="form-label"/><Label text="*" styleClass="required-asterisk"/></HBox>
+                <TextField fx:id="phoneField" promptText="e.g. +216 12 345 678" styleClass="form-field">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </TextField>
+                <Label fx:id="phoneError" styleClass="field-error-label" managed="false" visible="false"/>
+            </VBox>
+
+            <!-- Password -->
+            <VBox spacing="4" fx:id="passwordBox">
+                <HBox spacing="2"><Label text="Password" styleClass="form-label"/><Label text="*" styleClass="required-asterisk"/></HBox>
+                <PasswordField fx:id="passwordField" promptText="Enter password (min. 8 characters)" styleClass="form-field">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </PasswordField>
+                <Label fx:id="passwordHint" styleClass="password-hint-label" text="Password must be at least 8 characters"/>
+            </VBox>
+
+            <!-- User Type -->
+            <VBox spacing="4">
+                <HBox spacing="2"><Label text="User Type" styleClass="form-label"/><Label text="*" styleClass="required-asterisk"/></HBox>
+                <ComboBox fx:id="userTypeCombo" promptText="Select user type" styleClass="form-field" maxWidth="Infinity">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </ComboBox>
+                <Label fx:id="userTypeError" styleClass="field-error-label" managed="false" visible="false"/>
+            </VBox>
+
+            <!-- ===== Donor-specific fields (shown only when type = Donor) ===== -->
+            <VBox fx:id="donorFieldsBox" spacing="16" managed="false" visible="false" styleClass="donor-section">
+                <Separator/>
+                <Text text="Donor Information" styleClass="dialog-title" style="-fx-font-size: 18px;"/>
+                <Text text="Complete the donor profile details below." styleClass="dialog-subtitle"/>
+
+                <!-- Blood Type -->
+                <VBox spacing="4">
+                    <HBox spacing="2"><Label text="Blood Type" styleClass="form-label"/><Label text="*" styleClass="required-asterisk"/></HBox>
+                    <ComboBox fx:id="bloodTypeCombo" promptText="Select blood type" styleClass="form-field" maxWidth="Infinity">
+                        <padding>
+                            <Insets top="10" right="15" bottom="10" left="15"/>
+                        </padding>
+                    </ComboBox>
+                    <Label fx:id="bloodTypeError" styleClass="field-error-label" managed="false" visible="false"/>
+                </VBox>
+
+                <!-- Last Donation Date -->
+                <VBox spacing="4">
+                    <Label text="Last Donation Date" styleClass="form-label"/>
+                    <DatePicker fx:id="lastDonationDatePicker" promptText="Select date (optional)" styleClass="form-field" maxWidth="Infinity"/>
+                </VBox>
+
+                <!-- City -->
+                <VBox spacing="4">
+                    <Label text="City" styleClass="form-label"/>
+                    <TextField fx:id="donorCityField" promptText="e.g. Tunis" styleClass="form-field">
+                        <padding>
+                            <Insets top="10" right="15" bottom="10" left="15"/>
+                        </padding>
+                    </TextField>
+                </VBox>
+
+                <!-- Total Donations -->
+                <VBox spacing="4">
+                    <Label text="Total Donations" styleClass="form-label"/>
+                    <Spinner fx:id="totalDonationsSpinner" styleClass="form-field" maxWidth="Infinity"/>
+                </VBox>
+            </VBox>
+
+            <!-- ===== Hospital staff-specific fields (shown only when type = Hospital Staff) ===== -->
+            <VBox fx:id="hospitalStaffFieldsBox" spacing="16" managed="false" visible="false" styleClass="donor-section">
+                <Separator/>
+                <Text text="Hospital Staff Information" styleClass="dialog-title" style="-fx-font-size: 18px;"/>
+                <Text text="Complete the hospital staff details below." styleClass="dialog-subtitle"/>
+
+                <!-- Role -->
+                <VBox spacing="4">
+                    <HBox spacing="2"><Label text="Role" styleClass="form-label"/><Label text="*" styleClass="required-asterisk"/></HBox>
+                    <ComboBox fx:id="staffRoleCombo" promptText="Select role" styleClass="form-field" maxWidth="Infinity">
+                        <padding>
+                            <Insets top="10" right="15" bottom="10" left="15"/>
+                        </padding>
+                    </ComboBox>
+                    <Label fx:id="staffRoleError" styleClass="field-error-label" managed="false" visible="false"/>
+                </VBox>
+
+                <!-- Hospital -->
+                <VBox spacing="4">
+                    <HBox spacing="2"><Label text="Hospital" styleClass="form-label"/><Label text="*" styleClass="required-asterisk"/></HBox>
+                    <ComboBox fx:id="hospitalCombo" promptText="Select hospital" styleClass="form-field" maxWidth="Infinity">
+                        <padding>
+                            <Insets top="10" right="15" bottom="10" left="15"/>
+                        </padding>
+                    </ComboBox>
+                    <Label fx:id="hospitalError" styleClass="field-error-label" managed="false" visible="false"/>
+                </VBox>
+
+                <!-- Department -->
+                <VBox spacing="4">
+                    <Label text="Department" styleClass="form-label"/>
+                    <TextField fx:id="departmentField" promptText="e.g. Emergency" styleClass="form-field">
+                        <padding>
+                            <Insets top="10" right="15" bottom="10" left="15"/>
+                        </padding>
+                    </TextField>
+                </VBox>
+            </VBox>
+
+        </VBox>
+    </ScrollPane>
+
+    <!-- Action Buttons -->
+    <HBox spacing="15" alignment="CENTER_RIGHT">
+        <Button text="Cancel" styleClass="btn-cancel" onAction="#handleCancel">
+            <padding>
+                <Insets top="12" right="24" bottom="12" left="24"/>
+            </padding>
+        </Button>
+        <Button fx:id="saveButton" text="Create User" styleClass="btn-primary" onAction="#handleSave">
+            <padding>
+                <Insets top="12" right="24" bottom="12" left="24"/>
+            </padding>
+        </Button>
+    </HBox>
+
+</VBox>

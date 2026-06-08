@@ -157,7 +157,7 @@
 
  /* Header */
  #chat-header {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    background: linear-gradient(135deg, #8f1d1f 0%, #b3272a 100%);
     padding: 16px 20px;
     display: flex;
     align-items: center;
@@ -209,9 +209,9 @@
  .quick-btn {
     font-size: 11px;
     font-weight: 600;
-    background: #f0f4ff;
-    color: #4338ca;
-    border: 1px solid #c7d2fe;
+    background: #fff1f2;
+    color: #9f1239;
+    border: 1px solid #fecaca;
     border-radius: 20px;
     padding: 4px 10px;
     cursor: pointer;
@@ -219,7 +219,7 @@
     transition: background .15s;
     white-space: nowrap;
  }
- .quick-btn:hover { background: #e0e7ff; }
+ .quick-btn:hover { background: #fee2e2; }
 
  /* Messages */
  #chat-messages {
@@ -247,8 +247,8 @@
     font-size: 12px;
     font-weight: 700;
  }
- .msg.bot  .msg-avatar { background: linear-gradient(135deg,#4f46e5,#7c3aed); color: #fff; }
- .msg.user .msg-avatar { background: linear-gradient(135deg,#8f1d1f,#b3272a); color: #fff; }
+ .msg.bot  .msg-avatar { background: linear-gradient(135deg,#8f1d1f,#b3272a); color: #fff; }
+ .msg.user .msg-avatar { background: linear-gradient(135deg,#4f46e5,#7c3aed); color: #fff; }
 
  .msg-bubble {
     padding: 10px 14px;
@@ -301,11 +301,11 @@
     line-height: 1.5;
     background: #f8fafc;
  }
- #chat-input:focus { border-color: #6366f1; background: #fff; }
+ #chat-input:focus { border-color: #8f1d1f; background: #fff; }
  #chat-send {
     width: 40px; height: 40px;
     border-radius: 12px;
-    background: linear-gradient(135deg,#4f46e5,#7c3aed);
+    background: linear-gradient(135deg,#8f1d1f,#b3272a);
     border: none;
     color: #fff;
     font-size: 16px;
@@ -338,7 +338,7 @@
  {% block page_actions %}
     {% if user_type != 'DONOR' %}
         <button type="button" class="add-btn" onclick="openCreate()">+ Add Donation</button>
-        <button type="button" class="chart-btn" onclick="openChat()" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;">💬 AI Assistant</button>
+        <button type="button" class="chart-btn" onclick="openChat()" style="background:linear-gradient(135deg,#8f1d1f,#b3272a);color:#fff;border:none;box-shadow: 0 4px 12px rgba(143,29,31,0.25);">💬 AI Assistant</button>
     {% endif %}
  {% endblock %}
 

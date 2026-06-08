@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="tn.edu.esprit.controllers.BloodTypeDashboardController"
+      spacing="18"
+      styleClass="content-root"
+      stylesheets="@../styles/dashboard.css">
+    <padding>
+        <Insets top="30" right="40" bottom="30" left="40"/>
+    </padding>
+
+    <HBox alignment="CENTER_LEFT" spacing="16">
+        <VBox spacing="4" HBox.hgrow="ALWAYS">
+            <Label text="Blood Types" styleClass="page-title"/>
+            <Label text="Manage ABO/Rh compatibility definitions used across BloodLink." styleClass="page-description"/>
+        </VBox>
+        <Button fx:id="btnAdd" text="+ Add Blood Type" onAction="#handleAdd" styleClass="btn-primary"/>
+    </HBox>
+
+    <HBox alignment="CENTER_LEFT" spacing="12">
+        <HBox alignment="CENTER_LEFT" spacing="8" styleClass="search-input-wrapper" HBox.hgrow="ALWAYS">
+            <padding>
+                <Insets left="12" right="12" top="2" bottom="2"/>
+            </padding>
+            <Label text="🔍" styleClass="search-icon"/>
+            <TextField fx:id="searchField" promptText="Search by blood type, ABO, Rh, or compatibility..." styleClass="search-input" HBox.hgrow="ALWAYS"/>
+        </HBox>
+        <Button text="Refresh" onAction="#handleRefresh" styleClass="btn-secondary"/>
+    </HBox>
+
+    <HBox fx:id="statsRow" spacing="12" alignment="CENTER_LEFT">
+        <HBox styleClass="stat-chip" alignment="CENTER_LEFT" spacing="6">
+            <padding><Insets top="6" right="14" bottom="6" left="14"/></padding>
+            <Label text="Total:" styleClass="stat-chip-label"/>
+            <Label fx:id="lblTotal" text="0" styleClass="stat-chip-value"/>
+        </HBox>
+        <HBox styleClass="stat-chip" alignment="CENTER_LEFT" spacing="6">
+            <padding><Insets top="6" right="14" bottom="6" left="14"/></padding>
+            <Label text="Universal donors:" styleClass="stat-chip-label"/>
+            <Label fx:id="lblUniversalDonors" text="0" styleClass="stat-chip-value"/>
+        </HBox>
+        <HBox styleClass="stat-chip" alignment="CENTER_LEFT" spacing="6">
+            <padding><Insets top="6" right="14" bottom="6" left="14"/></padding>
+            <Label text="Universal recipients:" styleClass="stat-chip-label"/>
+            <Label fx:id="lblUniversalRecipients" text="0" styleClass="stat-chip-value"/>
+        </HBox>
+    </HBox>
+
+    <ScrollPane fitToWidth="true" styleClass="cards-scroll-pane" VBox.vgrow="ALWAYS">
+        <VBox fx:id="cardsContainer" spacing="12" styleClass="cards-container">
+            <padding>
+                <Insets top="4" right="4" bottom="20" left="4"/>
+            </padding>
+        </VBox>
+    </ScrollPane>
+</VBox>

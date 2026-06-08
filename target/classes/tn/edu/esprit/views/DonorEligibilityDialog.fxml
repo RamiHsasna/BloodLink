@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="tn.edu.esprit.controllers.DonorEligibilityDialogController"
+      styleClass="dialog-container" spacing="20" prefWidth="600">
+
+    <padding>
+        <Insets top="30" right="40" bottom="30" left="40"/>
+    </padding>
+
+    <!-- Header -->
+    <VBox spacing="5">
+        <Text fx:id="dialogTitle" text="Add Donor Eligibility" styleClass="dialog-title"/>
+        <Text text="Register a new donor eligibility record in the BloodLink network." styleClass="dialog-subtitle"/>
+    </VBox>
+
+    <!-- Form -->
+    <ScrollPane fitToWidth="true" styleClass="form-scroll">
+        <VBox spacing="20">
+            <!-- Donor ID -->
+            <VBox spacing="8">
+                <Label text="Donor ID (User ID)" styleClass="form-label"/>
+                <ComboBox fx:id="donorIdCombo" promptText="Select a donor" styleClass="form-field" maxWidth="Infinity">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </ComboBox>
+            </VBox>
+
+            <!-- Blood Type Cache -->
+            <VBox spacing="8">
+                <Label text="Blood Type" styleClass="form-label"/>
+                <ComboBox fx:id="bloodTypeCombo" promptText="Select blood type" styleClass="form-field" maxWidth="Infinity">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </ComboBox>
+            </VBox>
+
+            <!-- Is Currently Eligible -->
+            <VBox spacing="8">
+                <Label text="Current Eligibility Status" styleClass="form-label"/>
+                <ComboBox fx:id="eligibilityStatusCombo" promptText="Select status" styleClass="form-field" maxWidth="Infinity">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </ComboBox>
+            </VBox>
+
+            <!-- Days Until Eligible -->
+            <VBox spacing="8">
+                <Label text="Days Until Eligible" styleClass="form-label"/>
+                <TextField fx:id="daysUntilEligibleField" promptText="e.g. 0, 30, 60" styleClass="form-field">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </TextField>
+            </VBox>
+
+            <!-- Latitude Cache -->
+            <VBox spacing="8">
+                <Label text="Latitude" styleClass="form-label"/>
+                <TextField fx:id="latitudeField" promptText="e.g. 36.806389" styleClass="form-field">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </TextField>
+            </VBox>
+
+            <!-- Longitude Cache -->
+            <VBox spacing="8">
+                <Label text="Longitude" styleClass="form-label"/>
+                <TextField fx:id="longitudeField" promptText="e.g. 10.181667" styleClass="form-field">
+                    <padding>
+                        <Insets top="10" right="15" bottom="10" left="15"/>
+                    </padding>
+                </TextField>
+            </VBox>
+
+        </VBox>
+    </ScrollPane>
+
+    <!-- Action Buttons -->
+    <HBox spacing="15" alignment="CENTER_RIGHT">
+        <Button text="Cancel" styleClass="btn-cancel" onAction="#handleCancel">
+            <padding>
+                <Insets top="12" right="24" bottom="12" left="24"/>
+            </padding>
+        </Button>
+        <Button fx:id="saveButton" text="Create Record" styleClass="btn-primary" onAction="#handleSave">
+            <padding>
+                <Insets top="12" right="24" bottom="12" left="24"/>
+            </padding>
+        </Button>
+    </HBox>
+
+</VBox>

@@ -1,23 +1,18 @@
 {% set page_title = 'Alerts' %}
-{% set page_description = 'Read-only donor-facing alert timeline and response state.' %}
+{% set page_description = 'Donor-facing alert timeline and response state.' %}
 {% extends 'alerts/layouts/front_office.html.twig' %}
 
 {% block module_content %}
-    <div class="grid gap-4 lg:grid-cols-3">
+    <div class="grid gap-4 lg:grid-cols-2">
         <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
             <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Total alerts</p>
-            <p class="mt-3 text-3xl font-extrabold tracking-tight text-slate-950">{{ summary.total }}</p>
+            <p class="mt-3 text-3xl font-extrabold tracking-tight text-slate-950">{{ result.total|default(0) }}</p>
             <p class="mt-2 text-sm text-slate-500">All donor notifications visible to your account.</p>
         </article>
         <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
             <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Unread</p>
-            <p class="mt-3 text-3xl font-extrabold tracking-tight text-slate-950">{{ summary.unread }}</p>
+            <p class="mt-3 text-3xl font-extrabold tracking-tight text-slate-950">{{ unread_alerts_count|default(0) }}</p>
             <p class="mt-2 text-sm text-slate-500">Notifications that still need your attention.</p>
-        </article>
-        <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-            <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Timeline focus</p>
-            <p class="mt-3 text-xl font-extrabold tracking-tight text-slate-950">Read only</p>
-            <p class="mt-2 text-sm text-slate-500">This front-office view stays donor-friendly and never exposes admin CRUD actions.</p>
         </article>
     </div>
 

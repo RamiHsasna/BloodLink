@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.canvas.*?>
+<?import javafx.geometry.*?>
+
+<HBox xmlns:fx="http://javafx.com/fxml"
+    fx:controller="tn.edu.esprit.controllers.AuthController"
+      styleClass="root-container"
+    stylesheets="@../styles/auth.css"
+      prefWidth="1280" prefHeight="780">
+
+    <!-- Left side  -->
+    <VBox styleClass="brand-panel" HBox.hgrow="ALWAYS">
+
+        <!-- Logo -->
+        <HBox styleClass="logo-row" alignment="CENTER_LEFT">
+            <Canvas fx:id="logoCanvas" width="40" height="40"/>
+            <Label text="BloodLink" styleClass="logo-text"/>
+        </HBox>
+
+        
+        <VBox styleClass="illus-card" VBox.vgrow="ALWAYS" alignment="CENTER">
+            <Canvas fx:id="illustrationCanvas" width="460" height="260"/> 
+        </VBox>
+
+        
+        <VBox styleClass="brand-copy" spacing="0">
+            <Label text="Every drop is a lifeline" styleClass="brand-headline"/>
+            <Label text="Be someone's miracle today" styleClass="brand-headline"/>
+            <Label text="Join thousands of donors helping hospitals stay ready ."
+                   styleClass="brand-desc" wrapText="true"/>
+
+
+            <HBox styleClass="stats-row">
+                <VBox styleClass="stat-item">
+                    <Label text="12k+" styleClass="stat-num"/>
+                    <Label text="Active donors" styleClass="stat-lbl"/>
+                </VBox>
+                <VBox styleClass="stat-item">
+                    <Label text="200+" styleClass="stat-num"/>
+                    <Label text="Partner hospitals" styleClass="stat-lbl"/>
+                </VBox>
+                <VBox styleClass="stat-item">
+                    <Label text="98%" styleClass="stat-num"/>
+                    <Label text="Response rate" styleClass="stat-lbl"/>
+                </VBox>
+            </HBox>
+        </VBox>
+    </VBox>
+
+    <!-- Right side -->
+
+<!--    <ScrollPane styleClass="form-scroll" fitToWidth="true" fitToHeight="true"-->
+<!--                hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">-->
+
+        <VBox styleClass="form-panel" alignment="CENTER">
+
+            <VBox styleClass="form-box" maxWidth="420">
+
+                
+                <HBox styleClass="tab-switcher">
+                    <Button fx:id="tabSignIn" text="Sign in" styleClass="tab-btn,tab-active"
+                            onAction="#showSignIn" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                    <Button fx:id="tabSignUp" text="Create account" styleClass="tab-btn"
+                            onAction="#showSignUp" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                </HBox>
+
+                <!-- SIGN IN  -->
+                <VBox fx:id="signInPane" styleClass="form-pane">
+                    <Label text="Welcome back" styleClass="form-title"/>
+                    <Label text="Sign in to your account to continue."
+                           styleClass="form-sub" wrapText="true"/>
+
+                    <Label text="EMAIL ADDRESS" styleClass="field-label"/>
+                    <TextField fx:id="signInEmail" promptText="you@example.com" styleClass="field-input"/>
+                    <Label fx:id="signInEmailError" styleClass="field-error-text" managed="false" visible="false"/>
+
+                    <Label text="PASSWORD" styleClass="field-label"/>
+                    <StackPane styleClass="pw-stack">
+                        <PasswordField fx:id="signInPassword" promptText="Enter your password" styleClass="field-input"/>
+                        <TextField fx:id="signInPasswordVisible" promptText="Enter your password"
+                                   styleClass="field-input,hidden" managed="false" visible="false"/>
+                        <Button fx:id="toggleSignInPw" text="👁" styleClass="pw-eye-btn"
+                                onAction="#toggleSignInPassword" StackPane.alignment="CENTER_RIGHT"/>
+                    </StackPane>
+                    <Label fx:id="signInPasswordError" styleClass="field-error-text" managed="false" visible="false"/>
+
+                    <HBox alignment="CENTER_RIGHT">
+                        <Hyperlink text="Forgot password?" styleClass="forgot-link" onAction="#forgotPassword"/>
+                    </HBox>
+
+                    <Button text="Sign in" styleClass="btn-primary" maxWidth="Infinity"
+                            onAction="#handleSignIn"/>
+
+                    <HBox styleClass="divider-row" alignment="CENTER">
+                        <Region styleClass="div-line" HBox.hgrow="ALWAYS"/>
+                        <Label text="or continue with" styleClass="div-txt"/>
+                        <Region styleClass="div-line" HBox.hgrow="ALWAYS"/>
+                    </HBox>
+
+                    <Button text="Continue with Google" styleClass="btn-google" maxWidth="Infinity"
+                            onAction="#handleGoogle"/>
+
+                    <HBox alignment="CENTER" styleClass="switch-row">
+                        <Label text="No account? " styleClass="hint-text"/>
+                        <Hyperlink text="Create one free" styleClass="hint-link" onAction="#showSignUp"/>
+                    </HBox>
+                </VBox>
+
+                <!-- SIGN UP -->
+                <VBox fx:id="signUpPane" styleClass="form-pane,hidden" visible="false" managed="false">
+
+                    <!-- Step dots -->
+                    <HBox fx:id="stepDots" styleClass="step-dots" spacing="6">
+                        <Region fx:id="dot0" styleClass="step-dot,dot-active"/>
+                        <Region fx:id="dot1" styleClass="step-dot"/>
+                    </HBox>
+
+                    <!-- Step 0 -->
+                    <VBox fx:id="step0Pane">
+                        <Label text="Create account" styleClass="form-title"/>
+                        <Label text="Join BloodLink and start making a difference."
+                               styleClass="form-sub" wrapText="true"/>
+
+                        <HBox spacing="14">
+                            <VBox HBox.hgrow="ALWAYS">
+                                <Label text="FIRST NAME" styleClass="field-label"/>
+                                <TextField fx:id="firstName" promptText="Example" styleClass="field-input"/>
+                                <Label fx:id="firstNameError" styleClass="field-error-text" managed="false" visible="false"/>
+                            </VBox>
+                            <VBox HBox.hgrow="ALWAYS">
+                                <Label text="LAST NAME" styleClass="field-label"/>
+                                <TextField fx:id="lastName" promptText="Example" styleClass="field-input"/>
+                                <Label fx:id="lastNameError" styleClass="field-error-text" managed="false" visible="false"/>
+                            </VBox>
+                        </HBox>
+
+                        <Label text="EMAIL ADDRESS" styleClass="field-label"/>
+                        <TextField fx:id="signUpEmail" promptText="you@example.com" styleClass="field-input"/>
+                        <Label fx:id="signUpEmailError" styleClass="field-error-text" managed="false" visible="false"/>
+
+                        <Label text="PHONE NUMBER" styleClass="field-label"/>
+                        <TextField fx:id="phone" promptText="+216 00 000 000" styleClass="field-input"/>
+
+                        <Label text="CITY" styleClass="field-label"/>
+                        <TextField fx:id="city" promptText="e.g. Tunis" styleClass="field-input"/>
+                        <Label fx:id="cityError" styleClass="field-error-text" managed="false" visible="false"/>
+
+                        <Label text="BLOOD TYPE" styleClass="field-label"/>
+                        <ComboBox fx:id="bloodTypeCombo" promptText="Select blood type" maxWidth="Infinity" styleClass="bloodtype-combo"/>
+                        <Label fx:id="bloodTypeError" styleClass="field-error-text" managed="false" visible="false"/>
+
+                        <Button text="Continue →" styleClass="btn-primary" maxWidth="Infinity"
+                                onAction="#goToStep1"/>
+                    </VBox>
+
+                    <!-- Step 1 -->
+                    <VBox fx:id="step1Pane" visible="false" managed="false">
+                        <Label text="Secure your account" styleClass="form-title"/>
+                        <Label text="Choose a strong password to protect your account."
+                               styleClass="form-sub" wrapText="true"/>
+
+                        <Label text="PASSWORD" styleClass="field-label"/>
+                        <StackPane styleClass="pw-stack">
+                            <PasswordField fx:id="newPassword" promptText="Min. 8 characters" styleClass="field-input"/>
+                            <TextField fx:id="newPasswordVisible" promptText="Min. 8 characters"
+                                       styleClass="field-input,hidden" managed="false" visible="false"/>
+                            <Button text="👁" styleClass="pw-eye-btn"
+                                    onAction="#toggleNewPassword" StackPane.alignment="CENTER_RIGHT"/>
+                        </StackPane>
+                        <Label fx:id="newPasswordError" styleClass="field-error-text" managed="false" visible="false"/>
+
+                        <Label text="CONFIRM PASSWORD" styleClass="field-label"/>
+                        <StackPane styleClass="pw-stack">
+                            <PasswordField fx:id="confirmPassword" promptText="Repeat password" styleClass="field-input"/>
+                            <TextField fx:id="confirmPasswordVisible" promptText="Repeat password"
+                                       styleClass="field-input,hidden" managed="false" visible="false"/>
+                            <Button text="👁" styleClass="pw-eye-btn"
+                                    onAction="#toggleConfirmPassword" StackPane.alignment="CENTER_RIGHT"/>
+
+                        </StackPane>
+                        <Label fx:id="confirmPasswordError" styleClass="field-error-text" managed="false" visible="false"/>
+
+
+                        <HBox styleClass="terms-row" alignment="TOP_LEFT" spacing="8">
+                            <CheckBox fx:id="termsCheck" styleClass="terms-check"/>
+                            <TextFlow>
+                                <Text text="I agree to the " styleClass="terms-text"/>
+                                <Hyperlink text="Terms of Service" styleClass="terms-link" onAction="#openTerms"/>
+                                <Text text=" and " styleClass="terms-text"/>
+                                <Hyperlink text="Privacy Policy" styleClass="terms-link" onAction="#openPrivacy"/>
+                            </TextFlow>
+                        </HBox>
+                        <Label fx:id="termsError" styleClass="field-error-text" managed="false" visible="false"/>
+
+                        <Button text="✓  Create my account" styleClass="btn-primary" maxWidth="Infinity"
+                                onAction="#handleCreateAccount"/>
+
+                        <HBox alignment="CENTER">
+                            <Hyperlink text="← Back" styleClass="back-link" onAction="#goToStep0"/>
+                        </HBox>
+                    </VBox>
+
+                    <HBox alignment="CENTER" styleClass="switch-row">
+                        <Label text="Already have an account? " styleClass="hint-text"/>
+                        <Hyperlink text="Sign in" styleClass="hint-link" onAction="#showSignIn"/>
+                    </HBox>
+                </VBox>
+
+            </VBox>
+        </VBox>
+    </HBox>
+

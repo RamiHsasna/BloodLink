@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17"
+    xmlns:fx="http://javafx.com/fxml/1" fx:controller="tn.edu.esprit.controllers.AddTransferLogDialogController" spacing="15" style="-fx-background-color: white; -fx-padding: 24; -fx-border-radius: 8; -fx-background-radius: 8;" prefWidth="680">
+
+    <VBox spacing="4">
+        <Label text="Audit transfer progress" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #1e293b;"/>
+        <Label text="Record the progress state of an inter-hospital transfer." style="-fx-font-size: 13px; -fx-text-fill: #64748b;"/>
+    </VBox>
+
+    <Separator />
+
+    <VBox spacing="8">
+        <Label text="Transfer ID (source reference)" style="-fx-font-weight: bold; -fx-text-fill: #334155;"/>
+        <TextField fx:id="txtTransferId" promptText="Enter numeric transfer request ID" styleClass="form-input"/>
+        <Label fx:id="lblTransferIdError" textFill="#ef4444" visible="false" managed="false" style="-fx-font-size: 11px;"/>
+        <Label fx:id="lblStatusDetection" visible="false" managed="false" wrapText="true" styleClass="form-hint"/>
+    </VBox>
+
+    <VBox spacing="8">
+        <Label text="Log action" style="-fx-font-weight: bold; -fx-text-fill: #334155;"/>
+        <ComboBox fx:id="cbAction" promptText="Choose an action" maxWidth="Infinity" styleClass="form-input"/>
+        <Label fx:id="lblActionError" textFill="#ef4444" visible="false" managed="false" style="-fx-font-size: 11px;"/>
+    </VBox>
+
+    <HBox spacing="15">
+        <VBox spacing="8" HBox.hgrow="ALWAYS">
+            <Label text="Current status" style="-fx-font-weight: bold; -fx-text-fill: #334155;"/>
+            <ComboBox fx:id="cbPreviousStatus" promptText="Choose a status" maxWidth="Infinity" styleClass="form-input"/>
+        </VBox>
+        <VBox spacing="8" HBox.hgrow="ALWAYS">
+            <Label text="Status after action" style="-fx-font-weight: bold; -fx-text-fill: #334155;"/>
+            <ComboBox fx:id="cbNewStatus" promptText="Choose the next status" maxWidth="Infinity" styleClass="form-input"/>
+        </VBox>
+    </HBox>
+
+    <VBox spacing="8">
+        <Label text="Operator notes" style="-fx-font-weight: bold; -fx-text-fill: #334155;"/>
+        <TextArea fx:id="taNotes" promptText="Add context for this update (anomalies, delays)..." prefRowCount="4" wrapText="true" styleClass="form-input"/>
+    </VBox>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT" style="-fx-padding: 10 0 0 0;">
+        <Label fx:id="lblStatusMessage" visible="false" managed="false" style="-fx-font-weight: bold; -fx-padding: 0 10 0 0;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="Close" fx:id="btnCancel" onAction="#handleCancel" style="-fx-background-color: transparent; -fx-border-color: #cbd5e1; -fx-border-radius: 4; -fx-text-fill: #475569; -fx-padding: 8 16; -fx-cursor: hand;"/>
+        <Button text="Submit log" fx:id="btnSubmit" onAction="#handleSubmit" style="-fx-background-color: #2563eb; -fx-text-fill: white; -fx-border-radius: 4; -fx-background-radius: 4; -fx-font-weight: bold; -fx-padding: 8 16; -fx-cursor: hand;"/>
+    </HBox>
+</VBox>

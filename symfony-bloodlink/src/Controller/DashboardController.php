@@ -9,6 +9,7 @@ use Throwable;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
@@ -81,6 +82,13 @@ class DashboardController extends AbstractController {
         ]);
     }
 
+    private function getUnreadAlertsCount(Connection $connection, string $userId): int
+    {
+        return (int) $connection->fetchOne("
+            SELECT COUNT(*) FROM donor_alerts WHERE donor_id = ? AND is_read = false
+        ", [$userId]);
+    }
+
     #[Route("/dashboard/donor", name: "dashboard_donor_home", methods: ["GET"])]
     public function donorHome(
         Request $request,
@@ -108,10 +116,26 @@ class DashboardController extends AbstractController {
             $ownRecord,
         );
 
+        // Fetch recent alerts for the donor
+        $recentAlerts = $connection->fetchAllAssociative("
+            SELECT da.*, a.title, a.message AS content, a.severity, h.name as hospital_name
+            FROM donor_alerts da
+            JOIN alerts a ON da.alert_id::text = a.alert_id::text
+            JOIN hospital h ON a.hospital_id::text = h.hospital_id::text
+            WHERE da.donor_id::text = ?
+            ORDER BY da.notification_sent_at DESC
+            LIMIT 3
+        ", [$userId]);
+
+        $unreadAlertsCount = $this->getUnreadAlertsCount($connection, $userId);
+
         return $this->render("dashboard/donor_home.html.twig", [
             "session_user" => $sessionUser,
             "own_record" => $ownRecord,
             "donor_summary" => $donorSummary,
+            "recent_alerts" => $recentAlerts,
+            "unread_alerts_count" => $unreadAlertsCount,
+            "route" => "dashboard_donor_home",
         ]);
     }
 
@@ -172,6 +196,7 @@ class DashboardController extends AbstractController {
         }
 
         $userId = (string) ($sessionUser['id'] ?? '');
+        $unreadAlertsCount = $this->getUnreadAlertsCount($connection, $userId);
         $records = $this->fetchDonorOwnRecord($connection, $userId);
         $ownRecord = $records[0] ?? null;
         $donorSummary = $this->buildDonorSummary($connection, $userId, $ownRecord);
@@ -215,6 +240,8 @@ class DashboardController extends AbstractController {
             'session_user' => $sessionUser,
             'donor_summary' => $donorSummary,
             'articles' => $articles,
+            'unread_alerts_count' => $unreadAlertsCount,
+            'route' => 'dashboard_donor_articles',
         ]);
     }
 
@@ -232,6 +259,7 @@ class DashboardController extends AbstractController {
         }
 
         $userId = (string) ($sessionUser['id'] ?? '');
+        $unreadAlertsCount = $this->getUnreadAlertsCount($connection, $userId);
         $records = $this->fetchDonorOwnRecord($connection, $userId);
         $ownRecord = $records[0] ?? null;
         $donorSummary = $this->buildDonorSummary($connection, $userId, $ownRecord);
@@ -267,6 +295,8 @@ class DashboardController extends AbstractController {
             'session_user' => $sessionUser,
             'donor_summary' => $donorSummary,
             'tip_groups' => $tipGroups,
+            'unread_alerts_count' => $unreadAlertsCount,
+            'route' => 'dashboard_donor_tips',
         ]);
     }
 
@@ -454,7 +484,7 @@ class DashboardController extends AbstractController {
                                     <span style=\"color:#c52228;font-size:28px;font-weight:700;display:inline-block;vertical-align:middle;\">BloodLink</span>
                                 </div>
                                 <div style=\"padding:0 40px 40px 40px;\">
-                                    <h1 style=\"font-size:22px;font-weight:700;margin:0 0 24px 0;color:#1a1a1a;\">Bienvenue sur la plateforme</h1>
+                                    <h1 style=\"font-size:22px;font-weight:700;margin:0 0 24px 0;color:#1a1a1a;\">Welcome to BloodLink</h1>
                                     <div style=\"font-size:16px;line-height:1.6;color:#444444;margin-bottom:30px;\">
                                         <p>Hello <strong>$firstName</strong>,</p>
                                         <p>Your account is created successfully , you can now login and continue your activities.</p>
@@ -465,8 +495,8 @@ class DashboardController extends AbstractController {
                                     </div>
                                 </div>
                                 <div style=\"padding:0 40px 40px 40px;font-size:14px;color:#666666;line-height:1.5;\">
-                                    <p>Merci pour votre solidarité,</p>
-                                    <p style=\"margin-top:20px;font-weight:600;color:#333333;\">L'équipe BloodLink</p>
+                                    <p>Thank you for your support,</p>
+                                    <p style=\"margin-top:20px;font-weight:600;color:#333333;\">The BloodLink Team</p>
                                 </div>
                             </div>
                         </div>
@@ -654,7 +684,7 @@ class DashboardController extends AbstractController {
                 $notificationEmail = (new Email())
                     ->from('bloodlink.supportteam@gmail.com')
                     ->to($email)
-                    ->subject('Mise à jour de votre compte BloodLink')
+                    ->subject('BloodLink Account Information Updated')
                     ->html("
                         <div style=\"font-family:'Segoe UI',Tahoma,sans-serif;color:#333;background-color:#f6f9fc;padding:40px 0;\">
                             <div style=\"max-width:600px;margin:0 auto;background-color:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);\">
@@ -663,20 +693,20 @@ class DashboardController extends AbstractController {
                                     <span style=\"color:#c52228;font-size:28px;font-weight:700;display:inline-block;vertical-align:middle;\">BloodLink</span>
                                 </div>
                                 <div style=\"padding:0 40px 40px 40px;\">
-                                    <h1 style=\"font-size:22px;font-weight:700;margin:0 0 24px 0;color:#1a1a1a;\">Information de compte mise à jour</h1>
+                                    <h1 style=\"font-size:22px;font-weight:700;margin:0 0 24px 0;color:#1a1a1a;\">Account Information Updated</h1>
                                     <div style=\"font-size:16px;line-height:1.6;color:#444444;margin-bottom:30px;\">
-                                        <p>Bonjour <strong>$firstName</strong>,</p>
-                                        <p>Un administrateur a mis à jour les informations de votre compte sur la plateforme BloodLink.</p>
+                                        <p>Hello <strong>$firstName</strong>,</p>
+                                        <p>An administrator has updated your account information on the BloodLink platform.</p>
                                         $changesReport
-                                        <p>Si vous avez des questions ou si vous n'attendiez pas cette modification, veuillez contacter le support.</p>
+                                        <p>If you have any questions or did not expect this update, please contact the support team.</p>
                                     </div>
                                     <div style=\"text-align:center;\">
-                                        <a href=\"#\" style=\"background-color:#c52228;color:#ffffff;padding:16px 32px;text-decoration:none;border-radius:8px;font-weight:700;font-size:16px;display:inline-block;\">Accéder à mon compte</a>
+                                        <a href=\"#\" style=\"background-color:#c52228;color:#ffffff;padding:16px 32px;text-decoration:none;border-radius:8px;font-weight:700;font-size:16px;display:inline-block;\">Access My Account Details</a>
                                     </div>
                                 </div>
                                 <div style=\"padding:0 40px 40px 40px;font-size:14px;color:#666666;line-height:1.5;\">
-                                    <p>Merci pour votre solidarité,</p>
-                                    <p style=\"margin-top:20px;font-weight:600;color:#333333;\">L'équipe BloodLink</p>
+                                    <p>Thank you for your support,</p>
+                                    <p style=\"margin-top:20px;font-weight:600;color:#333333;\">The BloodLink Team</p>
                                 </div>
                             </div>
                         </div>
@@ -1074,6 +1104,8 @@ class DashboardController extends AbstractController {
             "status" => $status,
             "stats" => $stats,
             "donor_summary" => $donorSummary,
+            "unread_alerts_count" => $this->getUnreadAlertsCount($connection, (string) ($sessionUser["id"] ?? "")),
+            "route" => "dashboard_donor_eligibility",
         ]);
     }
 
@@ -1873,6 +1905,22 @@ class DashboardController extends AbstractController {
      *
      * @return array<string, mixed>
      */
+    #[Route("/dashboard/donor/summary-api", name: "dashboard_donor_summary_api", methods: ["GET"])]
+    public function donorSummaryApi(Request $request, Connection $connection): JsonResponse
+    {
+        $sessionUser = $request->getSession()->get("auth_user");
+        if (!$sessionUser) {
+            return new JsonResponse(['error' => 'Unauthorized'], 401);
+        }
+
+        $userId = (string) ($sessionUser["id"] ?? "");
+        $records = $this->fetchDonorOwnRecord($connection, $userId);
+        $ownRecord = $records[0] ?? null;
+        $donorSummary = $this->buildDonorSummary($connection, $userId, $ownRecord);
+
+        return new JsonResponse($donorSummary);
+    }
+
     private function buildDonorSummary(
         Connection $connection,
         string $userId,

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="tn.edu.esprit.controllers.AIPredictionController"
+      spacing="16" prefWidth="600" prefHeight="600"
+      style="-fx-background-color: #f0f4f8; -fx-padding: 24;">
+
+    <!-- Header -->
+    <HBox alignment="CENTER_LEFT" spacing="12">
+        <Label text="🤖 AI Blood Demand Prediction"
+               style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #1a2535;"/>
+    </HBox>
+
+    <Label text="Powered by Claude AI — analyzes your donation history to predict next month's needs."
+           style="-fx-font-size: 13px; -fx-text-fill: #6b7c93;" wrapText="true"/>
+
+    <!-- Status bar -->
+    <HBox spacing="12" alignment="CENTER_LEFT">
+        <ProgressIndicator fx:id="loadingSpinner" prefWidth="24" prefHeight="24"/>
+        <Label fx:id="statusLabel" wrapText="true"
+               style="-fx-font-size: 13px; -fx-text-fill: #4a6278;"
+               HBox.hgrow="ALWAYS"/>
+    </HBox>
+
+    <!-- Results -->
+    <ScrollPane fx:id="scrollPane" fitToWidth="true" VBox.vgrow="ALWAYS"
+                style="-fx-background-color: transparent; -fx-background: transparent;">
+        <VBox fx:id="predictionContainer" spacing="12">
+            <padding>
+                <Insets top="4" right="4" bottom="4" left="4"/>
+            </padding>
+        </VBox>
+    </ScrollPane>
+
+    <!-- Buttons -->
+    <HBox spacing="12" alignment="CENTER_RIGHT">
+        <Button fx:id="analyzeBtn" text="🤖 Analyze Now" onAction="#handleAnalyze"
+                style="-fx-background-color: #e53935; -fx-text-fill: white;
+                       -fx-font-weight: bold; -fx-background-radius: 8;
+                       -fx-padding: 10 24 10 24; -fx-cursor: hand;"/>
+        <Button text="Close" onAction="#handleClose"
+                style="-fx-background-color: #f0f4f8; -fx-text-fill: #1a2535;
+                       -fx-font-weight: bold; -fx-background-radius: 8;
+                       -fx-padding: 10 24 10 24; -fx-cursor: hand;
+                       -fx-border-color: #dde3ec; -fx-border-radius: 8;"/>
+    </HBox>
+</VBox>

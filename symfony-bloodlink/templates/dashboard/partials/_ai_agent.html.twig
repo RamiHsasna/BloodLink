@@ -1,0 +1,445 @@
+{# templates/dashboard/partials/_ai_agent.html.twig #}
+<style>
+    /* ── Chat modal ─────────────────────────────────────────────────────────── */
+    #modal-chat-ai {
+     position: fixed;
+     inset: 0;
+     background: rgba(15,23,42,.55);
+     display: none;
+     align-items: flex-end;
+     justify-content: flex-end;
+     z-index: 1100;
+     padding: 24px;
+    }
+   #modal-chat-ai.open { display: flex; }
+
+    #chat-window {
+     width: min(460px, 96vw);
+     height: min(640px, 90vh);
+     background: #fff;
+     border-radius: 18px;
+     box-shadow: 0 32px 80px rgba(0,0,0,.22);
+     display: flex;
+     flex-direction: column;
+     overflow: hidden;
+     animation: slideUp .22s ease;
+    }
+ @keyframes slideUp {
+    from { transform: translateY(24px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+ }
+
+ /* Header */
+ #chat-header {
+    background: linear-gradient(135deg, #8f1d1f 0%, #b3272a 100%);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+ }
+ .chat-avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.2);
+    display: grid; place-items: center;
+    font-size: 18px;
+    flex-shrink: 0;
+ }
+ .chat-header-info h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+ }
+ .chat-header-info p {
+    margin: 2px 0 0;
+    font-size: 11px;
+    color: rgba(255,255,255,.75);
+ }
+ .chat-close {
+    margin-left: auto;
+    background: rgba(255,255,255,.15);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    width: 32px; height: 32px;
+    font-size: 16px;
+    cursor: pointer;
+    display: grid; place-items: center;
+ }
+ .chat-close:hover { background: rgba(255,255,255,.25); }
+
+ /* Quick questions */
+ #chat-quick {
+    padding: 12px 16px 0;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 10px;
+ }
+ .quick-btn {
+    font-size: 11px;
+    font-weight: 600;
+    background: #fff1f2;
+    color: #9f1239;
+    border: 1px solid #fecaca;
+    border-radius: 20px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background .15s;
+    white-space: nowrap;
+ }
+ .quick-btn:hover { background: #fee2e2; }
+
+ /* Messages */
+ #chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scroll-behavior: smooth;
+ }
+ #chat-messages::-webkit-scrollbar { width: 4px; }
+ #chat-messages::-webkit-scrollbar-track { background: transparent; }
+ #chat-messages::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+
+ .msg { display: flex; gap: 8px; align-items: flex-end; max-width: 92%; }
+ .msg.user { flex-direction: row-reverse; align-self: flex-end; }
+ .msg.bot  { align-self: flex-start; }
+
+ .msg-avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: grid; place-items: center;
+    font-size: 12px;
+    font-weight: 700;
+ }
+ .msg.bot  .msg-avatar { background: linear-gradient(135deg,#8f1d1f,#b3272a); color: #fff; }
+ .msg.user .msg-avatar { background: linear-gradient(135deg,#4f46e5,#7c3aed); color: #fff; }
+
+ .msg-bubble {
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 13.5px;
+    line-height: 1.6;
+    max-width: 100%;
+    word-break: break-word;
+ }
+ .msg.bot  .msg-bubble { background: #f1f5f9; color: #0f172a; border-bottom-left-radius: 4px; }
+ .msg.user .msg-bubble { background: linear-gradient(135deg,#4f46e5,#7c3aed); color: #fff; border-bottom-right-radius: 4px; }
+
+ /* Typing indicator */
+ .typing-dots { display: flex; gap: 4px; align-items: center; padding: 4px 0; }
+ .typing-dots span {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #94a3b8;
+    animation: bounce 1.2s infinite;
+ }
+ .typing-dots span:nth-child(2) { animation-delay: .2s; }
+ .typing-dots span:nth-child(3) { animation-delay: .4s; }
+ @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30%            { transform: translateY(-6px); }
+ }
+
+ /* Input bar */
+ #chat-input-bar {
+    padding: 12px 14px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    flex-shrink: 0;
+    background: #fff;
+ }
+ #chat-input {
+    flex: 1;
+    border: 1px solid #d6deea;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-family: inherit;
+    font-size: 13px;
+    resize: none;
+    min-height: 40px;
+    max-height: 100px;
+    overflow-y: auto;
+    outline: none;
+    line-height: 1.5;
+    background: #f8fafc;
+ }
+ #chat-input:focus { border-color: #8f1d1f; background: #fff; }
+ #chat-send {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg,#8f1d1f,#b3272a);
+    border: none;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+    transition: opacity .15s;
+ }
+ #chat-send:disabled { opacity: .4; cursor: default; }
+ #chat-send:hover:not(:disabled) { opacity: .9; }
+
+ .chat-disclaimer {
+    text-align: center;
+    font-size: 10px;
+    color: #94a3b8;
+    padding: 4px 16px 10px;
+    flex-shrink: 0;
+ }
+
+ .msg-bubble strong { font-weight: 700; }
+ .msg-bubble ul { margin: 6px 0; padding-left: 16px; }
+ .msg-bubble li { margin: 2px 0; }
+</style>
+
+<!-- ══ AI CHATBOT MODAL ══ -->
+<div id="modal-chat-ai">
+    <div id="chat-window">
+        <!-- Header -->
+        <div id="chat-header">
+            <div class="chat-avatar">🩸</div>
+            <div class="chat-header-info">
+                <h4>BloodLink Donor AI</h4>
+                <p>Your personal donation assistant</p>
+            </div>
+            <button class="chat-close" onclick="closeChat()" type="button">✕</button>
+        </div>
+
+        <!-- Quick question chips -->
+        <div id="chat-quick">
+            <button class="quick-btn" type="button" onclick="quickAsk('Am I eligible to donate right now?')">🩺 Am I eligible?</button>
+            <button class="quick-btn" type="button" onclick="quickAsk('Where are the next donation events?')">📍 Find events</button>
+            <button class="quick-btn" type="button" onclick="quickAsk('How can I prepare for my next donation?')">🍎 Prep tips</button>
+            <button class="quick-btn" type="button" onclick="quickAsk('What are the benefits of donating blood?')">✨ Why donate?</button>
+            <button class="quick-btn" type="button" onclick="quickAsk('Show my donation history summary')">📊 My history</button>
+        </div>
+
+        <!-- Messages area -->
+        <div id="chat-messages"></div>
+
+        <!-- Input bar -->
+        <div id="chat-input-bar">
+            <textarea id="chat-input"
+                placeholder="Ask about eligibility, events, tips…"
+                rows="1"
+                onkeydown="handleKey(event)"
+                oninput="autoResize(this)"></textarea>
+            <button id="chat-send" type="button" onclick="sendMessage()">➤</button>
+        </div>
+        <div class="chat-disclaimer">AI may make mistakes · Always consult a medical professional</div>
+    </div>
+</div>
+
+<script>
+(function() {
+    let chatHistory = [];
+    let isBotTyping = false;
+    let donorSummaryCache = null;
+
+    // Fetch donor summary if not available
+    async function getDonorSummary() {
+        if (donorSummaryCache) return donorSummaryCache;
+        
+        // Try to get from Twig if available
+        const twigSummary = {{ donor_summary|default('null')|json_encode|raw }};
+        if (twigSummary && twigSummary !== 'null') {
+            donorSummaryCache = twigSummary;
+            return donorSummaryCache;
+        }
+
+        try {
+            const res = await fetch('/dashboard/donor/summary-api');
+            if (res.ok) {
+                donorSummaryCache = await res.json();
+                return donorSummaryCache;
+            }
+        } catch (e) {
+            console.error('Failed to fetch donor summary', e);
+        }
+        return {};
+    }
+
+    // Build donor context from summary
+    async function buildDonorContext() {
+        const summary = await getDonorSummary();
+        const session = {{ app.session.get('auth_user')|default({})|json_encode|raw }};
+        
+        return `
+You are a helpful AI assistant for a BloodLink donor named ${session.first_name || 'Donor'}.
+Your goal is to help them manage their donations and stay informed.
+
+DONOR PROFILE:
+- Name: ${session.first_name} ${session.last_name}
+- Email: ${session.email}
+- Eligibility Status: ${summary.status_text || 'Unknown'}
+- Days since last donation: ${summary.days_since_last_donation || 'N/A'}
+- Total donations: ${summary.total_donations || 0}
+- Note: ${summary.note || ''}
+
+When answering:
+1. Be encouraging and appreciative of their life-saving contributions.
+2. If they ask about eligibility, refer to their specific status but remind them a doctor makes the final call.
+3. Keep answers concise and use bullet points.
+4. If they ask about events, suggest they check the "Donation Events" tab for the most up-to-date map and timing.
+`.trim();
+    }
+
+    function messagesEl() { return document.getElementById('chat-messages'); }
+
+    function appendMessage(role, text, isHtml = false) {
+        const el = messagesEl();
+        const div = document.createElement('div');
+        div.className = 'msg ' + role;
+
+        const avatar = document.createElement('div');
+        avatar.className = 'msg-avatar';
+        avatar.textContent = role === 'bot' ? '🤖' : '👤';
+
+        const bubble = document.createElement('div');
+        bubble.className = 'msg-bubble';
+        if (isHtml) bubble.innerHTML = text;
+        else bubble.textContent = text;
+
+        div.appendChild(avatar);
+        div.appendChild(bubble);
+        el.appendChild(div);
+        el.scrollTop = el.scrollHeight;
+        return bubble;
+    }
+
+    function appendTyping() {
+        const el = messagesEl();
+        const div = document.createElement('div');
+        div.className = 'msg bot';
+        div.id = 'typing-indicator';
+        const avatar = document.createElement('div');
+        avatar.className = 'msg-avatar';
+        avatar.textContent = '🩸';
+        const bubble = document.createElement('div');
+        bubble.className = 'msg-bubble';
+        bubble.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+        div.appendChild(avatar);
+        div.appendChild(bubble);
+        el.appendChild(div);
+        el.scrollTop = el.scrollHeight;
+    }
+
+    function removeTyping() {
+        const t = document.getElementById('typing-indicator');
+        if (t) t.remove();
+    }
+
+    function formatResponse(text) {
+        return text
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/^- (.+)$/gm, '<li>$1</li>')
+            .replace(/((<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>')
+            .replace(/\n/g, '<br>');
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById('chat-input');
+        const text = input.value.trim();
+        if (!text || isBotTyping) return;
+
+        input.value = '';
+        input.style.height = '';
+        isBotTyping = true;
+        document.getElementById('chat-send').disabled = true;
+
+        appendMessage('user', text);
+        chatHistory.push({ role: 'user', content: text });
+        appendTyping();
+
+        try {
+            const context = await buildDonorContext();
+            const fullPrompt = context + '\n\n' +
+                chatHistory.slice(0, -1).map(m =>
+                    (m.role === 'user' ? 'User: ' : 'Assistant: ') + m.content
+                ).join('\n') +
+                (chatHistory.length > 1 ? '\n' : '') +
+                'User: ' + text + '\n\nPlease respond concisely.';
+
+            const formData = new FormData();
+            formData.append('prompt', fullPrompt);
+
+            const res = await fetch('/dashboard/donations/ai-predict', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await res.json();
+            const reply = data.result || data.error || 'Sorry, I could not get a response.';
+
+            removeTyping();
+            appendMessage('bot', formatResponse(reply), true);
+            chatHistory.push({ role: 'assistant', content: reply });
+
+            if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
+        } catch (err) {
+            removeTyping();
+            appendMessage('bot', '⚠️ Connection error. Please try again.', false);
+        }
+
+        isBotTyping = false;
+        document.getElementById('chat-send').disabled = false;
+    }
+
+    window.quickAsk = function(q) {
+        document.getElementById('chat-input').value = q;
+        sendMessage();
+    };
+
+    window.autoResize = function(el) {
+        el.style.height = '';
+        el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+    };
+
+    window.handleKey = function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    };
+
+    window.openChat = function() {
+        document.getElementById('modal-chat-ai').classList.add('open');
+        const el = messagesEl();
+        if (el.children.length === 0) {
+            appendMessage('bot',
+                'Hello! I\'m your BloodLink AI assistant. I can help you check your eligibility, find upcoming events, or give you tips for your next donation.<br><br>How can I help you today?',
+                true
+            );
+        }
+        setTimeout(() => document.getElementById('chat-input').focus(), 150);
+    };
+
+    window.closeChat = function() {
+        document.getElementById('modal-chat-ai').classList.remove('open');
+    };
+
+    window.sendMessage = sendMessage;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const chatModal = document.getElementById('modal-chat-ai');
+        if (chatModal) {
+            chatModal.addEventListener('click', function(e) {
+                if (e.target === this) closeChat();
+            });
+        }
+    });
+})();
+</script>

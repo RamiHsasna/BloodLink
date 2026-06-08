@@ -11,6 +11,7 @@ use App\Repository\BloodTransferRequestLogRepository;
 use App\Repository\BloodTransferRequestRepository;
 use App\Repository\DonationLogRepository;
 use App\Repository\DonationRepository;
+use Doctrine\DBAL\Connection;
 use App\Service\AuditAnomalyDetector;
 use App\Service\AuditAnomalyResult;
 use App\Service\AuditLogQrCodeGenerator;
@@ -694,6 +695,7 @@ class LogManagementController extends AbstractController
         Request $request,
         DonationRepository $donationRepository,
         BloodTransferRequestRepository $transferRepository,
+        Connection $connection,
     ): Response {
         if ($guard = $this->denyUnlessDonor($request)) {
             return $guard;
@@ -741,6 +743,8 @@ class LogManagementController extends AbstractController
             'donations' => $donations,
             'donation_logs' => $donationLogs,
             'transfer_context' => $transferContext,
+            'unread_alerts_count' => (int) $connection->fetchOne("SELECT COUNT(*) FROM donor_alerts WHERE donor_id = ? AND is_read = false", [$donorId]),
+            'is_audit_trail_route' => true,
         ]);
     }
 
