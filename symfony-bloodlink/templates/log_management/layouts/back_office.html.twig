@@ -46,10 +46,24 @@
         const input = root.querySelector('[data-audit-chatbot-input]');
         const messages = root.querySelector('[data-audit-chatbot-messages]');
 
-        const appendMessage = (text, type) => {
+        const formatResponse = (text) => {
+            return text
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/^- (.+)$/gm, '<li>$1</li>')
+                .replace(/((<li>.*<\/li>\n?)+)/g, '<ul style="margin:6px 0;padding-left:16px;">$1</ul>')
+                .replace(/\n/g, '<br>');
+        };
+
+        const appendMessage = (text, type, isHtml = false) => {
             const node = document.createElement('div');
             node.className = `audit-chatbot-message audit-chatbot-message--${type}`;
-            node.textContent = text;
+            if (isHtml) {
+                node.innerHTML = text;
+            } else {
+                node.textContent = text;
+            }
             messages.appendChild(node);
             messages.scrollTop = messages.scrollHeight;
             return node;
@@ -81,7 +95,7 @@
                     body: JSON.stringify({message})
                 });
                 const data = await response.json();
-                loading.textContent = data.reply || 'No response returned.';
+                loading.innerHTML = formatResponse(data.reply || 'No response returned.');
             } catch (error) {
                 loading.textContent = 'Unable to reach the audit assistant.';
             }

@@ -15,92 +15,161 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('styles/normalized-ui.css') }}">
     {% block extra_head_assets %}{% endblock %}
+    <style>
+        .fo-navbar {
+            background: #ffffff;
+            padding: 16px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .fo-navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .fo-navbar-logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #8f1d1f, #b3272a);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 900;
+            box-shadow: 0 4px 12px rgba(143,29,31,0.2);
+        }
+
+        .fo-navbar-brand-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .fo-navbar-brand-name {
+            font-size: 24px;
+            font-weight: 800;
+            color: #1e293b;
+            letter-spacing: -0.02em;
+            line-height: 1;
+            margin: 0;
+        }
+
+        .fo-navbar-links {
+            display: flex;
+            gap: 32px;
+        }
+
+        .fo-navbar-link {
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 600;
+            color: #475569;
+            transition: color 0.2s;
+        }
+
+        .fo-navbar-link:hover,
+        .fo-navbar-link.is-active {
+            color: #dc2626;
+        }
+
+        .fo-navbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .fo-navbar-user {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .fo-navbar-avatar {
+            width: 32px;
+            height: 32px;
+            background: #f1f5f9;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-size: 12px;
+        }
+        
+        .fo-layout {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .fo-main-shell {
+            padding: 0;
+            flex: 1;
+        }
+
+        .fo-main-card {
+            min-height: calc(100vh - 73px);
+            background: #fffdfc;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+        }
+    </style>
 {% endblock %}
 
 {% block body %}
-    <div class="fo-shell">
-        <div class="fo-layout">
-            <aside class="fo-sidebar">
-                <div class="fo-brand">
-                    <div class="fo-brand-row">
-                        <div class="fo-brand-mark">BL</div>
-                        <div>
-                            <p class="fo-brand-name">BloodLink</p>
-                            <p class="fo-brand-subtitle">Donor Front Office</p>
-                        </div>
-                    </div>
+    <div class="fo-shell" style="min-height: 100vh; display: flex; flex-direction: column;">
+        <header class="fo-navbar">
+            <a href="{{ path('dashboard_donor_home') }}" class="fo-navbar-brand">
+                <div class="fo-navbar-logo">BL</div>
+                <div class="fo-navbar-brand-text">
+                    <p class="fo-navbar-brand-name">BloodLink</p>
                 </div>
+            </a>
 
-                <nav class="fo-nav">
-                    <p class="fo-nav-title">Donor Area</p>
+            <nav class="fo-navbar-links">
+                <a href="{{ path('dashboard_donor_home') }}" class="fo-navbar-link {{ route == 'dashboard_donor_home' ? 'is-active' : '' }}">Home</a>
+                <a href="{{ path('dashboard_donor_articles') }}" class="fo-navbar-link {{ route == 'dashboard_donor_articles' ? 'is-active' : '' }}">Blogs</a>
+                <a href="{{ path('dashboard_donor_eligibility') }}" class="fo-navbar-link {{ route == 'dashboard_donor_eligibility' ? 'is-active' : '' }}">My Eligibility</a>
+                <a href="{{ path('donor_my_donations') }}" class="fo-navbar-link {{ route == 'donor_my_donations' ? 'is-active' : '' }}">My Donations</a>
+                <a href="{{ path('dashboard_donor_alerts') }}" class="fo-navbar-link {{ is_alerts_route ? 'is-active' : '' }}" style="position: relative;">
+                    Alerts
+                    {% if unread_alerts_count is defined and unread_alerts_count > 0 %}
+                        <span style="position: absolute; top: -5px; right: -15px; background: #dc2626; color: #fff; font-size: 10px; font-weight: 800; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff;">{{ unread_alerts_count }}</span>
+                    {% endif %}
+                </a>
+                <a href="{{ path('dashboard_donor_events') }}" class="fo-navbar-link {{ is_events_route ? 'is-active' : '' }}">Donate Blood</a>
+            </nav>
 
-                    <a href="{{ path('dashboard_donor_home') }}" class="fo-link {{ route == 'dashboard_donor_home' ? 'is-active' : '' }}">
-                        <span>Dashboard</span>
-                        {% if route == 'dashboard_donor_home' %}<span class="fo-pill">Live</span>{% endif %}
-                    </a>
-
-                    <a href="{{ path('dashboard_donor_eligibility') }}" class="fo-link {{ route == 'dashboard_donor_eligibility' ? 'is-active' : '' }}">
-                        <span>Eligibility</span>
-                        {% if route == 'dashboard_donor_eligibility' %}<span class="fo-pill">Live</span>{% endif %}
-                    </a>
-
-                    <a href="{{ path('dashboard_donor_events') }}" class="fo-link {{ is_events_route ? 'is-active' : '' }}">
-                        <span>Donation Events</span>
-                        {% if is_events_route %}<span class="fo-pill">Live</span>{% endif %}
-                    </a>
-                    <a href="{{ path('donor_my_donations') }}" class="fo-link {{ route == 'donor_my_donations' ? 'is-active' : '' }}">
-                        <span>My Donations</span>
-                        {% if route == 'donor_my_donations' %}<span class="fo-pill">Live</span>{% endif %}
-                    </a>
-                    <a href="{{ path('dashboard_donor_alerts') }}" class="fo-link {{ is_alerts_route ? 'is-active' : '' }}">
-                        <span>Alerts</span>
-                        {% if is_alerts_route %}<span class="fo-pill">Live</span>{% endif %}
-                    </a>
-
-                    <a href="{{ path('dashboard_donor_audit_trail') }}" class="fo-link {{ is_audit_trail_route ? 'is-active' : '' }}">
-                        <span>My Audit Trail</span>
-                        {% if is_audit_trail_route %}<span class="fo-pill">Live</span>{% endif %}
-                    </a>
-
-                    <a href="{{ path('dashboard_donor_articles') }}" class="fo-link {{ route == 'dashboard_donor_articles' ? 'is-active' : '' }}">
-                        <span>Articles</span>
-                        {% if route == 'dashboard_donor_articles' %}<span class="fo-pill">Live</span>{% endif %}
-                    </a>
-
-                    <a href="{{ path('dashboard_donor_tips') }}" class="fo-link {{ route == 'dashboard_donor_tips' ? 'is-active' : '' }}">
-                        <span>Health Tips</span>
-                        {% if route == 'dashboard_donor_tips' %}<span class="fo-pill">Live</span>{% endif %}
-                    </a>
-                </nav>
-
-                <div class="fo-session-card">
-                    <p class="fo-session-label">Donor profile</p>
-                    <p class="fo-session-name">{{ session_payload.first_name|default('User') }} {{ session_payload.last_name|default('') }}</p>
-                    <p class="fo-session-role">{{ session_payload.email|default('') }}</p>
-
-                    <form method="post" action="{{ path('auth_logout') }}" class="fo-session-logout">
-                        <button type="submit" class="shared-button shared-button--secondary shared-button--full">Logout</button>
-                    </form>
+            <div class="fo-navbar-actions">
+                {% if session_payload.user_type == 'DONOR' %}
+                    <button type="button" class="shared-button shared-button--primary" onclick="openChat()" style="background:linear-gradient(135deg,#8f1d1f,#b3272a);color:#fff;border:none;box-shadow: 0 4px 12px rgba(143,29,31,0.25); min-height: 36px; height: 36px;">💬 AI Assistant</button>
+                {% endif %}
+                <div class="fo-navbar-user">
+                    <div class="fo-navbar-avatar">{{ session_payload.first_name|first|upper }}{{ session_payload.last_name|first|upper }}</div>
+                    <span>{{ session_payload.first_name }}</span>
                 </div>
-            </aside>
+                <form method="post" action="{{ path('auth_logout') }}" style="margin:0;">
+                    <button type="submit" class="shared-button shared-button--secondary" style="min-height:36px; padding: 0 12px; font-size: 13px;">Logout</button>
+                </form>
+            </div>
+        </header>
 
-            <main class="fo-main-shell">
-                <div class="fo-main-card">
-                    <header class="fo-header">
-                        <div>
-                            <p class="fo-kicker">BloodLink Donor Experience</p>
-                            <h1 class="fo-title">{{ page_title|default('Donor Dashboard') }}</h1>
-                            {% if page_description is defined and page_description %}
-                                <p class="fo-description">{{ page_description }}</p>
-                            {% endif %}
-                        </div>
-
-                        <div class="fo-header-actions">
-                            {% block page_actions %}{% endblock %}
-                        </div>
-                    </header>
-
-                    <section class="fo-content">
+        <div class="fo-layout" style="flex: 1; display: flex; flex-direction: column;">
+            <main class="fo-main-shell" style="flex: 1; display: flex; flex-direction: column; padding: 0;">
+                <div class="fo-main-card" style="flex: 1; background: #fffdfc; border: none; border-radius: 0; box-shadow: none;">
+                    <section class="fo-content" style="padding: 0;">
                         {% include 'shared/_flash.html.twig' %}
                         {% block module_content %}{% endblock %}
                     </section>
@@ -108,5 +177,8 @@
             </main>
         </div>
     </div>
+    {% if session_payload.user_type == 'DONOR' %}
+        {% include 'dashboard/partials/_ai_agent.html.twig' %}
+    {% endif %}
     {% block extra_body_assets %}{% endblock %}
 {% endblock %}

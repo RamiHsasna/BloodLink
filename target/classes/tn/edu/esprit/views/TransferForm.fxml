@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="tn.edu.esprit.controllers.TransferFormController"
+      styleClass="modal-overlay"
+      alignment="CENTER"
+      stylesheets="@../styles/dashboard.css">
+
+    <!-- Modal Card -->
+    <VBox fx:id="modalCard" styleClass="modal-card" spacing="0" maxWidth="600" maxHeight="720"
+          alignment="TOP_CENTER">
+
+        <!-- Modal Header -->
+        <HBox styleClass="modal-header" alignment="CENTER_LEFT" spacing="12">
+            <padding>
+                <Insets top="20" right="24" bottom="16" left="24"/>
+            </padding>
+
+            <VBox spacing="4" HBox.hgrow="ALWAYS">
+                <Label fx:id="lblFormTitle" text="New Transfer" styleClass="modal-title"/>
+                <Label fx:id="lblFormSubtitle" text="Create an inter-hospital blood transfer request."
+                       styleClass="modal-subtitle"/>
+            </VBox>
+
+            <Button fx:id="btnClose" text="&#x2715;" styleClass="btn-close-modal"
+                    onAction="#onCancel"/>
+        </HBox>
+
+        <Separator styleClass="modal-divider"/>
+
+        <!-- Modal Body - Scrollable Form -->
+        <ScrollPane styleClass="modal-body-scroll" fitToWidth="true" hbarPolicy="NEVER"
+                    vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS">
+
+            <VBox styleClass="modal-body" spacing="20">
+                <padding>
+                    <Insets top="20" right="24" bottom="8" left="24"/>
+                </padding>
+
+                <!-- Requesting Hospital -->
+                <VBox spacing="6">
+                    <Label text="Requesting Hospital" styleClass="form-label"/>
+                    <ComboBox fx:id="cbRequestingHospital" promptText="Select the requesting hospital"
+                              styleClass="form-input" maxWidth="Infinity"/>
+                    <Label fx:id="lblRequestingHospitalError" text="" styleClass="form-error"
+                           visible="false" managed="false"/>
+                </VBox>
+
+                <!-- Approving Hospital -->
+                <VBox spacing="6">
+                    <Label text="Supplying Hospital" styleClass="form-label"/>
+                    <ComboBox fx:id="cbApprovingHospital" promptText="Select the supplying hospital"
+                              styleClass="form-input" maxWidth="Infinity"/>
+                    <Label fx:id="lblApprovingHospitalError" text="" styleClass="form-error"
+                           visible="false" managed="false"/>
+                </VBox>
+
+                <!-- Blood Type & Quantity - Side by Side -->
+                <HBox spacing="16">
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="Blood Type" styleClass="form-label"/>
+                        <ComboBox fx:id="cbBloodType" promptText="Select"
+                                  styleClass="form-input" maxWidth="Infinity"/>
+                        <Label fx:id="lblBloodTypeError" text="" styleClass="form-error"
+                               visible="false" managed="false"/>
+                    </VBox>
+
+                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                        <Label text="Quantity (units)" styleClass="form-label"/>
+                        <Spinner fx:id="spQuantity" styleClass="form-input" maxWidth="Infinity"
+                                 editable="true"/>
+                        <Label fx:id="lblQuantityError" text="" styleClass="form-error"
+                               visible="false" managed="false"/>
+                    </VBox>
+                </HBox>
+
+                <!-- Reason -->
+                <VBox spacing="6">
+                    <Label text="Reason for Request" styleClass="form-label"/>
+                    <TextArea fx:id="taReason" promptText="E.g.: Critical O+ stock following an emergency..."
+                              styleClass="form-input" prefRowCount="3" wrapText="true"/>
+                    <Label fx:id="lblReasonError" text="" styleClass="form-error"
+                           visible="false" managed="false"/>
+                </VBox>
+
+                <!-- Expected Delivery Date -->
+                <VBox spacing="6">
+                    <Label text="Expected Delivery Date" styleClass="form-label"/>
+                    <DatePicker fx:id="dpExpectedDelivery" promptText="Select a date"
+                                styleClass="form-input" maxWidth="Infinity"/>
+                    <Label fx:id="lblExpectedDeliveryError" text="" styleClass="form-error"
+                           visible="false" managed="false"/>
+                </VBox>
+
+                <!-- Notes (optional) -->
+                <VBox spacing="6">
+                    <Label text="Notes (optional)" styleClass="form-label"/>
+                    <TextArea fx:id="taNotes" promptText="Additional information..."
+                              styleClass="form-input" prefRowCount="2" wrapText="true"/>
+                </VBox>
+
+                <!-- Status Message -->
+                <Label fx:id="lblStatusMessage" text="" styleClass="form-status-message"
+                       visible="false" managed="false" wrapText="true"/>
+
+            </VBox>
+        </ScrollPane>
+
+        <Separator styleClass="modal-divider"/>
+
+        <!-- Modal Footer -->
+        <HBox styleClass="modal-footer" alignment="CENTER_RIGHT" spacing="12">
+            <padding>
+                <Insets top="16" right="24" bottom="20" left="24"/>
+            </padding>
+
+            <Button fx:id="btnCancel" text="Cancel" styleClass="btn-secondary"
+                    onAction="#onCancel"/>
+            <Button fx:id="btnSubmit" text="Submit Request" styleClass="btn-primary"
+                    onAction="#onSubmit"/>
+        </HBox>
+    </VBox>
+</VBox>

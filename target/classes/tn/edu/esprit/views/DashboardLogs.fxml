@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx/17"
+    xmlns:fx="http://javafx.com/fxml/1" fx:controller="tn.edu.esprit.controllers.DashboardLogsController" spacing="20" styleClass="content-root" stylesheets="@../styles/dashboard.css">
+
+    <padding>
+        <Insets top="30" right="40" bottom="30" left="40"/>
+    </padding>
+
+    <!-- Page Header -->
+    <VBox spacing="4" styleClass="page-header">
+        <Label text="Audit Logs" styleClass="page-title"/>
+        <Label text="Manage system logs for the blood network." styleClass="page-description"/>
+    </VBox>
+
+    <!-- Toolbar -->
+    <VBox spacing="12">
+        <HBox alignment="CENTER_LEFT" spacing="12">
+            <ComboBox fx:id="sectionSelector" styleClass="section-selector" prefWidth="250"/>
+            <HBox fx:id="searchWrapper" alignment="CENTER_LEFT" spacing="8" styleClass="search-input-wrapper" HBox.hgrow="ALWAYS">
+                <padding>
+                    <Insets left="12" right="12" top="2" bottom="2"/>
+                </padding>
+                <TextField fx:id="searchField" promptText="Search logs..." maxWidth="Infinity" styleClass="search-input" HBox.hgrow="ALWAYS"/>
+            </HBox>
+            <ComboBox fx:id="filterSelector" styleClass="section-selector" prefWidth="180" promptText="Filter by..."/>
+            <DatePicker fx:id="dateFrom" promptText="Start date" prefWidth="180" styleClass="audit-filter-control"/>
+            <DatePicker fx:id="dateTo" promptText="End date" prefWidth="180" styleClass="audit-filter-control"/>
+        </HBox>
+
+        <HBox alignment="CENTER_RIGHT" spacing="12">
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="btnResetFilters" text="Reset filters" onAction="#handleResetFilters" styleClass="audit-toolbar-secondary"/>
+            <Button fx:id="btnRefresh" text="Refresh" onAction="#handleRefresh" styleClass="audit-toolbar-secondary"/>
+            <Button fx:id="btnAiAnalysis" text="AI Analysis" onAction="#handleAiAnalysis" styleClass="audit-toolbar-secondary"/>
+            <Button fx:id="btnAdd" text="Add log" onAction="#handleAddAction" styleClass="audit-toolbar-primary"/>
+        </HBox>
+    </VBox>
+
+    <!-- Stat Chips Row -->
+    <HBox fx:id="statsRow" spacing="12" alignment="CENTER_LEFT">
+        <!-- Chips populated dynamically per section -->
+    </HBox>
+
+    <VBox fx:id="aiAnalysisCard" spacing="10" styleClass="audit-ai-card" visible="false" managed="false">
+        <HBox alignment="CENTER_LEFT" spacing="12">
+            <VBox spacing="2" HBox.hgrow="ALWAYS">
+                <Label text="AI analysis of logs" styleClass="audit-ai-title"/>
+                <Label fx:id="aiAnalysisContextLabel" text="Analysis will cover the visible filters." styleClass="audit-ai-subtitle" wrapText="true"/>
+            </VBox>
+            <ProgressIndicator fx:id="aiLoadingIndicator" prefWidth="28" prefHeight="28" visible="false" managed="false"/>
+        </HBox>
+        <Label fx:id="aiAnalysisStatusLabel" text="Run analysis to get a summary of the filtered logs." styleClass="audit-ai-status" wrapText="true"/>
+        <TextArea fx:id="aiAnalysisOutput" editable="false" focusTraversable="false" wrapText="true" prefRowCount="8" styleClass="audit-ai-output"/>
+    </VBox>
+
+    <!-- Main Content: StackPane switches between sections -->
+    <StackPane fx:id="contentStack" VBox.vgrow="ALWAYS">
+        <!-- Section 0: Donation Logs -->
+        <ScrollPane fx:id="scrollDonationLogs" fitToWidth="true" styleClass="cards-scroll-pane">
+            <VBox fx:id="containerDonationLogs" spacing="12" styleClass="cards-container">
+                <padding>
+                    <Insets top="4" right="4" bottom="20" left="4"/>
+                </padding>
+            </VBox>
+        </ScrollPane>
+
+        <!-- Section 1: Transfer Logs -->
+        <ScrollPane fx:id="scrollTransferLogs" fitToWidth="true" styleClass="cards-scroll-pane" visible="false">
+            <VBox fx:id="containerTransferLogs" spacing="12" styleClass="cards-container">
+                <padding>
+                    <Insets top="4" right="4" bottom="20" left="4"/>
+                </padding>
+            </VBox>
+        </ScrollPane>
+
+        <!-- Section 2: Donor Responses -->
+        <ScrollPane fx:id="scrollDonorAlerts" fitToWidth="true" styleClass="cards-scroll-pane" visible="false">
+            <VBox fx:id="containerDonorAlerts" spacing="12" styleClass="cards-container">
+                <padding>
+                    <Insets top="4" right="4" bottom="20" left="4"/>
+                </padding>
+            </VBox>
+        </ScrollPane>
+
+        <!-- Section 3: Statistics (charts kept as-is) -->
+        <VBox fx:id="containerStats" spacing="15" visible="false" style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 20;">
+            <HBox alignment="CENTER_LEFT" spacing="10">
+                <Label text="Tableau de bord analytique" styleClass="page-title" style="-fx-font-size: 18px;"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="Exporter PDF" onAction="#handleExportPDF" styleClass="btn-secondary"/>
+                <Button text="Exporter CSV" onAction="#handleExportCSV" styleClass="btn-secondary"/>
+            </HBox>
+
+            <HBox spacing="20" VBox.vgrow="ALWAYS">
+                <VBox spacing="8" HBox.hgrow="ALWAYS" style="-fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-padding: 15;">
+                    <Label text="Répartition de la sévérité des alertes" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #475569;"/>
+                    <javafx.scene.chart.PieChart fx:id="pieChartSeverity" VBox.vgrow="ALWAYS" legendVisible="true" labelsVisible="true"/>
+                </VBox>
+                <VBox spacing="8" HBox.hgrow="ALWAYS" style="-fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-padding: 15;">
+                    <Label text="Actions de don par type" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #475569;"/>
+                    <javafx.scene.chart.BarChart fx:id="barChartDonations" VBox.vgrow="ALWAYS">
+                        <xAxis>
+                            <javafx.scene.chart.CategoryAxis label="Action"/>
+                        </xAxis>
+                        <yAxis>
+                            <javafx.scene.chart.NumberAxis label="Nombre"/>
+                        </yAxis>
+                    </javafx.scene.chart.BarChart>
+                </VBox>
+            </HBox>
+        </VBox>
+    </StackPane>
+</VBox>

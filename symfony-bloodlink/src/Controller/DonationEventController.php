@@ -415,7 +415,7 @@ class DonationEventController extends AbstractController
                 $email = (new Email())
                     ->from('bloodlink.supportteam@gmail.com')
                     ->to($donorEmail)
-                    ->subject('Nouveau don de sang: ' . $eventName)
+                    ->subject('Blood Donation Event Scheduled: ' . $eventName)
                     ->html("
                         <div style=\"font-family:'Segoe UI',Tahoma,sans-serif;color:#333;background-color:#f6f9fc;padding:40px 0;\">
                             <div style=\"max-width:600px;margin:0 auto;background-color:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);\">

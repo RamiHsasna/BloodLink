@@ -597,6 +597,8 @@ HTML;
         return $this->render('dashboard/donor_events.html.twig', [
             'session_user' => $sessionUser,
             'events'       => $events,
+            'unread_alerts_count' => (int) $connection->fetchOne("SELECT COUNT(*) FROM donor_alerts WHERE donor_id = ? AND is_read = false", [$userId]),
+            'is_events_route' => true,
         ]);
     }
 
@@ -639,6 +641,8 @@ HTML;
             'session_user' => $sessionUser,
             'donations'    => $donations,
             'stats'        => $stats,
+            'unread_alerts_count' => (int) $connection->fetchOne("SELECT COUNT(*) FROM donor_alerts WHERE donor_id = ? AND is_read = false", [$userId]),
+            'route' => 'donor_my_donations',
         ]);
     }
     #[Route('/donation/view/{id}', name: 'donation_public_view', methods: ['GET'])]

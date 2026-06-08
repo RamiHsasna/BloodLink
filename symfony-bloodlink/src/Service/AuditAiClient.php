@@ -6,8 +6,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class AuditAiClient
 {
-    private const ENDPOINT = 'https://integrate.api.nvidia.com/v1/chat/completions';
-    private const MODEL = 'meta/llama-4-maverick-17b-128e-instruct';
+    private const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
+    private const MODEL = 'anthropic/claude-3-haiku';
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
@@ -21,7 +21,7 @@ final class AuditAiClient
      */
     public function analyzeAuditPayload(array $payload): ?array
     {
-        $apiKey = $this->env('NVIDIA_API_KEY');
+        $apiKey = $this->env('ANTHROPIC_API_KEY');
         if ($apiKey === '') {
             return null;
         }
@@ -48,12 +48,14 @@ final class AuditAiClient
             $response = $this->httpClient->request('POST', self::ENDPOINT, [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $apiKey,
-                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'HTTP-Referer' => 'http://localhost:8000',
+                    'X-Title' => 'BloodLink AI Assistant',
                 ],
                 'json' => [
                     'model' => self::MODEL,
                     'messages' => $messages,
-                    'max_tokens' => 420,
+                    'max_tokens' => 1000,
                     'temperature' => 0.1,
                 ],
                 'timeout' => 12,
@@ -76,9 +78,9 @@ final class AuditAiClient
      */
     public function answerAuditQuestion(array $context, string $question): string
     {
-        $apiKey = $this->env('NVIDIA_API_KEY');
+        $apiKey = $this->env('ANTHROPIC_API_KEY');
         if ($apiKey === '') {
-            return 'NVIDIA API key is not configured.';
+            return 'AI service API key is not configured.';
         }
 
         $question = trim($question);
@@ -116,12 +118,14 @@ final class AuditAiClient
             $response = $this->httpClient->request('POST', self::ENDPOINT, [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $apiKey,
-                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'HTTP-Referer' => 'http://localhost:8000',
+                    'X-Title' => 'BloodLink AI Assistant',
                 ],
                 'json' => [
                     'model' => self::MODEL,
                     'messages' => $messages,
-                    'max_tokens' => 260,
+                    'max_tokens' => 1000,
                     'temperature' => 0.2,
                 ],
                 'timeout' => 12,

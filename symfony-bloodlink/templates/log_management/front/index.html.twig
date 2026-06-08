@@ -1,5 +1,5 @@
 {% set page_title = 'My Audit Trail' %}
-{% set page_description = 'Read-only donor history that gathers your donations, the related audit records, and matching network transfer context in one place.' %}
+{% set page_description = 'Donor history that gathers your donations, the related audit records, and matching network transfer context in one place.' %}
 {% set summary = summary|default({}) %}
 {% set donations = donations|default([]) %}
 {% set donation_logs = donation_logs|default([]) %}
@@ -7,7 +7,7 @@
 {% extends 'log_management/layouts/front_office.html.twig' %}
 
 {% block module_content %}
-    <div class="grid gap-4 lg:grid-cols-4">
+    <div class="grid gap-4 lg:grid-cols-3">
         <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
             <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Donations</p>
             <p class="mt-3 text-3xl font-extrabold tracking-tight text-slate-950">{{ summary.donations|default(summary.total_donations|default(donations|length)) }}</p>
@@ -22,11 +22,6 @@
             <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Transfer context</p>
             <p class="mt-3 text-3xl font-extrabold tracking-tight text-slate-950">{{ summary.transfers|default(summary.total_transfers|default(transfer_context|length)) }}</p>
             <p class="mt-2 text-sm text-slate-500">Matching network transfer context related to your donation activity.</p>
-        </article>
-        <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-            <p class="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Access</p>
-            <p class="mt-3 text-xl font-extrabold tracking-tight text-slate-950">Read only</p>
-            <p class="mt-2 text-sm text-slate-500">This page is donor-facing and never exposes staff actions.</p>
         </article>
     </div>
 
