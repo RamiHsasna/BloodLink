@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+forbidden='(^|/)(\.env|\.env\.local|\.env\..*\.local|id_rsa|id_dsa|\.pem|\.p12)$'
+tracked=$(git diff --cached --name-only --diff-filter=ACMR)
+
+if echo "$tracked" | grep -E "$forbidden" >/dev/null 2>&1; then
+  echo "Error: commit contains forbidden sensitive file(s)."
+  echo "$tracked" | grep -E "$forbidden" || true
+  echo "Use .env.example for templates and keep secrets out of Git history."
+  exit 1
+fi
+
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --redact --verbose
+else
+  echo "Warning: gitleaks not installed; skipping local secret scan."
+fi

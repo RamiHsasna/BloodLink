@@ -1,0 +1,37 @@
+name: Security Guardrails
+
+permissions:
+  contents: read
+  pull-requests: read
+
+on:
+  pull_request:
+  push:
+    branches:
+      - '**'
+  schedule:
+    - cron: '0 5 * * 1'
+
+jobs:
+  prevent-sensitive-files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Block sensitive filenames
+        run: |
+          set -euo pipefail
+          forbidden='(^|/)(\.env|\.env\.local|\.env\..*\.local|id_rsa|id_dsa|\.pem|\.p12)$'
+          if git ls-files | grep -E "$forbidden" >/dev/null 2>&1; then
+            echo "Tracked sensitive files detected."
+            git ls-files | grep -E "$forbidden" || true
+            exit 1
+          fi
+
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

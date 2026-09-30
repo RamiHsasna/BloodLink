@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+forbidden='(^|/)(\.env|\.env\.local|\.env\..*\.local|id_rsa|id_dsa|\.pem|\.p12)$'
+tracked=$(git ls-files)
+
+if echo "$tracked" | grep -E "$forbidden" >/dev/null 2>&1; then
+  echo "Error: push blocked because sensitive file(s) are tracked in git."
+  echo "$tracked" | grep -E "$forbidden" || true
+  echo "Remove sensitive files from tracking before pushing."
+  exit 1
+fi
+
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks detect --no-git --redact --verbose --source .
+else
+  echo "Warning: gitleaks not installed; skipping local pre-push secret scan."
+fi

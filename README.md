@@ -246,20 +246,30 @@ BloodLink/
    # Update DATABASE_URL in .env with your PostgreSQL/Supabase credentials
    ```
 
-4. **Verify database connectivity**
+   Security note: never commit `.env`. Keep secrets local and commit only `.env.example`.
+
+4. **Enable local Git security hooks**
+
+   ```bash
+   git config core.hooksPath .githooks
+   ```
+
+   This enables repository-provided `pre-commit` and `pre-push` secret checks.
+
+5. **Verify database connectivity**
 
    ```bash
    php bin/console doctrine:query:sql "SELECT 1"
    php bin/console doctrine:mapping:info
    ```
 
-5. **Run the application**
+6. **Run the application**
 
    ```bash
    php -S 127.0.0.1:8000 -t public
    ```
 
-6. **Access the platform**
+7. **Access the platform**
    - Web: `http://127.0.0.1:8000`
    - Authentication: `/auth` endpoint
    - Admin Dashboard: `/dashboard`
