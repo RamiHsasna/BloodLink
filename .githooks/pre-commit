@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-forbidden='(^|/)(\.env|\.env\..*|id_rsa|id_dsa|\.pem|\.p12)$'
+forbidden='(^|/)(\.env|\.env\.local|\.env\..*\.local|id_rsa|id_dsa|\.pem|\.p12)$'
 tracked=$(git diff --cached --name-only --diff-filter=ACMR)
 
 if echo "$tracked" | grep -E "$forbidden" >/dev/null 2>&1; then

@@ -8,6 +8,8 @@ on:
   push:
     branches:
       - '**'
+  schedule:
+    - cron: '0 5 * * 1'
 
 jobs:
   prevent-sensitive-files:
@@ -21,7 +23,7 @@ jobs:
       - name: Block sensitive filenames
         run: |
           set -euo pipefail
-          forbidden='(^|/)(\.env|\.env\..*|id_rsa|id_dsa|\.pem|\.p12)$'
+          forbidden='(^|/)(\.env|\.env\.local|\.env\..*\.local|id_rsa|id_dsa|\.pem|\.p12)$'
           if git ls-files | grep -E "$forbidden" >/dev/null 2>&1; then
             echo "Tracked sensitive files detected."
             git ls-files | grep -E "$forbidden" || true
