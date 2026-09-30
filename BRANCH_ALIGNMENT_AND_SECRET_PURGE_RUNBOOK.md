@@ -36,6 +36,7 @@ No branch was auto-deleted in this change. Mark any superseded branch as `archiv
 ## 4) Secret incident response (already started here)
 - `symfony-bloodlink/.env` removed from tracked files.
 - `symfony-bloodlink/.gitignore` now ignores `.env`.
+- `.env.example` remains tracked as the setup template.
 - CI and local pre-commit guardrails added to block sensitive filenames and scan for secrets.
 
 ## 5) Mandatory remaining actions outside this commit
@@ -62,3 +63,10 @@ git push --force --tags
 - Secret scanning tools return no active leaks.
 - Required CI checks are enforced in branch protection.
 - New contributors use `.env.example` only.
+
+
+## 8) Automation now in repository
+- Branch hygiene automation now runs weekly via `.github/workflows/branch-hygiene-audit.yml`.
+- Security guardrails run on PR/push and weekly schedule via `.github/workflows/security-guardrails.yml`.
+- Local hook-based checks are available in `.githooks/pre-commit` and `.githooks/pre-push` (enable with `git config core.hooksPath .githooks`).
+- Team policy is documented in `BRANCH_HYGIENE_POLICY.md`.

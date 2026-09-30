@@ -1,0 +1,63 @@
+name: Branch Hygiene Audit
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch all branches
+        run: git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*'
+
+      - name: Audit branch divergence
+        run: |
+          set -euo pipefail
+          canonical="master"
+          report="branch-hygiene-report.md"
+          echo "# Branch hygiene report" > "$report"
+          echo "" >> "$report"
+          echo "Canonical branch: \`$canonical\`" >> "$report"
+          echo "" >> "$report"
+          echo "| Branch | Behind | Ahead | State |" >> "$report"
+          echo "|---|---:|---:|---|" >> "$report"
+
+          while read -r ref; do
+            branch="${ref#origin/}"
+            [ "$branch" = "$canonical" ] && continue
+            [ "$branch" = "HEAD" ] && continue
+
+            counts=$(git rev-list --left-right --count "origin/$canonical...origin/$branch")
+            behind=$(echo "$counts" | awk '{print $1}')
+            ahead=$(echo "$counts" | awk '{print $2}')
+
+            if [ "$ahead" -eq 0 ] && [ "$behind" -eq 0 ]; then
+              state="in-sync"
+            elif [ "$ahead" -gt 0 ] && [ "$behind" -eq 0 ]; then
+              state="ahead-only"
+            elif [ "$ahead" -eq 0 ] && [ "$behind" -gt 0 ]; then
+              state="behind-only"
+            else
+              state="diverged"
+            fi
+
+            echo "| \`$branch\` | $behind | $ahead | $state |" >> "$report"
+          done < <(git for-each-ref --format='%(refname:short)' refs/remotes/origin | sort)
+
+          cat "$report" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: branch-hygiene-report
+          path: branch-hygiene-report.md
