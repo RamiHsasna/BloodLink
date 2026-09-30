@@ -18,21 +18,24 @@ public class DataSource {
     private Connection cnx;
     private static DataSource instance;
 
-    //private String url = "jdbc:mysql://localhost:3306/esprit"; mysql connector
-    // private String url = "jdbc:postgresql://localhost:5432/esprit"; //postgresql connector
-    private String url =
-        "jdbc:postgresql://<configured-at-runtime>";
-    private String user = "<configured-at-runtime>";
-    private String password = "<configured-at-runtime>";
-
     private DataSource() {
+        String url = requiredEnvironment("BLOODLINK_DB_URL");
+        String user = requiredEnvironment("BLOODLINK_DB_USER");
+        String password = requiredEnvironment("BLOODLINK_DB_PASSWORD");
         try {
-            // cnx = DriverManager.getConnection(url, user, password);
             cnx = DriverManager.getConnection(url, user, password);
             System.out.println("Connected to DB !");
         } catch (SQLException ex) {
-            System.out.println(ex.getMessage());
+            throw new IllegalStateException("Unable to connect to the configured database.", ex);
         }
+    }
+
+    private static String requiredEnvironment(String name) {
+        String value = System.getenv(name);
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("Missing required environment variable: " + name);
+        }
+        return value;
     }
 
     public static DataSource getInstance() {

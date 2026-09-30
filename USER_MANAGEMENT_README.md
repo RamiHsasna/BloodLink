@@ -15,7 +15,7 @@ A JavaFX-based CRUD desktop application for managing users in the BloodLink netw
 
 - Java 8 or higher
 - JavaFX SDK (if not included in your JDK)
-- PostgreSQL database connection (configured in DataSource.java)
+- PostgreSQL database connection configured through environment variables
 
 ## Project Structure
 
@@ -76,13 +76,16 @@ module bloodlink {
 
 ## Database Configuration
 
-Make sure your database connection is properly configured in `DataSource.java`:
+Configure the database before starting the application:
 
-```java
-private String url = "jdbc:postgresql://your-host:5432/your-database";
-private String user = "your-username";
-private String password = "your-password";
+```bash
+export BLOODLINK_DB_URL="jdbc:postgresql://your-host:5432/your-database"
+export BLOODLINK_DB_USER="your-username"
+export BLOODLINK_DB_PASSWORD="your-password"
 ```
+
+Never commit database credentials. `DataSource.java` reads these values at runtime
+and fails explicitly when a required variable is missing.
 
 ## User Types
 
@@ -113,7 +116,7 @@ If you get "Error: JavaFX runtime components are missing":
 ### Database Connection Issues
 
 - Verify your database is running
-- Check credentials in `DataSource.java`
+- Check `BLOODLINK_DB_URL`, `BLOODLINK_DB_USER`, and `BLOODLINK_DB_PASSWORD`
 - Ensure PostgreSQL JDBC driver is in your classpath
 
 ### FXML loading errors

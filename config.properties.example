@@ -1,0 +1,10 @@
+# Optional AI configuration for local development.
+# Copy this file to config.properties or set the equivalent environment variables.
+BLOODLINK_IA_PROVIDER=openrouter
+BLOODLINK_OPENROUTER_API_KEY=
+# BLOODLINK_GEMINI_API_KEY=
+# BLOODLINK_GROQ_API_KEY=
+# BLOODLINK_OPENROUTER_MODEL=openrouter/free
+# BLOODLINK_GEMINI_MODEL=gemini-2.0-flash
+# BLOODLINK_GROQ_MODEL=llama-3.1-8b-instant
+# BLOODLINK_OPENROUTER_MAX_TOKENS=220
